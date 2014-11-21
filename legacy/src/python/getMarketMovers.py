@@ -42,6 +42,7 @@ def getDates(period):
     return from_date,to_date
 
 def calcAvgVolume(quotes):
+    # Calculate average trading volume for the given daily quotes
     days = len(quotes) - 1
     total_volume = 0
     for quote in quotes[1:]:
