@@ -16,13 +16,21 @@ def getMarketMovers(time_period,num_symbols):
     print "Here's what your urls look like:\n",buildURL("",from_date,to_date)
     for symbol in symlist:
 	url = buildURL(symbol,from_date,to_date)
- 	f = urllib.urlopen(url)
-	content = f.read()
-	if content.find("404 Not Found") != -1:
-	    continue
-	quotes = content.strip().split('\n')
-    	stock_data[symbol] = calcAvgVolume(quotes)
-    return sorted(stock_data.keys(),key=lambda symbol:stock_data[symbol],reverse=True)[:num_symbols]
+	for i in range(3):
+	    try:
+ 		f = urllib.urlopen(url)
+		content = f.read()
+		if content.find("404 Not Found") != -1:
+		    break
+	    	    continue
+		quotes = content.strip().split('\n')
+    		stock_data[symbol] = calcAvgVolume(quotes)
+	    except:
+		print "Error retrieving data for %s, trying again..." % symbol
+    if num_symbols != "all":
+    	return sorted(stock_data.keys(),key=lambda symbol:stock_data[symbol],reverse=True)[:num_symbols]
+    else:
+	return sorted(stock_data.keys(),key=lambda symbol:stock_data[symbol],reverse=True)
 
 def buildURL(symbol,from_date,to_date):
     # Build query string for historcal quotes from Yahoo Finance
@@ -59,8 +67,9 @@ def getListFromEoddata(market):
         page = r.read()
         mat = re.findall(r'<tr class=\"r[oe]"[^>]*><td><A.[^>]*>([-A-Z]*)</A>', page, re.M|re.I|re.S)
         symlist += mat
+    conn.close()
     return symlist
 
 if __name__ == "__main__":
-    market_movers = getMarketMovers(30,200)
-    print market_movers
+    market_movers = getMarketMovers(30,"all")
+    print ",".join(market_movers)
