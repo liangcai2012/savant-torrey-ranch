@@ -2,15 +2,14 @@ from Strategy import *
 
 class Controller:
 
-    def __init__(self,strategy_list):
-	self.strategy_list = set(strategy_list)
+    def __init__(self,lstStrat):
+	self.lstStrat = set(lstStrat)
    
     def invokeWorker(self):
-	stratGenerator = StrategyGenerator()
-	for strat in self.strategy_list:
-	    worker = stratGenerator.generate(strat)
+	stratGenerator = StrategyGenerator().generate(self.lstStrat)
+	for worker in stratGenerator:
 	    if worker != None:
-		worker.start()
+	  	worker.start()
  	
 
 if __name__ == "__main__":

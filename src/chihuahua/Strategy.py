@@ -12,13 +12,14 @@ class Strategy(Process):
 class StrategyGenerator:
 
     def __init__(self):
-	pass
-	
-    def generate(self,strat_name):
-	if strat_name == "simple":
-	    return SimpleStrategy()
-	else:
-	    return None
+	pass	
+
+    def generate(self,lstStrat):
+	for strat in lstStrat:
+	    if strat == "simple":
+		yield SimpleStrategy()
+	    else:
+		yield None
 
 
 class SimpleStrategy(Strategy):
