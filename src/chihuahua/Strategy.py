@@ -8,6 +8,19 @@ class Strategy(Process):
     def run():
 	pass
 
+
+class StrategyGenerator:
+
+    def __init__(self):
+	pass
+	
+    def generate(self,strat_name):
+	if strat_name == "simple":
+	    return SimpleStrategy()
+	else:
+	    return None
+
+
 class SimpleStrategy(Strategy):
 
     def __init__(self):
