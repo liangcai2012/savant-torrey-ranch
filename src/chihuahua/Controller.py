@@ -6,7 +6,7 @@ class Controller:
     def invokeWorker(self):
         for strat in self.lstStrat:
             try:
-	        mod = __import__("strategy." + strat)
+		mod = __import__("strategy" + strat)
                 stratCls = getattr(getattr(mod,strat),strat)
                 stratCls().start()
             except:
