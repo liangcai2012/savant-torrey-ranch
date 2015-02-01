@@ -34,9 +34,9 @@ public class Streamer
          
          try{
                 
-                int port = 21000;
+                int port = 8091;
                 ServerSocket serverSocket = new ServerSocket(port);
-                System.out.println("Server Started and listening to the port 25000");
+                System.out.println("Server Started and listening to the port 8091");
      
             //Server is running always. This is done using this while(true) loop
             while(true) 
@@ -139,6 +139,7 @@ public class Streamer
                 File[] listOfFiles = folder.listFiles();
 
                 for(File file : listOfFiles){
+            //String dir = "/home/jingjing/test/savant-torrey-ranch/data";
                     
                     if(file.isFile()){
                             
