@@ -1,0 +1,89 @@
+Commands handled by fetcher (Java part)
+Potential clients: fetcher (python part) 
+
+fetcher (java part) should fetch one symbol at a time. Any new request should be rejected. Data will be saved to a file. 
+
+Note: we might need to check if fetch multiple symbol together has a better performance than fetch them one by one. If fetch two or more is faster, than we might need to change the messages 
+
+
+phase 1:
+
+msg 1: Get tick data of the given date and symbol, it always fetch the tick data of one day (including the extended hour data)
+request:
+
+{
+    "requst": {
+        "command": "start",
+        "sym": "QQQ",
+		  "date": "YYYYMMDD"
+    }
+}
+
+response:
+{
+    "response":{
+       "errcode": 0
+    }
+}
+or
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
+
+msg 2: 
+ 
+request:
+{
+    "requst": {
+        "command": "status",
+    }
+}
+
+response:
+{
+    "response":{
+       "errcode": 0,
+		 "sym": "QQQ",
+       "latest": "HHMMSS"
+       "total_trade": 23455665
+       "total_quote": 12131232
+    }
+}
+or
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
+
+msg 3: 
+{
+    "requst": {
+        "command": "cancel",
+    }
+}
+
+note: if the fetch is not finished yet, cancel the fetching and remove the file. Otherwise, just keep the file and return an error
+
+response:
+{
+    "response":{
+       "errcode": 0
+    }
+}
+or
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
+
+

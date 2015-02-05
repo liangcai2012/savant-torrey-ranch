@@ -1,0 +1,101 @@
+Commands handled by Streamer
+Potential clients:
+1) Viewer
+2) Strategy worker
+
+phase 1:
+
+msg 1: subscribe a client
+request:
+
+{
+    "requst": {
+        "command": "subscribe",
+        "client": "strategy1",
+        "symlist": [
+            "QQQ",
+            "SPY"
+        ]
+    }
+}
+
+note: the value of client is a unique name of the client
+
+response:
+{
+    "response":{
+       "errcode": 0
+    }
+}
+or
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
+
+msg 2: unsubscribe a client
+request:
+{
+    "requst": {
+        "command": "unsubscribe",
+        "client": "strategy1"
+    }
+}
+
+response:
+{
+    "response":{
+       "errcode": 0
+    }
+}
+or
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
+
+msg 3: update a client.  mask means it asks for
+average/open/close/high/low/volume of trade data of (last second)
+
+{
+    "requst": {
+        "command": "update",
+        "client": "strategy1",
+        "interval": "1s"
+        "mask":  "111111"
+    }
+}
+
+note 1: interval should be a value in ["1s", "5s", "10s", "30s", "1m", "5m", "10m", "30m", "1h"]
+note 2: mask is a string of 0 or 1 (containing at least 6 char). the first 6 char should be mask of "average/open/close/high/low/volume". 
+
+ 
+response:
+{
+    "response":{
+       "timestamp": "yyyymmddhhmmss",
+       "data": [
+        "12.21;12.20;12.24;12.00;12.13;200",
+        "34.23;34.12;34.67;34.04;34.12;45",
+       ]
+    }
+}
+
+note 1: data should be a list of records of the realtime data. len of the list is equal to the number of subscribed symbols. Each record is a string using ';' as split
+
+
+
+or
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
