@@ -63,6 +63,7 @@ def send_request(request):
     host = "localhost"
     conn = rpyc.connect(host,8088)
     conn.root.request(request)
+    conn.close()
 
 def main():
     parser = ap.ArgumentParser()
