@@ -15,8 +15,27 @@ class Controller(rpyc.Service):
 
     def exposed_request(self,request):
         print request
+        mod = request["mod"]
+        cmd = request["cmd"]
+        if mod == "view":
+            if cmd == "list":
+                # get the list of items in Queue
+            elif cmd == "view":
+                # view item in the Queue
+            elif cmd == "move":
+                # re-allocate item in the Queue
+            else:
+                # remove item in the Queue
+        elif mod == "str":
+            if cmd == "run":
+                # start Strategy instance
+            elif cmd == "list":
+                # list running strategies
+            else:
+                # stop running strategy
 
-    def exposed_exit(self):
+
+    def exit(self):
         "Exiting Controller"
         sys.exit(0)
 
