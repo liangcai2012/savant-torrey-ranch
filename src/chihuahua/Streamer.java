@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.net.InetAddress;
 
 import java.util.*;
+import java.util.concurrent.*;
 import java.lang.*;
 import java.io.*;
  
@@ -20,31 +21,88 @@ import org.json.*;
 public class Streamer 
 {
     private static Socket socket;
- 
-    public static void main(String[] args) 
+    private ExecutorService exService;
+    private final int POOL_SIZE = 10;
+    private JSONArray arrData;    
+   
+    String host = "192.168.1.121";
+    int port = 8091;
+    
+    int totalNum = 0;
+
+    public static void main(String[] args) throws IOException 
     {
             //String dir = "/home/jingjing/test/savant-torrey-ranch/data";
-            String dir = "/Users/jingjingpeng/savant-torrey-ranch/src/chihuahua/data";
             
+	    
+	    new Streamer().acceptClient();
+    }
+         
+     public Streamer() throws IOException{
+		
+	InetAddress bindAdd = InetAddress.getByName(host);
+        ServerSocket serverSocket = new ServerSocket(port, 100, bindAdd);
+        
+	totalNum = Runtime.getRuntime().availableProcessors()*POOL_SIZE;
+	
+	exService = Executors.newFixedThreadPool(totalNum);        
+	
+	System.out.println("Server Started and listening to the port 8091");
+    }
+
+    public void acceptClinet(){    
+	while (true){
+ 		Socket socket = null;
+		try{
+			socket = serverSocket.accept();
+			executorService.execute(new Handler(socket, arrData));
+		} catch (Exception e){
+			e.printStackTrace();
+		} 		
+	}       
+    }
+
+class Handler implements Runnable{
+	
+	private Socket socket;
+	private JSONObject jData;
+	
+	public Handler(Socket socket, JSONObject jData){
+		this.socket = socket;
+		this.jData = jData;
+	
+	}
+	
+	public void run() {
+            String dir = "/Users/jingjingpeng/savant-torrey-ranch/src/chihuahua/data";
+
             HashMap<String, ArrayList<ArrayList<Double>>> map = new HashMap<String, ArrayList<ArrayList<Double>>>();
             
             ArrayList<ArrayList<Double>> lRet = new ArrayList<ArrayList<Double>>();
             
             readMap(dir, map);
-         
-         try{
-                String host = "192.168.1.121";
+
+
+
+ 
+	try{
+               /* String host = "192.168.1.121";
                 int port = 8091;
 		InetAddress bindAdd = InetAddress.getByName(host);
                 ServerSocket serverSocket = new ServerSocket(port, 100, bindAdd);
                 System.out.println("Server Started and listening to the port 8091");
-     
+     */
+
             //Server is running always. This is done using this while(true) loop
-            while(true) 
+	while(true) 
             {
                 //Reading the message from the client
+                System.out.println("ready for next client");
                 socket = serverSocket.accept();
+                System.out.println("Socket accepted");
+		    while(true){   
                 InputStream is = socket.getInputStream();
+		if (is.available() != 0 ){
                 InputStreamReader isr = new InputStreamReader(is);
                 BufferedReader br1 = new BufferedReader(isr);
                 
@@ -65,7 +123,8 @@ public class Streamer
 		    sList = sList + "_quote";
 
 		    System.out.println("sList is " + sList); 
-                    if(cmd.equals("unsubscribe")){
+                	
+			/* if(cmd.equals("unsubscribe")){
                         
                         if (map.containsKey(sList)){
                            
@@ -74,10 +133,14 @@ public class Streamer
                             returnMessage = "Removed\n"; 
                        
                         }
-                     }else if(cmd.equals("subscribe")){
+                     }else*/
+			
+			if(cmd.equals("subscribe")){
                             
                            // System.out.println("add a new list : "+ sList);
-                         if (!map.containsKey(sList)){
+                         	if (sList.isEmpty()){
+					break;
+				}else if (!map.containsKey(sList)){
                             
                             
                             String fname = sList+".txt"; 
@@ -101,18 +164,16 @@ public class Streamer
                          
                          }
                     }else if(cmd.equals("update")){
-                            
                           //lRet = map.get(sList);
                             System.out.println("map contains list : "+ sList);
                            
                             returnMessage = lRet + "\n";
-                    
                             //returnMessage = "Command is invalid\n"; 
                    
                     }else{
                         returnMessage = "No Sym\n";
                     }
- 
+               
                 //Sending the response back to the client.
                 OutputStream os = socket.getOutputStream();
                 OutputStreamWriter osw = new OutputStreamWriter(os);
@@ -124,11 +185,12 @@ public class Streamer
                 System.out.println("Message sent to the client is "+returnMessage);
                 bw.flush();
 		//pw.flush();
-               // socket.close();
+                //socket.close();
 		System.out.println("closed");
 		System.out.println(returnMessage);
             }
-	//}
+		}
+	}
         }catch(FileNotFoundException ex){
                 System.out.println("errorMessage:" + ex.getMessage());
         }catch(IOException ix){
@@ -148,7 +210,7 @@ public class Streamer
         }
     }
 
-
+}
     public static void readMap(String dir, HashMap<String, ArrayList<ArrayList<Double>>> map)
     {    
         try{
