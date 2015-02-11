@@ -17,7 +17,7 @@ public class Client
         try
         {
             String host = "localhost";
-            int port = 21000;
+            int port = 8091;
             InetAddress address = InetAddress.getByName(host);
             socket = new Socket(address, port);
  
