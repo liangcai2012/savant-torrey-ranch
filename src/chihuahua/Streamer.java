@@ -23,194 +23,171 @@ public class Streamer
     private static Socket socket;
     private ExecutorService exService;
     private final int POOL_SIZE = 10;
-    private JSONArray arrData;    
-   
-    String host = "192.168.1.121";
+	private HashMap<String, ArrayList<ArrayList<Double>>> map;
+    private ServerSocket serverSocket;
+
+    //String host = "192.168.1.121";
+    String host = "localhost";
     int port = 8091;
     
     int totalNum = 0;
 
     public static void main(String[] args) throws IOException 
     {
-            //String dir = "/home/jingjing/test/savant-torrey-ranch/data";
-            
-	    
-	    new Streamer().acceptClient();
+            new Streamer().acceptClient();
     }
          
-     public Streamer() throws IOException{
+    public Streamer() throws IOException{
 		
-	InetAddress bindAdd = InetAddress.getByName(host);
-        ServerSocket serverSocket = new ServerSocket(port, 100, bindAdd);
+            InetAddress bindAdd = InetAddress.getByName(host);
+            
+            serverSocket = new ServerSocket(port, 100, bindAdd);
+            
+            totalNum = Runtime.getRuntime().availableProcessors()*POOL_SIZE;
         
-	totalNum = Runtime.getRuntime().availableProcessors()*POOL_SIZE;
-	
-	exService = Executors.newFixedThreadPool(totalNum);        
-	
-	System.out.println("Server Started and listening to the port 8091");
+            exService = Executors.newFixedThreadPool(totalNum);        
+       
+            map = JavaToJson.readMap();
+
+            System.out.println("Server Started and listening to the port 8091");
     }
 
-    public void acceptClinet(){    
-	while (true){
- 		Socket socket = null;
-		try{
-			socket = serverSocket.accept();
-			executorService.execute(new Handler(socket, arrData));
-		} catch (Exception e){
-			e.printStackTrace();
-		} 		
-	}       
+    public void acceptClient()
+    {    
+        while (true){
+            Socket socket = null;
+            try{
+                socket = serverSocket.accept();
+                System.out.println("ready for next client");
+                
+                exService.execute(new Handler(socket, map));
+            
+            } catch (Exception e){
+                e.printStackTrace();
+            } 		
+        }       
     }
 
 class Handler implements Runnable{
 	
 	private Socket socket;
-	private JSONObject jData;
+	private HashMap<String, ArrayList<ArrayList<Double>>> map;
 	
-	public Handler(Socket socket, JSONObject jData){
+	public Handler(Socket socket,  HashMap<String, ArrayList<ArrayList<Double>>> map){
 		this.socket = socket;
-		this.jData = jData;
+		this.map = map;
 	
 	}
 	
 	public void run() {
-            String dir = "/Users/jingjingpeng/savant-torrey-ranch/src/chihuahua/data";
-
-            HashMap<String, ArrayList<ArrayList<Double>>> map = new HashMap<String, ArrayList<ArrayList<Double>>>();
             
-            ArrayList<ArrayList<Double>> lRet = new ArrayList<ArrayList<Double>>();
-            
-            readMap(dir, map);
-
-
-
+        ArrayList<ArrayList<Double>> lRet = new ArrayList<ArrayList<Double>>();
  
-	try{
-               /* String host = "192.168.1.121";
-                int port = 8091;
-		InetAddress bindAdd = InetAddress.getByName(host);
-                ServerSocket serverSocket = new ServerSocket(port, 100, bindAdd);
-                System.out.println("Server Started and listening to the port 8091");
-     */
+        try{
 
-            //Server is running always. This is done using this while(true) loop
-	while(true) 
-            {
-                //Reading the message from the client
-                System.out.println("ready for next client");
-                socket = serverSocket.accept();
-                System.out.println("Socket accepted");
-		    while(true){   
+            System.out.println("Socket accepted");
+                
+            while(true){   
+                
                 InputStream is = socket.getInputStream();
-		if (is.available() != 0 ){
-                InputStreamReader isr = new InputStreamReader(is);
-                BufferedReader br1 = new BufferedReader(isr);
                 
-                String jstr = br1.readLine();
-		        
-		        
-                System.out.println("Message received from client is "+jstr);
-                
-                String returnMessage =  null;
-                	
-                    JSONObject obj = new JSONObject(jstr);
-                    JSONObject req  = obj.getJSONObject("request");
-                	
-		    String cmd = req.getString("command");
-                    String cl = req.getString("client");
-                    String sList = req.getString("symlist").toLowerCase();
-		 
-		    sList = sList + "_quote";
-
-		    System.out.println("sList is " + sList); 
-                	
-			/* if(cmd.equals("unsubscribe")){
+                if (is.available() != 0 ){
+                    
+                    InputStreamReader isr = new InputStreamReader(is);
+                    
+                    BufferedReader br1 = new BufferedReader(isr);
+                    
+                    String jstr = br1.readLine();
+                    
+                    System.out.println("Message received from client is "+jstr);
+                    
+                    String returnMessage =  null;
                         
-                        if (map.containsKey(sList)){
-                           
-                            map.remove(sList);
-                            
-                            returnMessage = "Removed\n"; 
-                       
-                        }
-                     }else*/
-			
-			if(cmd.equals("subscribe")){
-                            
-                           // System.out.println("add a new list : "+ sList);
-                         	if (sList.isEmpty()){
-					break;
-				}else if (!map.containsKey(sList)){
-                            
-                            
-                            String fname = sList+".txt"; 
-                            System.out.println("add a new list : "+ sList);
+                        JSONObject obj = new JSONObject(jstr);
+                        JSONObject req  = obj.getJSONObject("request");
+                        
+                        String cmd = req.getString("command");
+                        String cl = req.getString("client");
+                        String sList = req.getString("symlist").toLowerCase();
+             
+                        sList = sList + "_quote";
 
-                            //readData(fname);
+                        System.out.println("sList is " + sList); 
+                        
+                        if(cmd.equals("subscribe")){
+                                        
+                            if (sList.isEmpty()){
+                                
+                                break;
                             
-                            map.put(sList, readData(fname));
-                            returnMessage = "Added the new list\n"; 
-                          
-                         }else{
-                         
-                            System.out.println( sList + "is subscribed");
-                            lRet = map.get(sList);
-                            
-                            System.out.println("map contains list : "+ sList);
-                           
-                           // returnMessage = lRet + "\n";
-                           // */
-			    returnMessage = "exist\n"; 
-                         
-                         }
-                    }else if(cmd.equals("update")){
-                          //lRet = map.get(sList);
-                            System.out.println("map contains list : "+ sList);
-                           
-                            returnMessage = lRet + "\n";
-                            //returnMessage = "Command is invalid\n"; 
+                            }else if (!map.containsKey(sList)){
+                                
+                                String fname = sList+".txt"; 
+                                System.out.println("add a new list : "+ sList);
+                                
+                                map.put(sList, JavaToJson.readData(fname));
+                                returnMessage = "Added the new list\n"; 
+                              
+                             }else{
+                             
+                                System.out.println( sList + "is subscribed");
+                                lRet = map.get(sList);
+                                
+                                System.out.println("map contains list : "+ sList);
+                               
+                    returnMessage = "exist\n"; 
+                             
+                             }
+                        }else if(cmd.equals("update")){
+                              //lRet = map.get(sList);
+                                System.out.println("map contains list : "+ sList);
+                               
+                                returnMessage = lRet + "\n";
+                                //returnMessage = "Command is invalid\n"; 
+                       
+                        }else{
+                            returnMessage = "No Sym\n";
+                        }
                    
-                    }else{
-                        returnMessage = "No Sym\n";
-                    }
-               
-                //Sending the response back to the client.
-                OutputStream os = socket.getOutputStream();
-                OutputStreamWriter osw = new OutputStreamWriter(os);
-                //PrintWriter pw = new PrintWriter(os);
-		BufferedWriter bw = new BufferedWriter(osw);
-		//System.out.println(returnMessage);
-                bw.write(returnMessage);
-		//pw.println(returnMessage);
-                System.out.println("Message sent to the client is "+returnMessage);
-                bw.flush();
-		//pw.flush();
-                //socket.close();
-		System.out.println("closed");
-		System.out.println(returnMessage);
-            }
-		}
-	}
-        }catch(FileNotFoundException ex){
-                System.out.println("errorMessage:" + ex.getMessage());
-        }catch(IOException ix){
-                System.out.println("IOException" +  ix.getMessage());
-        }catch (Exception e) 
-        {
-            e.printStackTrace();
+                    //Sending the response back to the client.
+                    OutputStream os = socket.getOutputStream();
+                    OutputStreamWriter osw = new OutputStreamWriter(os);
+                    //PrintWriter pw = new PrintWriter(os);
+            BufferedWriter bw = new BufferedWriter(osw);
+            //System.out.println(returnMessage);
+                    bw.write(returnMessage);
+            //pw.println(returnMessage);
+                    System.out.println("Message sent to the client is "+returnMessage);
+                    bw.flush();
+            //pw.flush();
+                    //socket.close();
+            System.out.println("closed");
+            System.out.println(returnMessage);
+                }
+            
         }
-        finally
-        {
-            try
+            }catch(FileNotFoundException ex){
+                    System.out.println("errorMessage:" + ex.getMessage());
+            }catch(IOException ix){
+                    System.out.println("IOException" +  ix.getMessage());
+            }catch (Exception e) 
             {
-                socket.close();
-		System.out.println("Socket CLosed");
+                e.printStackTrace();
             }
-            catch(Exception e){}
+            finally
+            {
+                try
+                {
+                    socket.close();
+            System.out.println("Socket CLosed");
+                }
+                catch(Exception e){}
+            }
         }
+
     }
 
-}
+/*
     public static void readMap(String dir, HashMap<String, ArrayList<ArrayList<Double>>> map)
     {    
         try{
@@ -297,7 +274,7 @@ public static ArrayList<ArrayList<Double>> readData(String frn)
 	    System.out.println("each is " + d);
     }
 
- /*   if(map.containsKey("qqq_trade")){
+    if(map.containsKey("qqq_trade")){
 	    ArrayList<ArrayList<Double>> arr = map.get("qqq_trade");
 	    for (ArrayList<Double> d: arr)
 	    {
@@ -305,7 +282,7 @@ public static ArrayList<ArrayList<Double>> readData(String frn)
 	    }
 
     }*/
-	    br.close();
+/*	    br.close();
     
     }catch(FileNotFoundException ex){
 	    System.out.println("errorMessage:" + ex.getMessage());
@@ -319,6 +296,6 @@ public static ArrayList<ArrayList<Double>> readData(String frn)
 		   return all;
  }
 
-
+*/
 
 }
