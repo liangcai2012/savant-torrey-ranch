@@ -1,0 +1,27 @@
+t=0
+	p1, v1
+	p2, v2
+	p3, v3
+
+t=1
+	p4, v4
+	p5, v5
+
+t=2
+	
+t=3
+
+t-4
+	p6, v6
+
+
+[p1*v1 +p2*v2+p3*v3, p4*v4+p5*v5, 0, 0, p6*v6]
+[v1+v2+v3, v4+v5, 0, 0, v6]
+
+
+possible interval 1, 2, 3
+int =1 : ptotal, vtotal, ave 
+int =2 : ptotal, vtotal, ave  
+int =3 : ptotal, vtotal, ave  
+
+http://www.activetick.com/activetick/contents/SupportPlatformProgrammerGuide.aspx
