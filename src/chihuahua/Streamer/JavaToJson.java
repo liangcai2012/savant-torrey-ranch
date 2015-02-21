@@ -31,16 +31,19 @@ public class JavaToJson
  
           // private String dir = "/Users/jingjingpeng/savant-torrey-ranch/src/chihuahua/data";
 
-           private static  HashMap<String, ArrayList<ArrayList<Double>>> map;
+          // private static  HashMap<String, ArrayList<ArrayList<Double>>> map;
            //= new HashMap<String, ArrayList<ArrayList<Double>>>();
             
            private  ArrayList<ArrayList<Double>> lRet;
    
    
    // public static HashMap<String, ArrayList<ArrayList<Double>>> readMap(String dir, HashMap<String, ArrayList<ArrayList<Double>>> map)
-     public static  HashMap<String, ArrayList<ArrayList<Double>>> readMap()
+     public static  HashMap<String, ArrayList<ArrayList<Double>>> readMap() throws IOException
     {    
          String dir = "/Users/jingjingpeng/savant-torrey-ranch/src/chihuahua/data";
+         
+	 HashMap<String, ArrayList<ArrayList<Double>>> map = new HashMap<String, ArrayList<ArrayList<Double>>>();
+            
         
         try{
                 File folder = new File(dir);

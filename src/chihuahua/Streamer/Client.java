@@ -26,7 +26,7 @@ public class Client
             OutputStreamWriter osw = new OutputStreamWriter(os);
             BufferedWriter bw = new BufferedWriter(osw);
  
-            String str = "{ \"command\": \"subscribe\", \"client\": \"strategy1\",\"symlist\": \"QQQ\"}";
+            String str = "{request:{ \"command\": \"subscribe\", \"client\": \"strategy1\",\"symlist\": \"QQQ\"}}";
  
             String sendMessage = str + "\n";
             bw.write(sendMessage);

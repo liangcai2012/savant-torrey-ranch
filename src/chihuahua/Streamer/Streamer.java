@@ -26,10 +26,10 @@ public class Streamer
 	private HashMap<String, ArrayList<ArrayList<Double>>> map;
     private ServerSocket serverSocket;
 
-    //String host = "192.168.1.121";
-    String host = "localhost";
+    String host = "192.168.1.121";
+    //String host = "localhost";
     int port = 8091;
-    
+    int i = 0;    
     int totalNum = 0;
 
     public static void main(String[] args) throws IOException 
@@ -82,6 +82,7 @@ class Handler implements Runnable{
 	public void run() {
             
         ArrayList<ArrayList<Double>> lRet = new ArrayList<ArrayList<Double>>();
+        ArrayList<Double> rData = new ArrayList<Double>();
  
         try{
 
@@ -108,41 +109,59 @@ class Handler implements Runnable{
                         
                         String cmd = req.getString("command");
                         String cl = req.getString("client");
-                        String sList = req.getString("symlist").toLowerCase();
-             
-                        sList = sList + "_quote";
-
-                        System.out.println("sList is " + sList); 
-                        
+                    //    String sList = req.getString("symlist").toLowerCase();
+                        JSONArray sList = (JSONArray)req.get("symlist");
+		//	int i = 0;
                         if(cmd.equals("subscribe")){
                                         
-                            if (sList.isEmpty()){
+                            if (sList.length() == 0){
                                 
                                 break;
                             
-                            }else if (!map.containsKey(sList)){
+                            }else{
+				
+				Iterator<String> itr = sList.iterator();
+				while(itr.hasNext())
+				{	
+					//itr = itr + "_quote";
+
+					System.out.println("sList is " + itr); 
+				
+				        if (!map.containsKey(itr)){
                                 
-                                String fname = sList+".txt"; 
-                                System.out.println("add a new list : "+ sList);
+                                        String fname = itr +"_quote.txt"; 
+                                        System.out.println("add a new list : "+ itr);
                                 
-                                map.put(sList, JavaToJson.readData(fname));
-                                returnMessage = "Added the new list\n"; 
+                                       map.put(itr, JavaToJson.readData(fname.toLowerCase()));
+                                       returnMessage = "Added the new list\n"; 
                               
-                             }else{
-                             
-                                System.out.println( sList + "is subscribed");
-                                lRet = map.get(sList);
-                                
-                                System.out.println("map contains list : "+ sList);
-                               
-                    returnMessage = "exist\n"; 
-                             
-                             }
+				        }else{
+				     
+					System.out.println( sList + "is subscribed");
+					lRet = map.get(itr);
+					
+					System.out.println("map contains list : "+ itr);
+				       
+					
+					returnMessage = "exist\n"; 
+				     
+				     }
+				}
+			}
                         }else if(cmd.equals("update")){
                               //lRet = map.get(sList);
                                 System.out.println("map contains list : "+ sList);
-                               
-                                returnMessage = lRet + "\n";
+                               //Iterator<ArrayList<Double>> it = lRet.iterator();
+				
+			//	if (it.hasNext()){
+				   while(i < 3600){
+					rData = lRet.get(i);
+					i++;
+                                System.out.println("i is  : "+ i);
+				  }
+
+			//	}
+                                returnMessage = rData + "\n";
                                 //returnMessage = "Command is invalid\n"; 
                        
                         }else{
