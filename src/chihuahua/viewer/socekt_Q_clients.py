@@ -6,7 +6,7 @@ from json import loads,dumps
 
 
 # input_str= "{\"cmd\":\"add\"; {\"sym\":\"xxxx""start\":starttime; \"end\":endtime; \"interval\": numofsec}}"
-input_str_add= {"cmd":"add", "sym":"AAPL","start":"0", "end":"0", "interval": "1"}
+input_str_add= {"cmd":"show", "sym":"QQQ","start":"0", "end":"0", "interval": "1"}
 input_str_list={"cmd":"list"}
 input_str_move={"cmd":"move", "id": "id", "position":"position"}
 input_str_remove={"cmd":"remove", "id": "id"}
