@@ -127,27 +127,33 @@ class StaticInfo:
 
 	
 	def getstocklist(self, exch):
-		pass
+		if exch == "" or exch == None:
+			return self.s.query(SymStatic.symbol).all()
+		else:
+			return self.s.query(SymStatic.symbol).join(Exch).filter(Exch.name == exch).all()
 	
 	def getstockbygsect(self, gsect):
-		pass
+		return self.s.query(SymStatic.symbol).join(GSector).filter(GSector.name == gsect).all()
 
 	def getstockbyysect(self, ysect):
-		pass
+		return self.s.query(SymStatic.symbol).join(YSector).filter(YSector.name == ysect).all()
 
 	def getstockbygind(self, gind):
-		pass
+		return self.s.query(SymStatic.symbol).join(GIndustry).filter(GIndustry.name == gind).all()
 
 	def getstockbyyind(self, yind):
-		pass
+		return self.s.query(SymStatic.symbol).join(YIndustry).filter(YIndustry.name == yind).all()
 
 
-si = StaticInfo()
-si.open()
-si.update("QQQ", "NYSE", 12000, "QQQ ETF", "", "", "", None)
-si.update("QQQ", "NASDAQ", 1000, "QQQ ETF", "", "", "", None)
-si.update("ABC", "NASDAQ", "200", "QQQ ETF", "ENERGY", "OIL", "", None)
-si.update("ABC", "NYSE", "200", "QQQ ETF", "ENERGY", "OIL", "", None)
-si.close()
+def test():
+    si = StaticInfo()
+    si.open()
+    si.update("QQQ", "NYSE", 12000, "QQQ ETF", "", "", "", None)
+    si.update("QQQ", "NASDAQ", 1000, "QQQ ETF", "", "", "", None)
+    si.update("ABC", "NASDAQ", "200", "QQQ ETF", "ENERGY", "OIL", "", None)
+    si.update("ABC", "NYSE", "200", "QQQ ETF", "ENERGY", "OIL", "", None)
+    print si.getstocklist("NASDAQ")
+    print si.getstockbyyind(None)
+    si.close()
 
-
+#test()
