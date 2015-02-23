@@ -1,0 +1,25 @@
+1. To start tracking a file or folder: git add some_file
+2. To stop tracking a file or folder: git rm --cached some_file
+3. To rename/move a file or folder: git mv some_file new_file
+4. To reverse changes made on a file: git checkout some_file
+5. To get changes on the remote branches: git fetch
+6. To merge things on a different branch: git merge some_branch
+7. To get and merge things from a remote branch: git pull origin branch_name
+8. To commit all the changes you made locally: git commit -am "some message"
+9. To push your changes to a remote branch: git push origin branch_name (but remember, always FETCH or PULL first!) 
+10. To switch to a different branch: git checkout branch_name
+11. To create a new branch: git branch new_branch_name
+12. To create and switch to a new branch: git checkout -b new_branch_name
+13. To remove a local branch: git checkout -d branch_name
+14. To see commit history: git log
+15. To see the differences between commits: git diff
+16. To see the differences between two branches: git diff branch1..branch2
+
+
+NOTE:
+1. DO NOT track binary files
+2. DO NOT track library fiels
+3. No file should be directly under the main folder (eg. chihuahua)
+4. PLEASE push your modifications everytime after your work.
+
+
