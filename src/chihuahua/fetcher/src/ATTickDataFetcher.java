@@ -13,6 +13,8 @@ import at.shared.ATServerAPIDefines;
 import at.shared.ATServerAPIDefines.ATSYMBOL;
 import at.shared.ATServerAPIDefines.ATGUID;
 import at.shared.ATServerAPIDefines.SYSTEMTIME;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 
 public class ATTickDataFetcher {
@@ -23,9 +25,9 @@ public class ATTickDataFetcher {
     private static final Logger logger = Logger.getLogger(ATTickDataFetcher.class.getName());
     private static final int MIN_INTERVAL = 60;  //minimum allowed time window
     private static final String DEFAULT_BEGIN_TIME = "093000"; //default query start time
-    private static final int DEFAULT_TIME_WINDOW = 18000; //this should be in seconds
+    private static final int DEFAULT_TIME_WINDOW = 18000; //this indicates the overall length of time in sec the client is trying to get data from
     private static final String DEFAULT_OUTPUT_DEST = "/home/kaiwen/workspace/savant-torrey-ranch/src/chihuahua/fetcher/data";
-    public Stack<Map> pendingRequests;
+    public Stack<JSONObject> pendingRequests;
     public String beginTime;
     public int timeWindow;
 
@@ -33,7 +35,7 @@ public class ATTickDataFetcher {
         serverapi = new ActiveTickServerAPI();
         apiSession = new APISession(serverapi,this);
         serverapi.ATInitAPI();
-        this.pendingRequests = new Stack<Map>();
+        this.pendingRequests = new Stack<JSONObject>();
         this.beginTime = DEFAULT_BEGIN_TIME;
         this.timeWindow = DEFAULT_TIME_WINDOW;
     }
@@ -52,15 +54,15 @@ public class ATTickDataFetcher {
         System.out.println("init status: " + (rc ? "ok" : "failed"));
     }
 
-    public Map processRequest(Map request) {
+    public Map processRequest(JSONObject request) throws JSONException {
         Map<String, String> response = new HashMap<String, String>();
-        String cmd = (String)request.get("cmd");
+        String cmd = (String)request.get("command");
         String errcode = "0";
         String errmsg = null;
         SENDREQUEST: {
-            if (cmd == "quit") {
+            if (cmd.equals("quit")) {
                 this.exit();
-            } else if (cmd == "get") {
+            } else if (cmd.equals("get")) {
                 if (!this.isIdle()) {
                     logger.log(Level.SEVERE,"fetcher busy");
                     errcode = "-1";
@@ -69,7 +71,7 @@ public class ATTickDataFetcher {
                 }
                 String symbol = (String)request.get("symbol");
                 String date = (String)request.get("date");
-                System.out.println("SEND request [" + symbol + ":" + date + "]");
+                logger.log(Level.INFO,"SEND request [" + symbol + ":" + date + "]");
                 if (!checkDate(date)) {
                     errcode = "-1";
                     errmsg = "Error in date (eg: yyyymmdd)";
@@ -81,7 +83,7 @@ public class ATTickDataFetcher {
                     this.setRequestOutputPath(symbol,date);
                     long res = this.sendATRequest(symbol,strBeginDateTime,strEndDateTime);
                     if (res < 0) {
-                        System.out.println("Error in request");
+                        logger.log(Level.INFO,"Error in request");
                         errcode = "-1";
                         errmsg = "Error in request";
                     } else {
@@ -90,18 +92,18 @@ public class ATTickDataFetcher {
                         this.addPendingRequest(request);
                     }
                 } catch(ParseException pe) {
-                    System.out.println("Error in time addition");
+                    logger.log(Level.INFO,"Error in time addition");
                     errcode = "-1";
                     errmsg = "Error in time addition";
                 }
-            } else if (cmd == "status") {
+            } else if (cmd.equals("check")) {
                 if (this.isIdle()) {
                     errcode = "-1";
                     errmsg = "Idle";
                 } else {
                     response.put("latest",this.beginTime);
                 }
-            } else if (cmd == "cancel") {
+            } else if (cmd.equals("cancel")) {
                 if (this.isIdle()) {
                     errcode = "-1";
                     errmsg = "Nothing to cancel";
@@ -112,7 +114,6 @@ public class ATTickDataFetcher {
         }
         response.put("errcode", errcode);
         if (errmsg != null) {
-            System.out.println(errmsg);
             response.put("errmsg", errmsg);
         }
         return response;
@@ -138,7 +139,7 @@ public class ATTickDataFetcher {
                 Calendar cal = Calendar.getInstance();
                 cal.set(year, month, day);
                 if (cal.after(today)) {
-                    System.out.println("You're trying to get data from the future!");
+                    logger.log(Level.SEVERE,"You're trying to get data from the future!");
                     cond = false;
                 }
             } catch (NumberFormatException nfe) {
@@ -149,17 +150,16 @@ public class ATTickDataFetcher {
     }
 
     public void onTickHistoryOverload() {
-        Map lastRequest = this.getPendingRequest();
+        JSONObject lastRequest = this.getPendingRequest();
         this.removePendingRequest();
         this.setTimeWindow(this.timeWindow / 2);
         if (this.timeWindow >= MIN_INTERVAL) {
-            String symbol = (String)lastRequest.get("symbol");
-            String date = (String)lastRequest.get("date");
-            String beginDateTime = (String)lastRequest.get("beginDateTime");
-            String endDateTime = (String)lastRequest.get("endDateTime");
             try {
+                String symbol = (String)lastRequest.get("symbol");
+                String date = (String)lastRequest.get("date");
+                String beginDateTime = (String)lastRequest.get("beginDateTime");
+                String endDateTime = (String)lastRequest.get("endDateTime");
                 int deltaT = (int)subtractTime(endDateTime.substring(8),beginDateTime.substring(8));
-                System.out.println(deltaT);
                 if (deltaT != this.timeWindow * 2) {
                     logger.log(Level.INFO,"Reset time window");
                     this.setTimeWindow(deltaT/2);
@@ -169,10 +169,11 @@ public class ATTickDataFetcher {
                 this.addPendingRequest(buildRequest(symbol, date, midPointDateTime, endDateTime));
                 //logger.log(Level.INFO,"First half: " + beginDateTime + " --- " + midPointDateTime);
                 this.addPendingRequest(buildRequest(symbol, date, beginDateTime, midPointDateTime));
-                System.out.println(this.pendingRequests);
                 this.sendNextRequest();
             } catch (ParseException pe) {
-                logger.log(Level.SEVERE,"Error in time parsing");
+                logger.log(Level.SEVERE,pe.getMessage());
+            } catch (JSONException je) {
+                logger.log(Level.SEVERE,je.getMessage());
             }
         } else {
             logger.log(Level.WARNING, "Fetch halted: Unexpected data volume");
@@ -181,16 +182,20 @@ public class ATTickDataFetcher {
 
     public void onRequestComplete() {
         logger.log(Level.INFO,"new data recorded");
-        this.updateBeginTime();
-        this.removePendingRequest();
-        if (CANCEL) {
-            this.cancelRequest();
-        }
-        if (!this.isIdle()) {
-            this.sendNextRequest();
-        } else {
-            logger.log(Level.INFO,"request complete");
-            this.reset();
+        try {
+            this.updateBeginTime();
+            this.removePendingRequest();
+            if (CANCEL) {
+                this.cancelRequest();
+            }
+            if (!this.isIdle()) {
+                this.sendNextRequest();
+            } else {
+                logger.log(Level.INFO, "request complete");
+                this.reset();
+            }
+        } catch (JSONException e) {
+            logger.log(Level.SEVERE,e.getMessage());
         }
     }
 
@@ -211,8 +216,8 @@ public class ATTickDataFetcher {
         return delta/1000;
     }
 
-    public Map buildRequest(String symbol,String date,String beginDateTime,String endDateTime) {
-        Map request = new HashMap();
+    public JSONObject buildRequest (String symbol,String date,String beginDateTime,String endDateTime) throws JSONException {
+        JSONObject request = new JSONObject();
         request.put("symbol",symbol);
         request.put("date",date);
         request.put("beginDateTime",beginDateTime);
@@ -220,8 +225,8 @@ public class ATTickDataFetcher {
         return request;
     }
 
-    public void sendNextRequest() {
-        Map nextRequest = this.getPendingRequest();
+    public void sendNextRequest() throws JSONException {
+        JSONObject nextRequest = this.getPendingRequest();
         String symbol = (String)nextRequest.get("symbol");
         String beginDateTime = (String)nextRequest.get("beginDateTime");
         String endDateTime = (String)nextRequest.get("endDateTime");
@@ -232,7 +237,7 @@ public class ATTickDataFetcher {
         return this.pendingRequests.empty();
     }
 
-    private void addPendingRequest(Map request) {
+    private void addPendingRequest(JSONObject request) {
         this.pendingRequests.push(request);
     }
 
@@ -240,13 +245,13 @@ public class ATTickDataFetcher {
         this.pendingRequests.pop();
     }
 
-    private Map getPendingRequest() {
+    private JSONObject getPendingRequest() {
         return this.pendingRequests.peek();
     }
 
-    private void updateBeginTime() {
+    private void updateBeginTime() throws JSONException {
         logger.log(Level.INFO,"Updating begin time");
-        Map latestRequest = this.getPendingRequest();
+        JSONObject latestRequest = this.getPendingRequest();
         String endDateTime = (String)latestRequest.get("endDateTime");
         this.beginTime = endDateTime.substring(8);
     }

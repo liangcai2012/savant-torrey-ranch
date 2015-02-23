@@ -16,6 +16,7 @@ import at.shared.ATServerAPIDefines.ATTICKHISTORY_QUOTE_RECORD;
 import at.shared.ATServerAPIDefines.ATTICKHISTORY_TRADE_RECORD;
 import at.shared.ATServerAPIDefines.ATTickHistoryRecordType;
 import at.shared.ATServerAPIDefines.ATTickHistoryResponseType;
+import org.json.JSONException;
 
 
 public class Requestor extends at.feedapi.ActiveTickServerRequester
