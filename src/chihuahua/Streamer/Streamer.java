@@ -1,3 +1,5 @@
+package Streamer;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.InputStream;
@@ -16,7 +18,6 @@ import java.io.*;
 
 import org.json.*;
 
-//import Data;
 
 public class Streamer 
 {
@@ -119,49 +120,80 @@ class Handler implements Runnable{
                                 break;
                             
                             }else{
+                            	for(int i = 0; i < sList.length(); i++){
+                                      JSONObject jsArr = sList.getJSONObject(i);
+                                      String[] syms = JSONObject.getNames(jsArr);
+                                      for(String sym : syms){
+		
+					System.out.println("current load is " + sym); 
 				
-				Iterator<String> itr = sList.iterator();
-				while(itr.hasNext())
-				{	
-					//itr = itr + "_quote";
-
-					System.out.println("sList is " + itr); 
-				
-				        if (!map.containsKey(itr)){
+				        if (!map.containsKey(sym)){
                                 
-                                        String fname = itr +"_quote.txt"; 
-                                        System.out.println("add a new list : "+ itr);
+                                        String fname = sym +"_quote.txt"; 
+                                        System.out.println("add a new list : "+ sym);
                                 
-                                       map.put(itr, JavaToJson.readData(fname.toLowerCase()));
+                                       map.put(sym, JavaToJson.readData(fname.toLowerCase()));
                                        returnMessage = "Added the new list\n"; 
                               
 				        }else{
 				     
-					System.out.println( sList + "is subscribed");
-					lRet = map.get(itr);
+					                   System.out.println( sym + "is subscribed");
+					                   lRet = map.get(sym);
 					
-					System.out.println("map contains list : "+ itr);
+					                    System.out.println("map contains list : "+ sym);
 				       
 					
-					returnMessage = "exist\n"; 
+					                    returnMessage = "exist\n"; 
 				     
-				     }
-				}
-			}
+				          }
+				      }
+                            	}
+                            }
                         }else if(cmd.equals("update")){
+                        	
+                        	String itv = req.getString("interval");
+                        	itv = itv.substring(0, itv.length() - 2);
+                        	int sec = Integer.parseInt(itv);
                               //lRet = map.get(sList);
                                 System.out.println("map contains list : "+ sList);
                                //Iterator<ArrayList<Double>> it = lRet.iterator();
 				
 			//	if (it.hasNext()){
-				   while(i < 3600){
-					rData = lRet.get(i);
-					i++;
-                                System.out.println("i is  : "+ i);
+                   int n = 1;
+                   int price = 0;
+                   int open = 0;
+                   int amount = 0;
+                   int close = 0;
+                   Double[] res = new Double[3];
+                   int[] retData = new int[3];
+                   if (sec == 1) {
+                	   rData = lRet.get(i); 
+                	   res = rData.toArray(res);
+                   }else{
+                	  
+				       while(n <= sec){
+					     
+				    	 //price += lRet.get(n);
+				    	 rData = lRet.get(i+n-1);
+				    	 //sData = lRet.get(1);
+				    	 
+					     res = rData.toArray(res);
+					     
+					     price += res[1];
+					     
+					     amount += res[2];
+					     
+					     n++;
+                             //   System.out.println("i is  : "+ i);
 				  }
-
-			//	}
-                                returnMessage = rData + "\n";
+				       
+				       retData[0] = sec;
+				       retData[1] = (int)price/(n-1);
+				       retData[2] = (int)amount;
+				       i = n;
+    
+				}
+                                returnMessage = res + "\n";
                                 //returnMessage = "Command is invalid\n"; 
                        
                         }else{
@@ -205,116 +237,5 @@ class Handler implements Runnable{
         }
 
     }
-
-/*
-    public static void readMap(String dir, HashMap<String, ArrayList<ArrayList<Double>>> map)
-    {    
-        try{
-                File folder = new File(dir);
-
-                File[] listOfFiles = folder.listFiles();
-
-                for(File file : listOfFiles){
-                    
-                    if(file.isFile()){
-                            
-                            String fn = file.getName();
-                            String frn = dir + "/"+fn;
-                           
-                            fn = fn.substring(0, fn.indexOf('.'));
-                            map.put(fn, readData(frn));
-                             
-                      }
-                 }
-                   
-	}catch (Exception e) 
-	{
-	    e.printStackTrace();
-	}
-     }
-                   
-                   
-public static ArrayList<ArrayList<Double>> readData(String frn)
-{
-	
-	String line;
-
-	ArrayList<ArrayList<Double>> all = new ArrayList<ArrayList<Double>>();
-
-	String t0 = "9:30:0]";
-	double n = 0;
-	double price = 0;
-	double amount = 0;
-	double iPri = 0;
-	double iAmt = 0;
-
-    try{
-	
-	BufferedReader br = new BufferedReader(new FileReader(frn));
-	
-	while((line = br.readLine()) != null)
-	{
-	    String[] ret = line.split(" ");
-
-	    String[] prc = ret[6].split(":");
-	    iPri = Double.parseDouble(prc[1]);
-
-	    String[] amt = ret[8].split(":");
-	    iAmt = Double.parseDouble(amt[1]);
-
-	    ArrayList<Double> each = new ArrayList<Double>();
-
-	    if(!ret[2].equals(t0))
-	    {
-		each.add(n);
-		each.add(price/amount);
-		each.add(amount);
-		all.add(each);
-
-		t0 = ret[2];
-		amount = iAmt;
-		n++;
-
-	    }else{
-		price = price + iPri*iAmt;
-		amount = amount + iAmt;
-	    }
-	}
-
-	ArrayList<Double> last = new ArrayList<Double>();
-	
-	last.add(n);
-	last.add(price/amount);
-	last.add(amount);
-	all.add(last);
-	
-/*for (ArrayList<Double> d: all)
-    {
-	    System.out.println("each is " + d);
-    }
-
-    if(map.containsKey("qqq_trade")){
-	    ArrayList<ArrayList<Double>> arr = map.get("qqq_trade");
-	    for (ArrayList<Double> d: arr)
-	    {
-		    System.out.println("each is " + d);
-	    }
-
-    }*/
-/*	    br.close();
-    
-    }catch(FileNotFoundException ex){
-	    System.out.println("errorMessage:" + ex.getMessage());
-    }catch(IOException ix){
-	    System.out.println("IOException");
-    }catch (Exception e) 
-    {
-	e.printStackTrace();
-    }
- 
-		   return all;
- }
-
-*/
 
 }

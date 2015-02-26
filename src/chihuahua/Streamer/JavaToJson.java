@@ -38,11 +38,15 @@ public class JavaToJson
    
    
    // public static HashMap<String, ArrayList<ArrayList<Double>>> readMap(String dir, HashMap<String, ArrayList<ArrayList<Double>>> map)
-     public static  HashMap<String, ArrayList<ArrayList<Double>>> readMap() throws IOException
+    
+	
+	 public static  HashMap<String, ArrayList<ArrayList<Double>>> readMap() throws IOException
+//	 public static  HashMap<String, Array<Array<Double>>> readMap() throws IOException
     {    
          String dir = "/Users/jingjingpeng/savant-torrey-ranch/src/chihuahua/data";
          
 	 HashMap<String, ArrayList<ArrayList<Double>>> map = new HashMap<String, ArrayList<ArrayList<Double>>>();
+	// HashMap<String, Array<Array<Double>>> map = new HashMap<String, Array<Array<Double>>>();
             
         
         try{
@@ -73,11 +77,14 @@ public class JavaToJson
                    
                    
 public static  ArrayList<ArrayList<Double>> readData(String frn)
+//public static  Array<Array<Double>> readData(String frn)
 {
 	
 	String line;
 
 	ArrayList<ArrayList<Double>> all = new ArrayList<ArrayList<Double>>();
+	//Array<Array<Double>> all = new Array<Array<Double>>();
+
 
 	String t0 = "9:30:0]";
 	double n = 0;
@@ -101,6 +108,7 @@ public static  ArrayList<ArrayList<Double>> readData(String frn)
 	    iAmt = Double.parseDouble(amt[1]);
 
 	    ArrayList<Double> each = new ArrayList<Double>();
+	    //Array<Double> each = new Array<Double>();
 
 	    if(!ret[2].equals(t0))
 	    {
