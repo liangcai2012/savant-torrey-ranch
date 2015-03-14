@@ -1,3 +1,5 @@
+//package Streamer;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.InputStream;
@@ -14,7 +16,7 @@ import java.lang.*;
 import java.io.*;
  
 
-import org.json.*;
+//import org.json.*;
 
 //import Data;
 
@@ -57,7 +59,7 @@ public class JavaToJson
                 for(File file : listOfFiles){
                     
                     if(file.isFile()){
-                            
+                           System.out.println("file name is "+ file); 
                             String fn = file.getName();
                             String frn = dir + "/"+fn;
                            
@@ -79,7 +81,7 @@ public class JavaToJson
 public static  ArrayList<ArrayList<Double>> readData(String frn)
 //public static  Array<Array<Double>> readData(String frn)
 {
-	
+	//String fnew = "/Users/jingjingpeng/savant-torrey-ranch/src/chihuahua/data/"+frn;
 	String line;
 
 	ArrayList<ArrayList<Double>> all = new ArrayList<ArrayList<Double>>();
