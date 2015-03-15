@@ -24,10 +24,11 @@ public class ATTickDataFetcher {
     private static boolean CANCEL = false;
     private static final Logger logger = Logger.getLogger(ATTickDataFetcher.class.getName());
     private static final int MIN_INTERVAL = 60;  //minimum allowed time window
-    private static final String DEFAULT_BEGIN_TIME = "093000"; //default query start time
-    private static final int DEFAULT_TIME_WINDOW = 18000; //this indicates the overall length of time in sec the client is trying to get data from
+    private static final String DEFAULT_BEGIN_TIME = "041500"; //default query start time
+    private static final String DEFAULT_END_TIME = "203000"; //default query end time
+    private static final int DEFAULT_TIME_WINDOW = 3600; //this indicates the overall length of time in sec the client is trying to get data from
     private static final String DEFAULT_OUTPUT_DEST = "/home/kaiwen/workspace/savant-torrey-ranch/src/chihuahua/fetcher/data";
-    public Stack<JSONObject> pendingRequests;
+    public LinkedList<JSONObject> pendingRequests;
     public String beginTime;
     public int timeWindow;
 
@@ -35,7 +36,7 @@ public class ATTickDataFetcher {
         serverapi = new ActiveTickServerAPI();
         apiSession = new APISession(serverapi,this);
         serverapi.ATInitAPI();
-        this.pendingRequests = new Stack<JSONObject>();
+        this.pendingRequests = new LinkedList<JSONObject>();
         this.beginTime = DEFAULT_BEGIN_TIME;
         this.timeWindow = DEFAULT_TIME_WINDOW;
     }
@@ -77,19 +78,20 @@ public class ATTickDataFetcher {
                     errmsg = "Error in date (eg: yyyymmdd)";
                     break SENDREQUEST;
                 }
-                String strBeginDateTime = date + this.beginTime;
+                this.setRequestOutputPath(symbol, date);
                 try {
-                    String strEndDateTime = date + addTime(this.beginTime,this.timeWindow);
-                    this.setRequestOutputPath(symbol,date);
-                    long res = this.sendATRequest(symbol,strBeginDateTime,strEndDateTime);
-                    if (res < 0) {
-                        logger.log(Level.INFO,"Error in request");
-                        errcode = "-1";
-                        errmsg = "Error in request";
-                    } else {
-                        request.put("beginDateTime",strBeginDateTime);
-                        request.put("endDateTime",strEndDateTime);
+                    String strCurrBeginTime = this.beginTime;
+                    String strCurrEndTime = "";
+                    do {
+                        strCurrEndTime = addTime(strCurrBeginTime, this.timeWindow);
+                        request = buildRequest(symbol,date,strCurrBeginTime,strCurrEndTime);
                         this.addPendingRequest(request);
+                        strCurrBeginTime = addTime(strCurrBeginTime, this.timeWindow);
+                    } while ((subtractTime(DEFAULT_END_TIME,strCurrEndTime) > 0));
+                    long res = sendNextRequest();
+                    if (res < 0) {
+                        errcode = "-1";
+                        errmsg = "Error in sending request";
                     }
                 } catch(ParseException pe) {
                     logger.log(Level.INFO,"Error in time addition");
@@ -166,9 +168,10 @@ public class ATTickDataFetcher {
                 }
                 String midPointDateTime = date + addTime(this.beginTime,this.timeWindow);
                 //logger.log(Level.INFO, "Second half: " + midPointDateTime + " --- " + endDateTime);
-                this.addPendingRequest(buildRequest(symbol, date, midPointDateTime, endDateTime));
+                this.insertPendingRequest(buildRequest(symbol, date, midPointDateTime, endDateTime));
                 //logger.log(Level.INFO,"First half: " + beginDateTime + " --- " + midPointDateTime);
-                this.addPendingRequest(buildRequest(symbol, date, beginDateTime, midPointDateTime));
+                this.insertPendingRequest(buildRequest(symbol, date, beginDateTime, midPointDateTime));
+                System.out.println(pendingRequests);
                 this.sendNextRequest();
             } catch (ParseException pe) {
                 logger.log(Level.SEVERE,pe.getMessage());
@@ -216,29 +219,32 @@ public class ATTickDataFetcher {
         return delta/1000;
     }
 
-    public JSONObject buildRequest (String symbol,String date,String beginDateTime,String endDateTime) throws JSONException {
+    public JSONObject buildRequest (String symbol,String date,String beginTime,String endTime) throws JSONException {
         JSONObject request = new JSONObject();
         request.put("symbol",symbol);
-        request.put("date",date);
-        request.put("beginDateTime",beginDateTime);
-        request.put("endDateTime",endDateTime);
+        request.put("beginDateTime",date+beginTime);
+        request.put("endDateTime",date+endTime);
         return request;
     }
 
-    public void sendNextRequest() throws JSONException {
+    public long sendNextRequest() throws JSONException {
         JSONObject nextRequest = this.getPendingRequest();
         String symbol = (String)nextRequest.get("symbol");
         String beginDateTime = (String)nextRequest.get("beginDateTime");
         String endDateTime = (String)nextRequest.get("endDateTime");
-        this.sendATRequest(symbol,beginDateTime,endDateTime);
+        return this.sendATRequest(symbol,beginDateTime,endDateTime);
     }
 
     public boolean isIdle() {
-        return this.pendingRequests.empty();
+        return this.pendingRequests.isEmpty();
     }
 
     private void addPendingRequest(JSONObject request) {
-        this.pendingRequests.push(request);
+        this.pendingRequests.add(request);
+    }
+
+    private void insertPendingRequest(JSONObject request) {
+        this.pendingRequests.addFirst(request);
     }
 
     private void removePendingRequest() {
