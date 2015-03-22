@@ -27,10 +27,20 @@ public class ATTickDataFetcher {
     private static final String DEFAULT_BEGIN_TIME = "041500"; //default query start time
     private static final String DEFAULT_END_TIME = "203000"; //default query end time
     private static final int DEFAULT_TIME_WINDOW = 3600; //this indicates the overall length of time in sec the client is trying to get data from
-    private static final String DEFAULT_OUTPUT_DEST = "/home/kaiwen/workspace/savant-torrey-ranch/src/chihuahua/fetcher/data";
+    private static final String DEFAULT_OUTPUT_DEST;
     public LinkedList<JSONObject> pendingRequests;
     public String beginTime;
     public int timeWindow;
+
+    static {
+        String dataPath = "";
+        String[] pathComp = Arrays.copyOfRange(new File("").getAbsolutePath().split("/"),1,5);
+        for (String c : pathComp) {
+            dataPath += "/" + c;
+        }
+        dataPath += "/savant/data";
+        DEFAULT_OUTPUT_DEST = dataPath;
+    }
 
     public ATTickDataFetcher() {
         serverapi = new ActiveTickServerAPI();

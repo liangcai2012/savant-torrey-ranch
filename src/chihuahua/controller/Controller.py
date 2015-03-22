@@ -12,8 +12,7 @@ class Controller(rpyc.Service):
             conn = rpyc.connect("localhost", 8090, config={"allow_public_attrs": True})
             conn.root.request(request)
         elif mod == "str":
-            conn = rpyc.connect("localhost", 8091)
-            conn.root.request(request)
+            pass
 
     def exit(self):
         "Exiting Controller"
