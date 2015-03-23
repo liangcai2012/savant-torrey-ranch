@@ -280,8 +280,17 @@ public class ATTickDataFetcher {
 
     private void completeFetch() {
         try {
-            String tempOutputPath = this.outputPath + ".tmp";
-            Process p = Runtime.getRuntime().exec("mv " + tempOutputPath + " " + this.outputPath);
+            String finalFilePath = this.outputPath + "_premarket.tsv";
+            String tempFilePath = finalFilePath + ".tmp";
+            Runtime.getRuntime().exec("mv " + tempFilePath + " " + finalFilePath);
+
+            finalFilePath = this.outputPath + "_markethours.tsv";
+            tempFilePath = finalFilePath + ".tmp";
+            Runtime.getRuntime().exec("mv " + tempFilePath + " " + finalFilePath);
+
+            finalFilePath = this.outputPath + "_aftermarket.tsv";
+            tempFilePath = finalFilePath + ".tmp";
+            Runtime.getRuntime().exec("mv " + tempFilePath + " " + finalFilePath);
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Fetch not complete: failed to rename temp file");
         }
@@ -298,12 +307,12 @@ public class ATTickDataFetcher {
         if (!outDir.exists()) {
             outDir.mkdir();
         }
-        outputPath = DEFAULT_OUTPUT_DEST + "/" + date + "/" + symbol;
-        String premarketFilePath = outputPath + "_premarket.tsv";
+        this.outputPath = DEFAULT_OUTPUT_DEST + "/" + date + "/" + symbol;
+        String premarketFilePath = this.outputPath + "_premarket.tsv.tmp";
         createIfNotExist(premarketFilePath);
-        String marketFilePath = outputPath + "_markethours.tsv";
+        String marketFilePath = this.outputPath + "_markethours.tsv.tmp";
         createIfNotExist(marketFilePath);
-        String aftermarketFilePath = outputPath + "_aftermarket.tsv";
+        String aftermarketFilePath = this.outputPath + "_aftermarket.tsv.tmp";
         createIfNotExist(aftermarketFilePath);
         apiSession.GetRequestor().setOutputPath(premarketFilePath,marketFilePath,aftermarketFilePath);
     }
