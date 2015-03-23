@@ -24,7 +24,9 @@ note: the value of client is a unique name of the client
 response:
 {
     "response":{
-       "errcode": 0
+       "symlist": [
+         "QQQ"
+        ]
     }
 }
 or
