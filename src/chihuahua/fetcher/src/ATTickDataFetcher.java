@@ -24,10 +24,11 @@ public class ATTickDataFetcher {
     private static boolean CANCEL = false;
     private static final Logger logger = Logger.getLogger(ATTickDataFetcher.class.getName());
     private static final int MIN_INTERVAL = 60;  //minimum allowed time window
-    private static final String DEFAULT_BEGIN_TIME = "041500"; //default query start time
-    private static final String DEFAULT_END_TIME = "203000"; //default query end time
+    private static final String DEFAULT_BEGIN_TIME = "060000"; //default query start time
+    private static final String DEFAULT_END_TIME = "200000"; //default query end time
     private static final int DEFAULT_TIME_WINDOW = 3600; //this indicates the overall length of time in sec the client is trying to get data from
     private static final String DEFAULT_OUTPUT_DEST;
+    public String outputPath;
     public LinkedList<JSONObject> pendingRequests;
     public String beginTime;
     public int timeWindow;
@@ -205,6 +206,7 @@ public class ATTickDataFetcher {
                 this.sendNextRequest();
             } else {
                 logger.log(Level.INFO, "request complete");
+                this.completeFetch();
                 this.reset();
             }
         } catch (JSONException e) {
@@ -276,6 +278,15 @@ public class ATTickDataFetcher {
         this.timeWindow = window;
     }
 
+    private void completeFetch() {
+        try {
+            String tempOutputPath = this.outputPath + ".tmp";
+            Process p = Runtime.getRuntime().exec("mv " + tempOutputPath + " " + this.outputPath);
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Fetch not complete: failed to rename temp file");
+        }
+    }
+
     private void reset() {
         this.beginTime = DEFAULT_BEGIN_TIME;
         this.setTimeWindow(DEFAULT_TIME_WINDOW);
@@ -283,8 +294,26 @@ public class ATTickDataFetcher {
     }
 
     private void setRequestOutputPath(String symbol,String date) {
-        String outputPath = DEFAULT_OUTPUT_DEST + "/" + symbol + "_" + date + ".txt";
-        File data = new File(outputPath);
+        File outDir = new File(DEFAULT_OUTPUT_DEST + "/" + date);
+        if (!outDir.exists()) {
+            outDir.mkdir();
+        }
+        outputPath = DEFAULT_OUTPUT_DEST + "/" + date + "/" + symbol;
+        String premarketFilePath = outputPath + "_premarket.tsv";
+        createIfNotExist(premarketFilePath);
+        String marketFilePath = outputPath + "_markethours.tsv";
+        createIfNotExist(marketFilePath);
+        String aftermarketFilePath = outputPath + "_aftermarket.tsv";
+        createIfNotExist(aftermarketFilePath);
+        apiSession.GetRequestor().setOutputPath(premarketFilePath,marketFilePath,aftermarketFilePath);
+    }
+
+    private void cancelRequest() {
+        this.pendingRequests.clear();
+    }
+
+    private void createIfNotExist(String filepath) {
+        File data = new File(filepath);
         if (data.exists()) {
             data.delete();
         }
@@ -293,13 +322,7 @@ public class ATTickDataFetcher {
         } catch (IOException e) {
             logger.log(Level.SEVERE,"Request halted: cannot create file");
         }
-        apiSession.GetRequestor().setOutputPath(outputPath);
     }
-
-    private void cancelRequest() {
-        this.pendingRequests.clear();
-    }
-
     private void exit() {
         apiSession.UnInit();
         serverapi.ATShutdownAPI();
