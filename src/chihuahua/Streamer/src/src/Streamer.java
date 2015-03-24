@@ -1,5 +1,3 @@
-package atapi.wrapper;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,23 +40,10 @@ public class Streamer extends ActiveTickStreamListener
 		super(session.GetSession(), false);
 		m_session = session;
 		this.map = map;
-		 
-
 		   
 	}
 	
-	public void init(String guid, String atHostName, int atPort, String userId, String password, HashMap<String, ArrayList<String[]>> map){
-		/*String atHostName = "activetick1.activetick.com";
-		          int atPort = 443;
-		          String guid = "80af4953bb7f4dcf85523ad332161eff";
-		          String userId = "liangcai";
-		          String password = "S@^@nt932456";
-		 */
-		          ATGUID atguid = (new ATServerAPIDefines()).new ATGUID();
-		          atguid.SetGuid(guid);
-		 
-		          boolean rc = m_session.Init(atguid, atHostName, atPort, userId, password, map);
-		          System.out.println("init status: " + (rc ? "ok" : "failed"));
+	public void init(){
 
 	}
 	

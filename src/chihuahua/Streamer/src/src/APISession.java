@@ -1,5 +1,3 @@
-package atapi.wrapper;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -32,6 +30,8 @@ public class APISession extends ATCallback implements
 	String m_userid;
 	String m_password;
 	ATGUID m_apiKey;
+
+   boolean m_loginSucceed = false;
 	
 	public APISession(ActiveTickServerAPI serverapi)
 	{
@@ -103,7 +103,7 @@ public class APISession extends ATCallback implements
 		String strLoginResponseType = "";
 		switch(response.loginResponse.m_atLoginResponseType)
 		{
-		case ATServerAPIDefines.ATLoginResponseType.LoginResponseSuccess: strLoginResponseType = "LoginResponseSuccess"; break;
+		case ATServerAPIDefines.ATLoginResponseType.LoginResponseSuccess: strLoginResponseType = "LoginResponseSuccess"; m_loginSucceed = true; break;
 		case ATServerAPIDefines.ATLoginResponseType.LoginResponseInvalidUserid: strLoginResponseType = "LoginResponseInvalidUserid"; break;
 		case ATServerAPIDefines.ATLoginResponseType.LoginResponseInvalidPassword: strLoginResponseType = "LoginResponseInvalidPassword"; break;
 		case ATServerAPIDefines.ATLoginResponseType.LoginResponseInvalidRequest: strLoginResponseType = "LoginResponseInvalidRequest"; break;
