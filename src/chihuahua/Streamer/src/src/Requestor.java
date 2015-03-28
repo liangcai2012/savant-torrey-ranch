@@ -1,5 +1,3 @@
-package atapi.wrapper;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;

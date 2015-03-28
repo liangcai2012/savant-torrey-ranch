@@ -17,7 +17,7 @@ public class Client
         try
         {
             String host = "localhost";
-            int port = 8093;
+            int port = 8091;
             InetAddress address = InetAddress.getByName(host);
             socket = new Socket(address, port);
  
@@ -26,7 +26,7 @@ public class Client
             OutputStreamWriter osw = new OutputStreamWriter(os);
             BufferedWriter bw = new BufferedWriter(osw);
  
-            String str = "{request:{ \"command\": \"subscribe\", \"client\": \"strategy1\",\"symlist\": \"QQQ\"}}";
+            String str = "{\"request\":{ \"command\": \"subscribe\", \"client\": \"strategy1\",\"symlist\": [\"QQQ\", \"SPY\"]}}";
  
             String sendMessage = str + "\n";
             bw.write(sendMessage);

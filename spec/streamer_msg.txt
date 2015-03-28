@@ -24,9 +24,7 @@ note: the value of client is a unique name of the client
 response:
 {
     "response":{
-       "symlist": [
-         "QQQ"
-        ]
+       "errcode":0
     }
 }
 or
@@ -83,15 +81,15 @@ response:
     "response":{
        "timestamp": "yyyymmddhhmmss",
        "data": [
-        "12.21;12.20;12.24;12.00;12.13;200",
-        "34.23;34.12;34.67;34.04;34.12;45",
+        "QQQ;12.21;12.20;12.24;12.00;12.13;200",
+        "SPY;34.23;34.12;34.67;34.04;34.12;45",
        ]
     }
 }
 
-note 1: data should be a list of records of the realtime data. len of the list is equal to the number of subscribed symbols. Each record is a string using ';' as split
+note 1: data should be a list of records of the realtime data followed by the symbol. len of the list is equal to the number of subscribed symbols + 1. Each record is a string using ';' as split; 
 
-
+note 2: the reason to add symbol is that the streamer cannot garentee streaming data for all symbols is avaiable.  
 
 or
 {
@@ -100,4 +98,38 @@ or
        "errmsg": "xxxxx"
     }
 }
+
+
+
+msg4: update mving average, 
+{
+   "request":{
+      "command": "ma",
+      "client": "viewer",
+      "intervallist": ["10s", "1m", "1h"]
+   }
+}
+
+note: "ma" (moving average) command is added because "upate" message is incapable of delievering moving average of multiple intervals simultaneously. In addition, preparing moving average data invokes extra computation on Streamer. The calculation of moving average should be need based.
+
+response:
+{
+   "response":{
+      "timestamp":"yyyymmddmmss",
+      "data": [
+         "QQQ;12.21;12.20;11.98",
+         "SPY;34.23;34.67;33.99'
+      ]
+   }
+}
+
+or 
+       
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
 
