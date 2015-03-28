@@ -18,6 +18,12 @@ import org.json.JSONObject;
 
 
 public class ATTickDataFetcher {
+    /*
+    This class is used to fetch stock history data from ATTick server.
+    Three files are generated for each request, one for market pre-hours quotes,
+    one for regular hours quotes, and another for aftermarket quotes. The
+    output files are named using the format: symbol_date_hours.tsv.
+     */
     private static Socket socket;
     private static ActiveTickServerAPI serverapi;
     private static APISession apiSession;
