@@ -1,9 +1,8 @@
 Commands handled by Streamer
-Potential clients:
+Potential caller:
 1) Viewer
 2) Strategy worker
 
-phase 1:
 
 msg 1: subscribe a client
 request:
@@ -19,8 +18,6 @@ request:
     }
 }
 
-note: the value of client is a unique name of the client
-
 response:
 {
     "response":{
@@ -35,8 +32,15 @@ or
     }
 }
 
+note 1: the value of "client" is a unique name. It is not a one-to-one mapping of the caller. One caller (such as viewer) can have multiple clients for different groups (to get different interval or mask)
 
-msg 2: unsubscribe a client
+note 2: subscription is not incremental. When the streamer receives this message, the previous subscribed symbols (not included in the new list) are all unsubscribed. 
+
+
+note 3: The response does not reflect whether any symbol are actually subscribed to ActiveTick server because ATAPI does not return that information immediately. The caller will find this out through the output of the update message (see msg 3) 
+
+
+msg 2: unsubscribe all symbols belonging to a client
 request:
 {
     "requst": {
@@ -59,39 +63,39 @@ or
     }
 }
 
+note 1: This message is equivalent to sending a subscribe message with empty symbol list. 
 
-msg 3: update a client.  mask means it asks for
-average/open/close/high/low/volume of trade data of (last second)
+msg 3: feed bar data and/or moving average data to the caller. 
 
 {
     "requst": {
         "command": "update",
         "client": "strategy1",
-        "interval": "1s"
-        "mask":  "111111"
+        "interval": "1s",
+        "bar_mask":  0x111111,
+	"ma_mask": 0x111111111
     }
 }
 
-note 1: interval should be a value in ["1s", "5s", "10s", "30s", "1m", "5m", "10m", "30m", "1h"]
-note 2: mask is a string of 0 or 1 (containing at least 6 char). the first 6 char should be mask of "average/open/close/high/low/volume". 
-
- 
 response:
 {
     "response":{
-       "timestamp": "yyyymmddhhmmss",
-       "data": [
-        "QQQ;12.21;12.20;12.24;12.00;12.13;200",
-        "SPY;34.23;34.12;34.67;34.04;34.12;45",
-       ]
+	"client": "strategy1"
+       	"timestamp": "hhmmss",
+	"interval": "1s",
+       	"data": [
+		{
+			"symbol": "QQQ",
+			"bar": "12.21,12.20,12.24,12.00,12.13,200",
+			"ma":"aveprice:avevol,aveprice:avevol,aveprice:avevol", //comma separated 
+			"delay": "yymmss-price-vol;yymmss-price-vol", //comma seperated
+		}
+	]
     }
 }
-
-note 1: data should be a list of records of the realtime data followed by the symbol. len of the list is equal to the number of subscribed symbols + 1. Each record is a string using ';' as split; 
-
-note 2: the reason to add symbol is that the streamer cannot garentee streaming data for all symbols is avaiable.  
 
 or
+
 {
     "response":{
        "errcode": "-1",
@@ -99,37 +103,19 @@ or
     }
 }
 
+note 1: interval must be a value in ["1s", "5s", "10s", "30s", "1m", "5m", "10m", "30m", "1h"]. It decides the granularity of bar data to be returned.  
 
+note 2: bar_mask is a bitmap of 0 or 1 (only lowest 6 bits are used) representing mask of "average/open/close/high/low/volume". 
 
-msg4: update mving average, 
-{
-   "request":{
-      "command": "ma",
-      "client": "viewer",
-      "intervallist": ["10s", "1m", "1h"]
-   }
-}
+note 3: ma_mask is a bitmap of 0 or 1 (only lowest 9 bits are used) representing the moving average of intervals (from 1s to 1h)
 
-note: "ma" (moving average) command is added because "upate" message is incapable of delievering moving average of multiple intervals simultaneously. In addition, preparing moving average data invokes extra computation on Streamer. The calculation of moving average should be need based.
+note 4: interval and bar_mask fields are mandatory when requesting for bar data; ma_mask field is mandatory when requesting moving average data. 
+ 
+note 5: client and interval is included in the response to support multiple clients in a caller. 
 
-response:
-{
-   "response":{
-      "timestamp":"yyyymmddmmss",
-      "data": [
-         "QQQ;12.21;12.20;11.98",
-         "SPY;34.23;34.67;33.99'
-      ]
-   }
-}
+note 6: returned data is the most recent and "accurate" data that the streamer owns. The timestamp field means the last second of the current "accurate" data (at most 1-2s delay comparing with the actual tick data). The word "accurate" is quoted because it is based on the assumption that ATAPI tick has at most 1s second. If this assumption is not true, all tick data with more than 1s delay will be attached in the "delay" field. 
 
-or 
-       
-{
-    "response":{
-       "errcode": "-1",
-       "errmsg": "xxxxx"
-    }
-}
+note 7: returned data be a list of records, each record contains symbol, bar data, moving average data and delayed tick data. "bar", "ma" and "delay" fields might be optional, depending on the request.
 
+note 8: when requesting bar data only, caller should send this message with the same interval as the bar interval. For example, if bar data is 1m long, then the caller should send the request every minute. However, due to clock drift, the caller might get same bar data via two consecutive messages. In this case, the caller need to resend the second message immediately and adjust its timer.   
 

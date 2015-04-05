@@ -12,15 +12,24 @@ import java.util.List;
 //to ask for moving open/close/high/low data. 
 //
 
+//pos always points to the last updated data
+//The data returned in get function is 1 second in delay to allow delayed AT data
+// Eg:
+// t= 1   2   3   4   5   6   7   8 
+//                       pos
+//when pos is 6, we assume data at t=5 is not complete, so the latest data we return is t=4 Therefore, to provide 3600s moving average, the window size  needs to be 3602  
+
 
 public class SymData {
 	public static String[] allowedIntervalText = {"1s", "5s", "10s", "30s", "1m", "5m", "10m", "30m", "1h"};
 	public static int[] allowedInterval = {1, 5, 10, 30, 60, 300, 600, 1800, 3600};
+	public static enum{
 	
-	private ArrayList<String> registeredClient;
+	}
+	
 	private long[] wv;
 	private long[] wp;
-	private int pos=0;
+	private int pos;
 	private long lastSecond;
 	private long[] tv;
 	private long[] tp;
@@ -29,32 +38,29 @@ public class SymData {
 	private long totalSeconds;
 	
 	private int intnum;
-	private int maxint;
+	private int winsize;
 
 			
 	public SymData(){
-		registeredClient = new ArrayList<String>();
 		intnum = allowedInterval.length;
-		maxint = allowedInterval[intnum-1];
+		//to calculate the moving average of 3600, we need array of 3602 
+		winsize = allowedInterval[intnum-1]+2;
 		
-		wv = new long[maxint];
-		wp = new long[maxint];
+		wv = new long[winsize];
+		wp = new long[winsize];
 		pos = -1;
 		lastSecond = 0;
 		totalSeconds = 0;
 		tv = new long[intnum];
 		tp = new long[intnum];
-		Arrays.fill(tv,  0);
-		Arrays.fill(tp, 0);
-		
-		mvSwitch = new boolean[intnum];
-		Arrays.fill(mvSwitch,  false);
-		
+		Arrays.fill(tv, -1);
+		Arrays.fill(tp, -1);
 		
 	}
 
 	// called everytime a tick data is received or a client request is received
 	//type: 0 tick data 1: client request
+	//second has to be an interger reflecting current time provided  by the caller
 
 	public void update(long second, long vol, long price, int type){
 		if (lastSecond > second){
@@ -71,93 +77,120 @@ public class SymData {
 				pv = price * vol;
 				wv[pos]+=vol;
 				wp[pos]+=pv;
-				return;
 			}
+			return;
 		}
 	
 		//update the moving average values
 
-		//step is number of the seconds where wv/wp will be updated. Notice that step cannot be 0
-		long step = 1;
+		//skip is number of the seconds between last update and this one.
+		long skip = 0;
 		if(lastSecond != 0)
-			step = second - lastSecond;
+			skip = second - lastSecond -1;
 
-
-		totalSeconds += step;
+		totalSeconds = totalSeconds + skip + 1;
 		lastSecond = second;
 
-		//step cannot be longer than 3600. 
-		if(step > maxint)
-			step = maxint;
+		//skip cannot be longer than 3601. 
+		if(skip > winsize-1)
+			skip = winsize-1
 		
-		//get the sum of the values to be replaced before the new values are added
-		long rmtv=0;
-		long rmtp=0;
-		for(int i=1; i<=step; i++){
-			rmtv += wv[(pos+i)%maxint];
-			rmtp += wp[(pos+i)%maxint];
-			if(i==step-1){
-				wv[(pos+i)%maxint]=vol;
-				wp[(pos+i)%maxint]=pv;
-			}
-			else{
-				wv[(pos+i)%maxint]=0;
-				wp[(pos+i)%maxint]=0;
-			}
-		}
-		pos= (pos+step)%maxint;
-		
-		//update the moving average value
-		for(int i=0; i<intnum; i++){
-			if(totalSeconds < allowedInterval[i])
-				continue;
-			if(step >= allowedInterval[i]){
-				tv[i]=vol;
-				tp[i]=pv;
-				continue;
-			}
-			if (i==intnum-1){
-				tv[i]+=(vol-rmtv);
-				tp[i]+=(pv-rmtp);
-				continue;
-			}
-			//calculate the moving average for i=1 to intnum-2
-			long rmtvi = 0;
-			long rmtpi = 0;
-			for (int j=0; j<step; j++){
-				rmtvi+=wv[(pos- allowedInterval[i] -j)%maxint];
-				rmtpi+=wp[(pos- allowedInterval[i] -j)%maxint];
-			}
-			tv[i]+=(vol-rmtvi);
-			tp[i]+=(pv-rmtpi);
-		}
-	}
-	
-	public String get(String mask, String interval){
-		return "";
-	}
-	
-	public boolean hasClient(String client){
-		if (registeredClient.contains(client))
-			return true;
-		return false;
-	}
+		//update the moving averages first
+		for (int i=0; i<intnum; i++){
+			//if skip is too big, then existing moving average is not relevant
+			if (skip>=allowedInterval[i]+1)
+				tv[i]=tp[i]=0;
+			else if(skip == allowedInterval[i]){
+				tv[i]=wv[pos];
+				tp[i]=wp[pos];
+			//Deduct the values leaving the window. Since values at pos and pos-1 were not counted in the previous moving average, we need to add them first.
+			else{ 
+				if(skip>0){
+					tv[i]+=wv[pos];
+					tp[i]+=wp[pos];
+				}
+				tv[i]+=wv[pos-1];
+				tp[i]+=wp[pos-1];
 
-	public void addClient(String client){
-		if (! registeredClient.contains(client))
-			registeredClient.add(client);
-	}
-	
-	public void setMASwtich(List<String> intervals){
-		for(String intv : intervals){
-			for (int i=0; i<allowedIntervalText.length; i++){
-				if (intv.equalsIgnoreCase(allowedIntervalText[i])){
-					mvSwitch[i]=true;
-					//since we have never calculated: update tv[i], tp[i]
-					
-					break;
+				for(int j=0; j<skip; j++){
+					tv[i] -= wv[(pos-1-allowedInterval[i]+j)%winsize];
+					tp[i] -= wp[(pos-1-allowedInterval[i]+j)%winsize];
+
 				}
 			}
 		}
+		//fill 0 to the skipped spots
+		for (int i=0; i<skip; i++){ 
+			wv[(pos+i+1)%winsize]=0;
+			wp[(pos+i+1)%winsize]=0;
+		}
+		//update pos and change the value at new pos
+		pos= (pos+skip+1)%winsize;
+		wv[pos]=vol;
+		wp[pos]=pv;
 	}
+	
+	public String getBar(int second, int interval, int bar_mask){
+		
+		update(second, 0, 0, 1);
+		retval = "";
+		
+		if (interval >= intnum)
+			return "";
+		int ival = allowedInterval[interval];
+	
+		if(bar_mask & 0x20){
+		//average of specified interval
+			retval += String.valueOf(tp[interval]/tv[interval]);
+		}
+		retval += ",";
+		if(bar_mask & 0x10){
+		//open of specified interval
+			retval += String.valueOf(wp[(pos-1-ival)%winsize]/tv[(pos-1-ival)%winsize]);
+		}
+		retval += ",";
+		if(bar_mask & 0x08){
+		//close of specified interval
+			retval += String.valueOf(wp[(pos-2)%winsize]/wv[(pos-2)%winsize]);
+		}
+		retval += ",";
+		if(bar_mask & 0x04 || bar_mask & 0x02){
+		//high or close, scan the period anyway
+			long h = -1;
+			long l = 1000000;
+			for(int i=0; i<ival; i++){
+				pave = wp[(pos-2-i)%winsize]/wv[(pos-2-i)%winsize]
+				if ( pave> h)
+					h=pave;
+				if (pave < l)
+					l=pave;
+			}
+			if(bar_mask & 0x04)
+				retval += String.valueOf(h);
+			retval += ",";
+			if(bar_mask & 0x02)
+				retval += String.valueOf(l);
+			retval += ",";
+		}
+		if(bar_mask & 0x 1)
+			retval += String.valueOf(tv[interval])
+		
+		return retval; 
+	}
+
+	public String getMA(int second, int ma_mask){
+		
+		update(second, 0, 0, 1);
+		retval = "";
+
+		for(int i=0;i<intnum; i++){
+			if(ma_mask & (0x1 << i)){
+				retval += String.valueOf(tp[i]/tv[i]);
+				reval += ":";
+				retval += String.valueOf(tv[i]);
+			}
+			if (i< intnum-1)
+				retval += ",";
+		}
+		return retval;
 }
