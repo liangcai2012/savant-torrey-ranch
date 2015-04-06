@@ -88,7 +88,7 @@ response:
 			"symbol": "QQQ",
 			"bar": "12.21,12.20,12.24,12.00,12.13,200",
 			"ma":"aveprice:avevol,aveprice:avevol,aveprice:avevol", //comma separated 
-			"delay": "yymmss-price-vol;yymmss-price-vol", //comma seperated
+			"delay": "hhmmss-price-vol;yymmss-price-vol", //comma seperated
 		}
 	]
     }

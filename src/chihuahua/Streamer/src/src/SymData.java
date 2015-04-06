@@ -23,9 +23,6 @@ import java.util.List;
 public class SymData {
 	public static String[] allowedIntervalText = {"1s", "5s", "10s", "30s", "1m", "5m", "10m", "30m", "1h"};
 	public static int[] allowedInterval = {1, 5, 10, 30, 60, 300, 600, 1800, 3600};
-	public static enum{
-	
-	}
 	
 	private long[] wv;
 	private long[] wp;

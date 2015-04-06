@@ -32,10 +32,6 @@ import at.shared.ATServerAPIDefines.ATSymbolType;
 import at.shared.ATServerAPIDefines.SYSTEMTIME;
 import at.utils.jlib.Errors;
 
-
-
-
-
 //import org.json.*;
 import org.json.simple.*;
 import org.json.simple.parser.JSONParser;
@@ -52,17 +48,22 @@ public class StreamerRun
 	private static ActiveTickServerAPI serverapi;
 	private static APISession apiSession;
 
-	private HashMap<String, ArrayList<String>> m_clientmap;
-	private ArrayList<String> m_allsymlist;
-  	private HashMap<String, ArrayList<String[]>> m_map;
+	private	HashMap<String, ArrayList<String>> m_clientSymMap; 
+	private HashMap<String, int> m_symRefMap; 
+	private HashMap <String, SymData> m_symDataMap;
+	private HashMap <String, DelayedTicks> m_symDelayMap;
+	//private HashMap<String, ArrayList<String>> m_clientmap;
+	//private ArrayList<String> m_allsymlist;
+  	//private HashMap<String, SymData> m_map;
+
+	//this is a time gap between Streamer's system clock and timestamp received in tick data. This value is set when first tick data is received and never changed. 
+	private long m_atTimeGap=-1;
+
 
 	
 	//String host = "192.168.1.121";
-	String host = "localhost";
-	int port = 8091;
-	int i = 0;	
-	int totalNum = 0;
-	int count = 0;	
+	String m_hostIP = "localhost";
+	int m_hostPort = 8091;
 
 	String returnMessage;
 	//	JavaToJson js = new JavaToJson();
@@ -71,70 +72,174 @@ public class StreamerRun
 		
 	public StreamerRun() 
 	{
-      serverapi = new ActiveTickServerAPI();
-      apiSession = new APISession(serverapi);
-   }
+	     	serverapi = new ActiveTickServerAPI();
+		apiSession = new APISession(serverapi);
 
-   public boolean Init() throws IOException, InterruptedException{
-	 //init data structure
-	 m_clientmap = new HashMap<String, ArrayList<String>>();
-	 m_allsymlist = new ArrayList<String>();
-	 m_map = new HashMap<String, ArrayList<String[]>>() ;
-     //initialize the api and login to the service
+ 		//init data structure
+	 	m_clientSymMap = new HashMap<String, ArrayList<String>>();
+		m_symRefMap = new HashMap<String, int>();
+		m_symDataMap = new HashMap <String, SymData>();
+		m_symDelayMap = new HashMap <String, DelayedTicks>();
 
-      serverapi.ATInitAPI();
-	   String atHostName = "activetick1.activetick.com";
-      int atPort = 443;
-      String guid = "80af4953bb7f4dcf85523ad332161eff";
-      String userId = "liangcai";
-      String password = "S@^@nt932456";
+//	 	m_allsymlist = new ArrayList<String>();
+//	 	m_map = new HashMap<String, ArrayList<String[]>>() ;
+   	}
+
+   	public boolean Init() throws IOException, InterruptedException{
+
+     	//initialize the api and login to the service
+	      	serverapi.ATInitAPI();
+		String atHostName = "activetick1.activetick.com";
+	      	int atPort = 443;
+	      	String guid = "80af4953bb7f4dcf85523ad332161eff";
+	      	String userId = "liangcai";
+	      	String password = "S@^@nt932456";
 		ATGUID atguid = (new ATServerAPIDefines()).new ATGUID();
 		atguid.SetGuid(guid);
-		 
+
 		boolean rc = apiSession.Init(atguid, atHostName, atPort, userId, password, m_map);
 		System.out.println("init status: " + (rc ? "ok" : "failed"));
-      if (!rc)
-         return false;
-      Thread.sleep(5000);
-      if(!apiSession.m_loginSucceed){
-         System.out.println("Login failed!");
-         return false;
-      }
+		if (!rc)
+	       		return false;
+	      	Thread.sleep(5000);
+	      	if(!apiSession.m_loginSucceed){
+	        	System.out.println("Login failed!");
+	         	return false;
+	      	}
 
- 
       //initialize the server socket
-		InetAddress bindAdd = InetAddress.getByName(host);
-		serverSocket = new ServerSocket(port, 100, bindAdd);
-		totalNum = Runtime.getRuntime().availableProcessors()*POOL_SIZE;
+		InetAddress bindAdd = InetAddress.getByName(m_hostIP);
+		serverSocket = new ServerSocket(m_hostPort, 100, bindAdd);
+		int totalNum = Runtime.getRuntime().availableProcessors()*POOL_SIZE;
 		exService = Executors.newFixedThreadPool(totalNum);		
 		System.out.println("Server Started and listening to the port 8091");
-      return true;
+      		return true;
 	}
 
 
 	public void acceptClient()
 	{	
 		while (true){
-         Socket socket = null;
+         		Socket socket = null;
 			try{
-	         socket = serverSocket.accept();
-		      System.out.println("ready for next client");
-	         exService.execute(new Handler(socket, m_map));
+	         		socket = serverSocket.accept();
+		      		System.out.println("ready for next client");
+	         		exService.execute(new Handler(socket, m_map));
 			} 
-         catch (Exception e){
-		      e.printStackTrace();
-		   } 		
-      }		
+		        catch (Exception e){
+		      		e.printStackTrace();
+		   	}	 		
+      		}		
 	}
 
-   class Handler implements Runnable{
-   	private Socket socket;
-   	private HashMap<String, ArrayList<String[]>> map;
+   	class Handler implements Runnable{
+   		private Socket socket;
+   		private HashMap<String, ArrayList<String[]>> map;
 
-   	public Handler(Socket socket,	HashMap<String, ArrayList<String[]>> map){
-   		this.socket = socket;
-   		this.map = map;
-   	}
+   		public Handler(Socket socket,	HashMap<String, ArrayList<String[]>> map)		 {
+   			this.socket = socket;
+   			this.map = map;
+   		}
+
+	   	public void run() 
+		{
+        		ArrayList<String[]> lRet = new ArrayList<String[]>();
+   			String[] rData = new String[5];
+   		try{
+   
+   		   System.out.println("Socket accepted");
+   			while(true){	
+   			   InputStream is = socket.getInputStream();
+   			   if (is.available() != 0 ){
+   				   InputStreamReader isr = new InputStreamReader(is);
+   				   BufferedReader br1 = new BufferedReader(isr);
+   				   try{	
+   					   String jstr = br1.readLine();
+   					   System.out.println("Message received from client is "+jstr);
+   					   if(jstr.length() > 0){
+                        //is this part of the specification? Streamer is a server shared by multiple clients so it should not be shutdown by one client
+   					       if(jstr.startsWith("quit"))
+   							   break;
+   						   String returnMessage =	"hi";
+   						   JSONParser parser = new JSONParser();
+   						   //Object oObj=JSONValue.parse(jstr);
+   						   Object oObj;
+   						   try{
+   							   oObj = parser.parse(jstr);
+   	   						   JSONObject obj = (JSONObject) oObj;
+   	   						   JSONObject req	= (JSONObject)obj.get("request");
+   	                           if (req==null){
+   	                               System.out.println("receiving invalid request: " +jstr);
+   	                               continue;
+   	                            }
+   	   						    String cmd = (String)req.get("command");
+   	                            if (cmd.equalsIgnoreCase("subscribe"))
+   	                            {
+   	                            	JSONArray symlist = (JSONArray)req.get("symlist");
+   	                            	String client = (String)req.get("client");
+   	                            	processSubscribe(client, symlist);
+   	                            }
+   	                            else if (cmd.equalsIgnoreCase("unsubscribe"))
+   	                            {
+   	                            	String client = (String)req.get("client");
+   	                            	processUnubscribe(client);   	                            	
+   	                            }
+   	                            else if(cmd.equalsIgnoreCase("update"))
+   	                            {
+   	                            	String client = (String)req.get("client");
+   	                            	String interval = (String)req.get("interval");
+   	                            	String mask = (String)req.get("mask");
+   	                            	processMask(client, interval, mask);   	                            	
+  	                            }
+   						   }
+   						   catch(ParseException pe){
+                               System.out.println("received request is not a valid json input: " +jstr);
+                               continue;
+   						   }
+                           catch(java.lang.ClassCastException e){
+                               System.out.println("received json request contain invalid field type: " +jstr);
+                               continue;
+                           }
+   						   
+					   /*String cl = (String)req.get("client");
+   						   String sbList = (String)req.get("symlist");
+   						   String cmdStr;
+   						   if (sbList.contains(",")){
+   							   JSONArray sList = (JSONArray)req.get("symlist");
+   							   Iterator<String> iterator = sList.iterator();
+   							   cmdStr = iterator.next();
+   							   while(iterator.hasNext()){	
+   								   cmdStr =	"," + iterator.next();
+   							   }
+   						   }
+   						   else{
+   							   cmdStr = sbList;
+   						   }
+   						   cmd = cmd + " " + cmdStr;
+   						   processInput(cmd);
+                        */
+   					   }
+   				   }   
+   				   catch (Exception e) {
+   					   e.printStackTrace();
+   					   System.out.println("IO error trying to read your input!");
+   				   }
+   			   }
+   			}
+   			apiSession.UnInit();
+   			serverapi.ATShutdownAPI();
+   		}
+   		catch (Exception e) {
+   			e.printStackTrace();
+   		}
+   		finally{
+   			try{
+   			   socket.close();
+   			   System.out.println("Socket CLosed");
+   			}
+   			catch(Exception e){}
+   		}
+   	 }
 
    	/**************
    	 * //processSubscribe
@@ -147,7 +252,7 @@ public class StreamerRun
    	 * return the whole list for the client
    	 */
    	public String processSubscribe(String client, List<String> symlist)
-    {
+	{
    		ArrayList<String> reducedsymlist = new ArrayList<String>();
    		
 		if(m_clientmap.get(client) == null){
@@ -411,105 +516,6 @@ public class StreamerRun
    	}
    
    	
-   	public void run() {
-   			
-         ArrayList<String[]> lRet = new ArrayList<String[]>();
-   		String[] rData = new String[5];
-   		try{
-   
-   		   System.out.println("Socket accepted");
-   			while(true){	
-   			   InputStream is = socket.getInputStream();
-   			   if (is.available() != 0 ){
-   				   InputStreamReader isr = new InputStreamReader(is);
-   				   BufferedReader br1 = new BufferedReader(isr);
-   				   try{	
-   					   String jstr = br1.readLine();
-   					   System.out.println("Message received from client is "+jstr);
-   					   if(jstr.length() > 0){
-                        //is this part of the specification? Streamer is a server shared by multiple clients so it should not be shutdown by one client
-   					       if(jstr.startsWith("quit"))
-   							   break;
-   						   String returnMessage =	"hi";
-   						   JSONParser parser = new JSONParser();
-   						   //Object oObj=JSONValue.parse(jstr);
-   						   Object oObj;
-   						   try{
-   							   oObj = parser.parse(jstr);
-   	   						   JSONObject obj = (JSONObject) oObj;
-   	   						   JSONObject req	= (JSONObject)obj.get("request");
-   	                           if (req==null){
-   	                               System.out.println("receiving invalid request: " +jstr);
-   	                               continue;
-   	                            }
-   	   						    String cmd = (String)req.get("command");
-   	                            if (cmd.equalsIgnoreCase("subscribe"))
-   	                            {
-   	                            	JSONArray symlist = (JSONArray)req.get("symlist");
-   	                            	String client = (String)req.get("client");
-   	                            	processSubscribe(client, symlist);
-   	                            }
-   	                            else if (cmd.equalsIgnoreCase("unsubscribe"))
-   	                            {
-   	                            	String client = (String)req.get("client");
-   	                            	processUnubscribe(client);   	                            	
-   	                            }
-   	                            else if(cmd.equalsIgnoreCase("update"))
-   	                            {
-   	                            	String client = (String)req.get("client");
-   	                            	String interval = (String)req.get("interval");
-   	                            	String mask = (String)req.get("mask");
-   	                            	processMask(client, interval, mask);   	                            	
-  	                            }
-   						   }
-   						   catch(ParseException pe){
-                               System.out.println("received request is not a valid json input: " +jstr);
-                               continue;
-   						   }
-                           catch(java.lang.ClassCastException e){
-                               System.out.println("received json request contain invalid field type: " +jstr);
-                               continue;
-                           }
-   						   
-					   /*String cl = (String)req.get("client");
-   						   String sbList = (String)req.get("symlist");
-   						   String cmdStr;
-   						   if (sbList.contains(",")){
-   							   JSONArray sList = (JSONArray)req.get("symlist");
-   							   Iterator<String> iterator = sList.iterator();
-   							   cmdStr = iterator.next();
-   							   while(iterator.hasNext()){	
-   								   cmdStr =	"," + iterator.next();
-   							   }
-   						   }
-   						   else{
-   							   cmdStr = sbList;
-   						   }
-   						   cmd = cmd + " " + cmdStr;
-   						   processInput(cmd);
-                        */
-   					   }
-   				   }   
-   				   catch (Exception e) {
-   					   e.printStackTrace();
-   					   System.out.println("IO error trying to read your input!");
-   				   }
-   			   }
-   			}
-   			apiSession.UnInit();
-   			serverapi.ATShutdownAPI();
-   		}
-   		catch (Exception e) {
-   			e.printStackTrace();
-   		}
-   		finally{
-   			try{
-   			   socket.close();
-   			   System.out.println("Socket CLosed");
-   			}
-   			catch(Exception e){}
-   		}
-   	 }
    }
 
    public static void main(String[] args) throws IOException, InterruptedException 
