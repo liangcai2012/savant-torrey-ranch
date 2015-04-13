@@ -1,0 +1,41 @@
+1. Requirements Definition
+
+a. Streamer is a server program, it should not be stopped by any client. It has to be stopped by an admin
+b. Streamer can be started at any time of trading hours of a day, but it is also expected to be running for multiple days (without being started and stopped daily)
+c. There can be multiple streamer instance in the LAN, but only one instance is allowed on any computer. 
+d. Streamer should be able to accept requests from any computer in the LAN
+e. Streamer identify its client with unique client name, but it does not authenticate clients. 
+f. The minimum supported interval is 1s and the maximum is 1h
+
+
+2. Function Definition
+a. Streamer is a TCP server listening to requests (in json form) from clients and subscribe/unsubscribe real-time tick data and process data for clients based on the requests
+b. Processing tick data includes calculating in real-time the moving average, open, close, high, low price and volume of  given symbol(s) and given time interval (only a list of valid intervals are supported)
+
+3. Interface Definition
+a. Streamer provides the following message interface:
+   * Subscribe: subscribes a list of symbols for the client to AT server (if they havn’t been subscribed).  A client can subscribe multiple times but each request is implicitly unsubscribe previous one (subscription is not incremental)
+   * Unsubscribe: unsubscribe all previously subscribed symbols for the client. Streamer will no longer received tick data of these symbols (if they are not subscribed by other clients) from AT server
+   * Update: provides processed data of all previously subscribed symbols to the client in specific form. Data sent via Update message can be bar data (average, open, close, high, low and volume) and moving average (of a larger time span) The client normally sends update message with a constant interval but this is not mandatory.
+b. Detail description of APIs can be found in the repo. 
+
+4. Module Design
+a. Main class: TCP server with JSON parsing capability and command dispatcher. It also preserve the client list and their subscription. Subscribe/unsubscribe command is also handled here. 
+b. Streamer/Request/APISession: needed for ATAPI access
+c. Core data structure and command handler: to be called when a client request or AT tick data event is triggered, preserve the history data buffer, moving average for each symbol. The class is client ignorant. 
+
+5. Design Strategies
+a. Streamer maintains a list of clients (by client name), for each client it maintains a list of subscribed symbols
+b. Streamer subscribe the union of symbols to AT server (notice that the subscribe/unsubscribe interface provided by AT server is incremental)
+c. For each symbol, Streamer maintains a history data buffer of a fixed time window (for moving average calculation).
+d. On receiving a tick data or a client request, Streamer will update the history data buffer as well as moving average of supported intervals
+e. On receiving a client request for open/close/high/low price, Streamer will calculate the value on the fly. It will take longer if the interval is big but fortunately the frequency for such requests will be low
+
+6. Major technique issues
+a. As streamer is converting real time tick data to bar data. It must consider the delay of the tick data. Otherwise the data provides to clients is not accurate. The accuracy can be increased if streamer add a delay in its response to the clients (eg. only give data before 9:30:56 when a request is received at 9:30:59 to allow a maximum of 3s delay from AT) but the delay could harm our auto trading algorithm
+b. The clock of the streamer and that of the client is not synchronized, clock drifting can cause the client to miss one data point( eg. if the client is request data by 1m, and the request were previously sent at 1st second of each minute, gradually it drifts to the last second of the each minute. so a client might sent out request at 9:35:01 and 9:35:59, the streamer will provide the same data (9:34:00-9:35:59)
+
+7. Solutions
+a. For issue 1: we decide to allow 1s delay, but if an AT tick has delay longer than that. The streamer will send the data in the next request by the client.  It is up to the client to decide whether it needs this data to amend its previous result.
+b. When issue 2 occurs, the client should resend the request immediately (or may be some delay)
+
