@@ -1,7 +1,4 @@
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-
 
 //data structure for each subscribed symbol
 //it maintains a window of volume and Price*Vol to provide moving average
@@ -91,16 +88,16 @@ public class SymData {
 			//update the moving average values
 
 			//skip is number of the seconds between last update and this one.
-			long skip = 0;
+			int skip = 0;
 			if(lastSecond != 0)
-				skip = second - lastSecond -1;
+				skip = (int) (second - lastSecond -1);
 
 			totalSeconds = totalSeconds + skip + 1;
 			lastSecond = second;
 
 			//skip cannot be longer than 3601. 
 			if(skip > winsize-1)
-				skip = winsize-1
+				skip = winsize-1;
 			
 			//update the moving averages first
 			for (int i=0; i<intnum; i++){
@@ -110,6 +107,7 @@ public class SymData {
 				else if(skip == allowedInterval[i]){
 					tv[i]=wv[pos];
 					tp[i]=wp[pos];
+				}
 				//Deduct the values leaving the window. Since values at pos and pos-1 were not counted in the previous moving average, we need to add them first.
 				else{ 
 					if(skip>0){
@@ -141,47 +139,49 @@ public class SymData {
 	public String getBar(int second, int interval, int bar_mask){
 		
 		update(second, 0, 0, 1);
-		retval = "";
+		String retval = "";
+		//price average
+		long pave;
 		
 		if (interval >= intnum)
 			return "";
 		int ival = allowedInterval[interval];
 	
-		if(bar_mask & 0x20){
+		if((bar_mask & 0x20) !=0){
 		//average of specified interval
 			retval += String.valueOf(tp[interval]/tv[interval]);
 		}
 		retval += ",";
-		if(bar_mask & 0x10){
+		if((bar_mask & 0x10) != 0){
 		//open of specified interval
 			retval += String.valueOf(wp[(pos-1-ival)%winsize]/tv[(pos-1-ival)%winsize]);
 		}
 		retval += ",";
-		if(bar_mask & 0x08){
+		if((bar_mask & 0x08) != 0){
 		//close of specified interval
 			retval += String.valueOf(wp[(pos-2)%winsize]/wv[(pos-2)%winsize]);
 		}
 		retval += ",";
-		if(bar_mask & 0x04 || bar_mask & 0x02){
+		if(((bar_mask & 0x04) != 0) || ((bar_mask & 0x02) != 0)){
 		//high or close, scan the period anyway
 			long h = -1;
 			long l = 1000000;
 			for(int i=0; i<ival; i++){
-				pave = wp[(pos-2-i)%winsize]/wv[(pos-2-i)%winsize]
+				pave = wp[(pos-2-i)%winsize]/wv[(pos-2-i)%winsize];
 				if ( pave> h)
 					h=pave;
 				if (pave < l)
 					l=pave;
 			}
-			if(bar_mask & 0x04)
+			if((bar_mask & 0x04) != 0)
 				retval += String.valueOf(h);
 			retval += ",";
-			if(bar_mask & 0x02)
+			if((bar_mask & 0x02) != 0)
 				retval += String.valueOf(l);
 			retval += ",";
 		}
-		if(bar_mask & 0x 1)
-			retval += String.valueOf(tv[interval])
+		if((bar_mask & 0x1) != 0)
+			retval += String.valueOf(tv[interval]);
 		
 		return retval; 
 	}
@@ -189,16 +189,17 @@ public class SymData {
 	public String getMA(int second, int ma_mask){
 		
 		update(second, 0, 0, 1);
-		retval = "";
+		String retval = "";
 
 		for(int i=0;i<intnum; i++){
-			if(ma_mask & (0x1 << i)){
+			if((ma_mask & (0x1 << i)) != 0){
 				retval += String.valueOf(tp[i]/tv[i]);
-				reval += ":";
+				retval += ":";
 				retval += String.valueOf(tv[i]);
 			}
 			if (i< intnum-1)
 				retval += ",";
 		}
 		return retval;
+	}
 }
