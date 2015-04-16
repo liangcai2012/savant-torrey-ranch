@@ -25,6 +25,7 @@ public class APISession extends ATCallback implements
 	ActiveTickServerAPI m_serverapi;
 	Requestor m_requestor;
 	Streamer m_streamer;
+	StreamerRun m_sr;
 	
 	long m_lastRequest;	
 	String m_userid;
@@ -58,13 +59,14 @@ public class APISession extends ATCallback implements
 		return m_requestor;
 	}
 	
-	public boolean Init(ATGUID apiKey, String serverHostname, int serverPort, String userId, String password, HashMap<String, ArrayList<String[]>> map)
+	public boolean Init(ATGUID apiKey, String serverHostname, int serverPort, String userId, String password, StreamerRun srun)
 	{
 		if(m_session != null)
 			m_serverapi.ATShutdownSession(m_session);
 		
 		m_session = m_serverapi.ATCreateSession();
-		m_streamer = new Streamer(this, map);
+		m_sr = srun;
+		m_streamer = new Streamer(this, m_sr);
 		m_requestor = new Requestor(this, m_streamer);
 		
 		m_userid = userId;
