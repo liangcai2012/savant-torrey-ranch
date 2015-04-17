@@ -1,0 +1,84 @@
+IPO Trade Analysis Module Design Document
+
+## Functionality:
+
+1. Collect symbols and metadata of newly-listed companies on the north American market from websites like NASDAQ and IPOScoop, and store these information into a relational database.
+
+2. Using tick data downloaded by SAVANT's Fetcher module for past IPOs, process and perform empirical analysis over these data to extract information that will aid in price variation pattern recognition, IPO classifications, and future IPO predictions. Store and maintain aforementioned analysis results in relational models.
+
+3. Plot tick data for visual inspection.
+
+4. Given metadata and market data obtained for a new IPO, perform real-time analysis to help make trading decisions.
+
+
+## Interface:
+
+This module is not expected to interact with SAVANT and will be used directly from command line.
+
+
+## Components:
+
+1. Database:
+
+SQLite will be used for development and testing. When the code reaches production quality, we will move to a real RDBMS such as PostgreSQL to handle concurrent access. 
+
+The database built for this module will contain the following tables:
+
+a) Company overview:
+    -- Schema: Company_ID(int), Company_name(char), Exchange_symbol(char), Headquarter_location(char), Year_founded(int), Industry(char), Outstanding(float), Shares(float), Current_price(float), Date_updated(char)
+    -- Source: reuters and nasdaq for already listed companies, table b for future listings
+    -- Note: this table will be used by SAVANT. It will be updated on a regular basis
+
+b) Historical IPO overview:
+    -- Schema: Company_ID(char), IPO_date(char), Underwriters(char), Offer_price(float), Opening_price(float), 1st_day_closing_price(float), 1st_day_peak_%_change(char), Scoop_rating(int)
+    -- Source: iposcoop(archive and last 100 ipos page) for ipos from 2000
+    -- Note: this table provides basic IPO info for companies in table a.
+
+c) IPO Analytics:
+    -- Schema(temporary): Company_ID(int), 1st_trade_time(char), 1st_day_highest_price(float), 1st_day_highest_price_time(char), 1st_day_lowest_price(float), 1st_day_lowest_price_time(char), 1st_day_volume(float), more TBD
+    -- Source: at, yahoo
+    -- Note: the schema for this table is not permanent.
+
+d) Exchange:
+    -- Schema: Exchange_ID(int), Exchange_name(char), Market(char)
+
+e) Industry:
+    -- Schema: Industry_ID(int), Industry_name(char)
+
+f) Underwriter:
+    -- Schema: Underwriter_ID(int), Underwriter_name(char)
+
+The following tables maybe implemented in the future:
+
+g) Pre-IPO:
+    -- Schema: Company_ID(char), IPO_date(char), Underwriters(char), Revenues(float), Net_income(float), Year_of_report(int), Price_low(float), Price_high(float), Scoop_rating(int)
+    -- Source: iposcoop
+    -- Note: this table is for temporarily storing company stock information before it goes public on the IPO date. Once the company's stocks are traded on an exchange, relevant data will be transfered over to table a and b, following the schema described above, and the corresponding entry in this table will be removed. An unique internal ID will also be generated in this process.
+
+
+2. Data Collection:
+
+a) Web scraping will be the primary method of data collection for this module. Information of companies that are already publicly traded will be scraped from web pages on www.nasdaq.com and www.reuters.com. For companies in the process of issuing their IPOs, data will be retrieved from www.iposcoop.com.
+
+Note: Historical IPO tick data wil be collected by fetcher, which is implemented in SAVANT and thus is not of concern here. To perform real-time analysis of onging IPO, however, will likely need access to SAVANT's streamer and viewer. See Technical Concerns #3 for more discussion on this.
+
+
+3. Data Analysis: 
+
+a) Mining historical data: TBD
+
+b) Predictive analytics of future IPOs: TBD
+
+c) Real-time analysis of ongoing IPOs: TBD
+
+
+4. Plotting: TBD
+
+
+## Technical Concerns:
+
+1. DBMS selection: 
+
+2. Database access in python:
+
+3. Real-time IPO analysis:
