@@ -25,12 +25,12 @@ SQLite will be used for development and testing. When the code reaches productio
 The database built for this module will contain the following tables:
 
 a) Company overview:
-    -- Schema: Company_ID(int), Company_name(char), Exchange_symbol(char), Headquarter_location(char), Year_founded(int), Industry(char), Outstanding(float), Shares(float), Current_price(float), Date_updated(char)
-    -- Source: reuters and nasdaq for already listed companies, table b for future listings
+    -- Schema: Company_ID(int), Company_name(char), Exchange_ID(char), Headquarter_location(char), Year_founded(int), Industry_ID(char), Outstanding(float), Shares(float), Current_price(float), Date_updated(char)
+    -- Source: reuters and nasdaq for already listed companies
     -- Note: this table will be used by SAVANT. It will be updated on a regular basis
 
 b) Historical IPO overview:
-    -- Schema: Company_ID(char), IPO_date(char), Underwriters(char), Offer_price(float), Opening_price(float), 1st_day_closing_price(float), 1st_day_peak_%_change(char), Scoop_rating(int)
+    -- Schema: Company_ID(char), IPO_date(char), Underwriter_IDs(char), Offer_price(float), Opening_price(float), 1st_day_closing_price(float), 1st_day_peak_%_change(char), Scoop_rating(int)
     -- Source: iposcoop(archive and last 100 ipos page) for ipos from 2000
     -- Note: this table provides basic IPO info for companies in table a.
 
@@ -51,7 +51,7 @@ f) Underwriter:
 The following tables maybe implemented in the future:
 
 g) Pre-IPO:
-    -- Schema: Company_ID(char), IPO_date(char), Underwriters(char), Revenues(float), Net_income(float), Year_of_report(int), Price_low(float), Price_high(float), Scoop_rating(int)
+    -- Schema: Company_name(char), Exchange_name(char), Headquarter_location(char), Year_founded(int), Industry(char), IPO_date(char), Underwriter_IDs(char), Revenues(float), Net_income(float), Year_of_report(int), Price_low(float), Price_high(float), Scoop_rating(int)
     -- Source: iposcoop
     -- Note: this table is for temporarily storing company stock information before it goes public on the IPO date. Once the company's stocks are traded on an exchange, relevant data will be transfered over to table a and b, following the schema described above, and the corresponding entry in this table will be removed. An unique internal ID will also be generated in this process.
 
@@ -60,7 +60,7 @@ g) Pre-IPO:
 
 a) Web scraping will be the primary method of data collection for this module. Information of companies that are already publicly traded will be scraped from web pages on www.nasdaq.com and www.reuters.com. For companies in the process of issuing their IPOs, data will be retrieved from www.iposcoop.com.
 
-Note: Historical IPO tick data wil be collected by fetcher, which is implemented in SAVANT and thus is not of concern here. To perform real-time analysis of onging IPO, however, will likely need access to SAVANT's streamer and viewer. See Technical Concerns #3 for more discussion on this.
+Note: Historical IPO tick data wil be collected by fetcher, which is implemented in SAVANT and thus is not of concern here..
 
 
 3. Data Analysis: 
@@ -69,16 +69,25 @@ a) Mining historical data: TBD
 
 b) Predictive analytics of future IPOs: TBD
 
-c) Real-time analysis of ongoing IPOs: TBD
+c) Analysis of ongoing IPOs: TBD
 
 
-4. Plotting: TBD
+4. Plotting:
+
+The plotting tool should support the following use scenarios: 
+
+a) Given a ticker symbol and a time range(in days, hours, or minutes), provide a plot of price vs. time for the stock of interest since its IPO. 
+
+b) Given a list of ticker symbols and a time range(in days, hours, or minutes), provide a plot of price vs. time for the stocks of interest since their IPOs. Normalize y-axis if the price range exceeds a certain limit(parameterized perhaps).
 
 
 ## Technical Concerns:
 
-1. DBMS selection: 
+1. DBMS selection:
+
+We consider relational database to be the appropriate storage system for the data of this module. Python will be the primary language used to import, manage, and extract data from the database. The Python DBMS implementation will allow both SQLite and PostgreSQL backends, but only the latter should be used after it is deployed to allow concurrent access.
 
 2. Database access in python:
 
-3. Real-time IPO analysis:
+We can either use SQLAlchemy or plain SQL in python. Using plain SQL through sqlite3 or psycopg2 is fast and straightforward. However, it will likely produce many redundant codes while doing similar queries over different tables. It's possible to implement a wrapper over the existing db library to avoid code redundancy, but this is already a built-in feature of SQLAlchemy. Another advantage of SQLAlchemy is that it provides a declarative approach to database that will make our code more robust and flexible against changes to the physical structure of our tables. This could be very benefitial as the IPO Analytics table will be constantly modified. Finally, in the future in case we want to extend this module into a web application, using SQLAlchemy now we would not need to re-integrate an ORM.
+
