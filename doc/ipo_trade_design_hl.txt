@@ -25,32 +25,35 @@ SQLite will be used for development and testing. When the code reaches productio
 The database built for this module will contain the following tables:
 
 a) Company overview:
-    -- Schema: Company_ID(int), Company_name(char), Exchange_ID(char), Headquarter_location(char), Year_founded(int), Industry_ID(char), Outstanding(float), Shares(float), Current_price(float), Date_updated(char)
-    -- Source: reuters and nasdaq for already listed companies
+    -- Schema: Company_ID(int primary key), Company_name(char), Symbol(char), Exchange_ID(int), Headquarter_location(char), Year_founded(int), YHOO_Sector_ID(int), YHOO_Industry_ID(int), GOOG_Sector_ID(int), GOOG_Industry_ID(int), Outstanding(float), Current_shares(float), Current_price(float), Current_volume(int), Current_P/E(float), Date_updated(char)
+    -- Source: yahoo and google finance
     -- Note: this table will be used by SAVANT. It will be updated on a regular basis
 
 b) Historical IPO overview:
-    -- Schema: Company_ID(char), IPO_date(char), Underwriter_IDs(char), Offer_price(float), Opening_price(float), 1st_day_closing_price(float), 1st_day_peak_%_change(char), Scoop_rating(int)
+    -- Schema: Company_ID(char), IPO_date(char), Underwriter_IDs(char), Offer_price(float), Offer_shares(float), Opening_price(float), 1st_day_closing_price(float), 1st_trade_time(char), 1st_day_high(float), 1st_day_high_%_change(char), 1st_day_low(float), 1st_day_low_%_change(char), 1st_day_volume(float), Scoop_rating(int)
     -- Source: iposcoop(archive and last 100 ipos page) for ipos from 2000
     -- Note: this table provides basic IPO info for companies in table a.
 
 c) IPO Analytics:
-    -- Schema(temporary): Company_ID(int), 1st_trade_time(char), 1st_day_highest_price(float), 1st_day_highest_price_time(char), 1st_day_lowest_price(float), 1st_day_lowest_price_time(char), 1st_day_volume(float), more TBD
+    -- Schema(temporary): Company_ID(int), more TBD
     -- Source: at, yahoo
     -- Note: the schema for this table is not permanent.
 
 d) Exchange:
     -- Schema: Exchange_ID(int), Exchange_name(char), Market(char)
 
-e) Industry:
-    -- Schema: Industry_ID(int), Industry_name(char)
+e) Sector:
+    -- Schema: Sector_ID(int), Sector_name(char), Source(char)
 
-f) Underwriter:
+f) Industry:
+    -- Schema: Industry_ID(int), Industry_name(char), Source(char)
+
+g) Underwriter:
     -- Schema: Underwriter_ID(int), Underwriter_name(char)
 
 The following tables maybe implemented in the future:
 
-g) Pre-IPO:
+h) Pre-IPO:
     -- Schema: Company_name(char), Exchange_name(char), Headquarter_location(char), Year_founded(int), Industry(char), IPO_date(char), Underwriter_IDs(char), Revenues(float), Net_income(float), Year_of_report(int), Price_low(float), Price_high(float), Scoop_rating(int)
     -- Source: iposcoop
     -- Note: this table is for temporarily storing company stock information before it goes public on the IPO date. Once the company's stocks are traded on an exchange, relevant data will be transfered over to table a and b, following the schema described above, and the corresponding entry in this table will be removed. An unique internal ID will also be generated in this process.
