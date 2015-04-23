@@ -1,0 +1,354 @@
+
+======================General requirements======================
+*Viewer is client for streamer/feeder to get real-time/historical stock data and display, and server for controller(only receive command).
+
+*Viewer component is responsible for displaying BOTH historical AND real-time data in different charts, and integrate message Q to maintain a queue of display items.
+
+*Message Q should be manual modifiable, include move/remove/list
+
+*For each stock, viewer should be able to display multiple data in same plot, include bar data,MA,vol,etc.
+
+
+=======================function definition=======================
+*feature#1:
+Viewer should support  display multiple charts for each stock inside one figure, like:
+! 	line:  MA(moving average) with different interval,bar data(o/h/l/c)
+	Histogram: vol
+	
+
+*feature#2:
+Viewer should be able to both separetely or  "combinely" display each stock's historical data and real-time data, cases include(order as priority):
+!	a) ONLY show realtime data: first plot point will begin with Viewer get first real-time data from Streamer. Interval decide data requesting frequency, except MA(see detail later)
+!	b) ONLY show ONE DAY's historical data: start/stop/interval time specified on command, Viewer get data from Fetcher, and show the whole data at once. Interval only decide points on plot, not data requesting frequency.
+!	c) show today's "combine" data: first load today's 'historical' data getting from Fether, then keep updating real-time data getting from Streamer. Kind of chart should be the same.
+!	d) show historical data crossing multiple datas: start/stop time specified on command, Viewer get data from Fetcher, and show the whole data at once. interval 
+
+*feature#3:
+Message Q should be manual modifiable, include add/move/remove/list
+
+
+*feture#4:
+Viewer can display n small charts or m big charts. Layout&configr ways:
+!	how-to: fixed layout& configr. Each chart will divide by up and down part: upper part will be bar and MA (depending on commands) lower part will be volume. Also in the upper part, we want to have the most recent price (in text) 
+
+
+*feture#5:
+Viewer support both backtest and auto trading result displaying. each chart disp one  stock based on order. 
+Viewer works in sessions. When bt engine finishes a strategy, or when auto trading is started, The old session (if any) is closed and a new session is automatically created. The Viewer process is terminated when session is closed and a new process is spawned for the new session. User can restart viewer session from console. 
+In each session, viewer mainatins a queue of display items. When bt is finished, the queue is populated with the execution results; When the auto trade is started, the queue is populated with all streamed stocks in the list. The order of the queue will be dynamically adjusted. 
+! 	follow-up about session:
+	pros: good for multi-client, server can store muli-client's information(like MQ) in different session. clients can have high-costumed request from server 
+	cons: 	1)session mainly used in web. As server to Controller, viewer don't benefit from session because normally only have one controller. As client to streammer/feeder, original design of sigle session(close old one after new one created) do not benefit too much.
+		2) need 3rd party framework, like "flask" in Python, and most framwork is face to web
+ 	some concern: if we multi-sessions(properly won't), need consider multi-thread and multi-session relative issue. 
+		      when viewer used as client session, like request 2 streamers in LAN at same time, how to handle(one time one session or multi session?)  
+
+
+*feture#6 (proposal only)
+viewer may be able to show current's day's total equity +-% in real-time. may support to show all holding stock's +-% in real-time(compare with open price and buy price). Not graph is ok. All those number should get from stratege. 
+
+=======================block definition=========================
+1.real-time data requestor:
+request real-time data from streamer. Will send request every interval. Store temp data(1 hour or WHOLE day) in memory and display.
+when requesting bar data only, caller should send this message with the same interval as the bar interval. 
+
+
+class: Recvdata
+defs: connect_str(), streaming()
+
+
+2. same day 'historical' data requestor:
+work in same thread with 'real-time data requestor'.  get same day previous data from Fetcher
+
+class: Recvdata
+defs: connect_hist(),hist_today()
+
+
+3. historical data requestor:
+work in different thread with 'real-time data requestor'. request historical data from feeder and plot all data in one time.
+
+class: Recvdata
+defs: connect_hist(),hist()
+
+
+4. plotter:
+work in differnt thread with data requestor.  if called by historical requestor, plot all data in one time, if called by real-time data requestor, keep updating every 1s. 
+Plotter should be support all kinds of data plotting. See feature#1 and #4
+
+class: Plotdata
+defs: on_launch(), on_running(), config_plot()
+
+
+5. MQ operator:
+work in thread,operate MQ for add/list/remove/move. Use dequeue datastructure in Python to implement the MQ. 
+
+class: MQ
+defs: list(),remove(),move(),add()
+
+
+6. Interface for controller:
+class:ForController
+def: list(),remove(),move(),add(),subscrb_str(),update_str(),unsubscrb_str(),subscrb_hist(),update_hist(),unsubscrb_hist(),
+potential defs: chart1_cfg(),chart2_cfg(),chart3_cfg()...
+
+! Thread deinition:
+ 	thread1: connect and request real-time/same day historical data
+	thread2: connect and request pure historical. (Requested historical data may huge and seperate store from real-time data, so use diff thread with realtime data requester)
+ 	thread3: plotting
+ 	thread4: main thread, MQ operation, ForController,Misc.
+
+! Main Data structure definistion:
+	MQ: use dequeue
+	real-time plotting data: use dict of dict. global,share between threadings
+			outter dict:  key: stock_name, value: data
+			inner dict: key: data(bar/MA), value: data value. eg: {"QQQ": {"time_stamp":"12:22:45","open": 110,"high":113,"MA1":"112","vol":20000}, "SPY": {"time_stamp":"12:22:45","open": 105,"avg":100,"MA":"102","vol":30000}}
+	
+	Historical data: similar as real-time data.global,share between threadings
+
+
+! block relations:
+ 	general: begin -> MQ -> Recvdata->Plotdata
+	change MQ: MQ->plotdata	(all stock in MQ always keep updating)
+	change plot config:  plotdata  ( need figure out how to change config in middle of realtime data plotting)
+
+	"combine" plot -> Recvdata(from feeder)->plotdata   -> Recvdata(from streammer)->plotdata  (need figure out the 'combine' plotting implementation)
+	
+
+=========================APIs====================================
+
+### with controller ###:
+
+! 1.add symbols:
+{ 
+ "requst": {
+	"mod":"view",
+	"cmd":"add",
+	"symlist": [
+            "QQQ",
+            "SPY"
+        ]
+	"interval":interval
+	"type": "real" or "hist"
+	"start":y/m/d/h/m/s or "today" 
+	"stop":y/m/d/h/m/s or "today"
+	}
+}
+NOTE:
+a) when 'type' is 'real',request real-time data from streammer;when 'type' is 'hist',request historical data from feeder
+b) 'start'/'stop' only take effect when 'type' is 'hist', and they will specify the start/stop time of the historical data requested. when they're 'today',means will request today's historical data from beginning of today to current time.
+c) when 'type' is 'real',interval must inside ["1s", "5s", "10s", "30s", "1m", "5m", "10m", "30m", "1h"], and when 'type' is 'hist',interval can have additional option '1d'
+
+
+
+2.list message Q inside viewer
+{ 
+ "requst": {
+	"mod":"view",
+	"cmd":"list"
+	}
+}
+
+3. move chart_id's position inside messageQ:
+{ 
+ "requst": {
+	"mod":"view",
+	"cmd":"move",
+	"id":index,
+	"position":position
+	}
+}
+
+NOTE: will cause 4 cases which need by handle by Viewer: 
+a) both chart_ids not in plot ->  just swap their positions in Q,no other operate needed
+b) one chart in real-time plotting, another isn't -> swap chart_ids in Q, replace plot with new stock,may need get 'same day historical' data
+c) one chart in historical data plot, another isn't -> swap chart_ids in Q, call feeder get new historical data and update plottings. 
+d) both chart in ploting -> just swap plotting position(1-6). DO we really need this case?
+
+
+4. remove chart_id in Q:
+{
+ "requst": {
+	"mod":"view",
+	"cmd":"remove",
+	"id":index
+	}
+}
+
+NOTE: once a chart_ids removed from Q, both relative memory and file removed.  two cases need handle:
+a)removed chart_ids is NOT on ploting, delete chart_id from Q, delete relative memory and temp file(if used)
+b)removed chart_ids is on ploting, next unshow chart_id fill this position.
+
+
+5. status response to controller:
+{
+    "response":{
+       "errcode":0
+    }
+}
+or
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
+
+### With streamer ###
+
+6. subscribe new symlist from streamer:
+
+{
+    "requst": {
+        "command": "subscribe",
+        "client": "viwer",
+        "symlist": [
+            "QQQ",
+            "SPY"
+        ]
+    }
+}
+
+7. unsubscribe ALL symlist from streamer:
+{
+    "requst": {
+        "command": "unsubscribe",
+        "client": "viwer",
+    }
+}
+NOTE: do we need empty the Q?
+
+8.update ALL symlist from streamer:
+{
+    "requst": {
+        "command": "update",
+        "client": "viwer",
+        "interval": "1s",
+        "bar_mask":  0x111111,
+	"ma_mask": 0x111111111
+    }
+}
+NOTE:
+a) interval must inside ["1s", "5s", "10s", "30s", "1m", "5m", "10m", "30m", "1h"].
+b )bar_mask is a bitmap of 0 or 1 (only lowest 6 bits are used) representing mask of "average/open/close/high/low/volume".
+c) ma_mask is a bitmap of 0 or 1 (only lowest 9 bits are used) representing the moving average of intervals (from 1s to 1h)
+d) interval and bar_mask fields are mandatory when requesting for bar data; ma_mask field is mandatory when requesting moving average data.
+e) viewer always keep send 'update' command every 1s unless 'unsubscribe', but 'interval' value can be 1s-1h
+f) "bar", "ma" and "delay" fields might be optional, depending on the request.
+g)  when requesting bar data only, caller should send this message with the same interval as the bar interval
+
+9. data response from streamer:
+{
+    "response":{
+	"client": "strategy1"
+       	"timestamp": "hhmmss",
+	"interval": "1s",
+       	"data": [
+		{
+			"symbol": "QQQ",
+			"bar": "12.21,12.20,12.24,12.00,12.13,200",
+			"ma":"aveprice:avevol,aveprice:avevol,aveprice:avevol", //comma separated 
+			"delay": "hhmmss-price-vol;yymmss-price-vol", //comma seperated
+		}
+	]
+    }
+}
+
+10. status response from streamer:
+{
+    "response":{
+       "errcode":0
+    }
+}
+or
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
+### With feeder ###
+11. subscribe new symlist from streamer:
+
+{
+    "requst": {
+        "command": "subscribe",
+        "client": "viwer",
+        "symlist": [
+            "QQQ",
+            "SPY"
+        ]
+	"start": " "
+	"stop": " "
+    }
+}
+
+NOTE: 
+a)feeder will send all data in symlist to viewer, periode defined by 'start' and 'stop'. Viewer will decide what to show.
+
+
+9. data response from feeder:
+{
+    "response":{
+	"client": "viewer"
+       	"start": " "
+	"stop": " "
+       	"data": [
+		{
+			"symbol": "QQQ",
+			"bar": "12.21,12.20,12.24,12.00,12.13,200",
+			"ma":"aveprice:avevol,aveprice:avevol,aveprice:avevol", //comma separated 
+			"interval": "1d",
+		}
+	]
+    }
+}
+
+10. status response from feeder:
+{
+    "response":{
+       "errcode":0
+    }
+}
+or
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
+
+
+
+=========Major technique issues=========
+1. memory not enough if too many stock in Q ->
+opt1: limit both Q size and time size. only memory stock's recent 1 hour data, ealier's store in file
+opt2: ony stream on plotting stock, when re-show hiden stock data, call streamer or feeder to ask for same-day-historical data
+
+!
+2. re-show data from file('move' command),how to combine updating with streaming data ->
+opt1: show 'same day historical' data first, then keep updating data from streamer every 1s 
+
+--follow up issue: fetcher can not real-time store 'same day historical data' in file, maybe store every hour. what if we request in middle of an hour? ->
+opt1: fetcher should be able provide any start/stop time historical data
+
+3. zoom-in,zoom-out. don't want re-plot after scale change ->
+opt1: use replotting for zoom function
+Liang's comment:zoom-in/out without replot is not useful feature. We want to replot it only because we want to see some detail of a given period, or we want to see extended time line, both require replotting
+
+
+4. during real-time data ploting, need handle case that there is no data during some seconds from streamer->
+opt1: plot should do nothing or use the previous price (depending on the bar type) until new data comes
+
+!
+5. case like:when stock A was only streaming bar data, in some time, we want show it's all previous MA data inside today, how to? ->
+opt1: for any real-time stock data, should always request "whole set" data from streammer, incluse bar/MA,etc. viewer can decide which data to show. 
+opt2: During grab "same today historical data", feeder/streamer should always grap "whole set" data. then viewer will ask "missing data" from ""same today historical data"
+follow-up: request freq is decided by interval: when have bar data, use bar data interval; when only have MA data, use min interval of MA data. 
+
+6. when requesting bar data only, caller should send this message with the same interval as the bar interval. 
+Due to clock drift, the caller might get same bar data via two consecutive messages. In this case, the caller need to resend the second message immediately and adjust its timer.   
+-> viewer need to check if the data received this time is same as last one.
+ 
