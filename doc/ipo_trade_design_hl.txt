@@ -30,9 +30,10 @@ a) Company overview:
     -- Note: this table will be used by SAVANT. It will be updated on a regular basis
 
 b) Historical IPO overview:
-    -- Schema: Company_ID(char), IPO_date(char), Underwriter_IDs(char), Offer_price(float), Offer_shares(float), Opening_price(float), 1st_day_closing_price(float), 1st_trade_time(char), 1st_day_high(float), 1st_day_high_%_change(char), 1st_day_low(float), 1st_day_low_%_change(char), 1st_day_volume(float), Scoop_rating(int)
+    -- Schema: Company_ID(int), IPO_date(char), Underwriter_IDs(char), Offer_price(float), Offer_shares(float), Opening_price(float), 1st_day_closing_price(float), 1st_trade_time(char), 1st_day_high(float), 1st_day_high_%_change(char), 1st_day_low(float), 1st_day_low_%_change(char), 1st_day_volume(float), Scoop_rating(int)
     -- Source: iposcoop(archive and last 100 ipos page) for ipos from 2000
     -- Note: this table provides basic IPO info for companies in table a.
+    -- Underwriter: a string representation of lists: aaa/bbbb;ccc/ddd  aaa,bbb,ccc,ddd are all underwriter id, aaa and bbb are leading underwriters
 
 c) IPO Analytics:
     -- Schema(temporary): Company_ID(int), more TBD
