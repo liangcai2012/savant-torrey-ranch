@@ -1,5 +1,7 @@
+import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.ParseException;
@@ -7,6 +9,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 import java.util.Vector;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import at.feedapi.ActiveTickStreamListener;
 import at.utils.jlib.PrintfFormat;
@@ -264,13 +268,20 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 	public void writeTickRecord(String filepath, ArrayList<String> records)
 	{
 		try {
+			FileOutputStream dest = new FileOutputStream(filepath);
+			ZipOutputStream writer = new ZipOutputStream(new BufferedOutputStream(dest)); 
+			ZipEntry entry = new ZipEntry("data.tsv");
+			writer.putNextEntry(entry);
+/*			
 			File data = new File(filepath);
 			FileWriter fw = new FileWriter(data,true);
 			BufferedWriter writer = new BufferedWriter(fw);
+*/			
 			for (String record : records) {
-				writer.write(record);
+				writer.write(record.getBytes(), 0, record.length());
 			}
 			writer.close();
+
 		} catch (IOException e) {
 			System.out.println("Cannot write to file");
 		}

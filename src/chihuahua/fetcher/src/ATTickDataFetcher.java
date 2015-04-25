@@ -286,16 +286,16 @@ public class ATTickDataFetcher {
 
     private void completeFetch() {
         try {
-            String finalFilePath = this.outputPath + "_premarket.tsv";
-            String tempFilePath = finalFilePath + ".tmp";
+            String finalFilePath = this.outputPath + "_premarket.tsv.zip";
+            String tempFilePath = this.outputPath + "_premarket.tsv.tmp.zip";
             Runtime.getRuntime().exec("mv " + tempFilePath + " " + finalFilePath);
 
-            finalFilePath = this.outputPath + "_markethours.tsv";
-            tempFilePath = finalFilePath + ".tmp";
+            finalFilePath = this.outputPath + "_markethours.tsv.zip";
+            tempFilePath = this.outputPath + "_markethours.tsv.tmp.zip";
             Runtime.getRuntime().exec("mv " + tempFilePath + " " + finalFilePath);
 
-            finalFilePath = this.outputPath + "_aftermarket.tsv";
-            tempFilePath = finalFilePath + ".tmp";
+            finalFilePath = this.outputPath + "_aftermarket.tsv.zip";
+            tempFilePath = this.outputPath + "_aftermarket.tsv.tmp.zip";
             Runtime.getRuntime().exec("mv " + tempFilePath + " " + finalFilePath);
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Fetch not complete: failed to rename temp file");
@@ -314,11 +314,11 @@ public class ATTickDataFetcher {
             outDir.mkdir();
         }
         this.outputPath = DEFAULT_OUTPUT_DEST + "/" + date + "/" + symbol;
-        String premarketFilePath = this.outputPath + "_premarket.tsv.tmp";
+        String premarketFilePath = this.outputPath + "_premarket.tsv.tmp.zip";
         createIfNotExist(premarketFilePath);
-        String marketFilePath = this.outputPath + "_markethours.tsv.tmp";
+        String marketFilePath = this.outputPath + "_markethours.tsv.tmp.zip";
         createIfNotExist(marketFilePath);
-        String aftermarketFilePath = this.outputPath + "_aftermarket.tsv.tmp";
+        String aftermarketFilePath = this.outputPath + "_aftermarket.tsv.tmp.zip";
         createIfNotExist(aftermarketFilePath);
         apiSession.GetRequestor().setOutputPath(premarketFilePath,marketFilePath,aftermarketFilePath);
     }
