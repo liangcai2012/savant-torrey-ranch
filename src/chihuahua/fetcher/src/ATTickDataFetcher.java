@@ -1,11 +1,12 @@
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import at.feedapi.ActiveTickServerAPI;
 import at.feedapi.Helpers;
@@ -13,8 +14,8 @@ import at.shared.ATServerAPIDefines;
 import at.shared.ATServerAPIDefines.ATSYMBOL;
 import at.shared.ATServerAPIDefines.ATGUID;
 import at.shared.ATServerAPIDefines.SYSTEMTIME;
-import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONException;
 
 
 public class ATTickDataFetcher {
@@ -34,6 +35,7 @@ public class ATTickDataFetcher {
     private static final String DEFAULT_END_TIME = "200000"; //default query end time
     private static final int DEFAULT_TIME_WINDOW = 3600; //this indicates the overall length of time in sec the client is trying to get data from
     private static final String DEFAULT_OUTPUT_DEST;
+    private static final int BUFFER = 2048;
     public String outputPath;
     public LinkedList<JSONObject> pendingRequests;
     public String beginTime;
@@ -81,12 +83,14 @@ public class ATTickDataFetcher {
             if (cmd.equals("quit")) {
                 this.exit();
             } else if (cmd.equals("get")) {
+
                 if (!this.isIdle()) {
                     logger.log(Level.SEVERE,"fetcher busy");
                     errcode = "-1";
                     errmsg = "busy";
                     break SENDREQUEST;
                 }
+
                 String symbol = (String)request.get("symbol");
                 String date = (String)request.get("date");
                 logger.log(Level.INFO,"SEND request [" + symbol + ":" + date + "]");
@@ -96,6 +100,7 @@ public class ATTickDataFetcher {
                     break SENDREQUEST;
                 }
                 this.setRequestOutputPath(symbol, date);
+
                 try {
                     String strCurrBeginTime = this.beginTime;
                     String strCurrEndTime = "";
@@ -211,9 +216,9 @@ public class ATTickDataFetcher {
             if (!this.isIdle()) {
                 this.sendNextRequest();
             } else {
-                logger.log(Level.INFO, "request complete");
                 this.completeFetch();
                 this.reset();
+                logger.log(Level.INFO, "request complete");
             }
         } catch (JSONException e) {
             logger.log(Level.SEVERE,e.getMessage());
@@ -285,20 +290,49 @@ public class ATTickDataFetcher {
     }
 
     private void completeFetch() {
+        String filepath = this.outputPath + "_markethours.tsv";
+        renameFile(filepath);
+        compressFile(filepath);
+
+        filepath = this.outputPath + "_premarket.tsv";
+        renameFile(filepath);
+        compressFile(filepath);
+
+        filepath = this.outputPath + "_aftermarket.tsv";
+        renameFile(filepath);
+        compressFile(filepath);
+    }
+
+    private void renameFile(String filepath) {
         try {
-            String finalFilePath = this.outputPath + "_premarket.tsv.zip";
-            String tempFilePath = this.outputPath + "_premarket.tsv.tmp.zip";
-            Runtime.getRuntime().exec("mv " + tempFilePath + " " + finalFilePath);
-
-            finalFilePath = this.outputPath + "_markethours.tsv.zip";
-            tempFilePath = this.outputPath + "_markethours.tsv.tmp.zip";
-            Runtime.getRuntime().exec("mv " + tempFilePath + " " + finalFilePath);
-
-            finalFilePath = this.outputPath + "_aftermarket.tsv.zip";
-            tempFilePath = this.outputPath + "_aftermarket.tsv.tmp.zip";
-            Runtime.getRuntime().exec("mv " + tempFilePath + " " + finalFilePath);
+            String tempFilePath = filepath + ".tmp";
+            Runtime.getRuntime().exec("mv " + tempFilePath + " " + filepath);
+            new File(filepath);
         } catch (IOException e) {
-            logger.log(Level.SEVERE, "Fetch not complete: failed to rename temp file");
+            logger.log(Level.SEVERE, "Failed to rename temp file");
+        }
+    }
+
+    private void compressFile(String filepath) {
+        try {
+            byte[] data = new byte[BUFFER];
+            String zipFilePath = filepath + ".zip";
+            BufferedInputStream in = new BufferedInputStream(new FileInputStream(filepath), BUFFER);
+            FileOutputStream zipFile = new FileOutputStream(zipFilePath);
+            ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(zipFile));
+            ZipEntry entry = new ZipEntry(filepath);
+            out.putNextEntry(entry);
+            int count;
+            while((count = in.read(data, 0, BUFFER)) != -1) {
+                out.write(data, 0, count);
+            }
+            in.close();
+            out.close();
+            zipFile.close();
+            new File(filepath).delete();
+        } catch (IOException e) {
+            logger.log(Level.SEVERE, "Failed to compress data file");
+            logger.log(Level.SEVERE, e.getMessage());
         }
     }
 
@@ -314,11 +348,11 @@ public class ATTickDataFetcher {
             outDir.mkdir();
         }
         this.outputPath = DEFAULT_OUTPUT_DEST + "/" + date + "/" + symbol;
-        String premarketFilePath = this.outputPath + "_premarket.tsv.tmp.zip";
+        String premarketFilePath = this.outputPath + "_premarket.tsv.tmp";
         createIfNotExist(premarketFilePath);
-        String marketFilePath = this.outputPath + "_markethours.tsv.tmp.zip";
+        String marketFilePath = this.outputPath + "_markethours.tsv.tmp";
         createIfNotExist(marketFilePath);
-        String aftermarketFilePath = this.outputPath + "_aftermarket.tsv.tmp.zip";
+        String aftermarketFilePath = this.outputPath + "_aftermarket.tsv.tmp";
         createIfNotExist(aftermarketFilePath);
         apiSession.GetRequestor().setOutputPath(premarketFilePath,marketFilePath,aftermarketFilePath);
     }
@@ -338,6 +372,7 @@ public class ATTickDataFetcher {
             logger.log(Level.SEVERE,"Request halted: cannot create file");
         }
     }
+
     private void exit() {
         apiSession.UnInit();
         serverapi.ATShutdownAPI();

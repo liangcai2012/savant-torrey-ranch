@@ -35,10 +35,10 @@ public class RequestListener {
             }
         }
         catch (IOException ix) {
-            System.out.println("IOException");
+            System.out.println(ix.getMessage());
         }
         catch (Exception e) {
-            System.out.print("");
+            System.out.print(e.getMessage());
         }
     }
 }
