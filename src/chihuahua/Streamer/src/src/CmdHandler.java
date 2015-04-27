@@ -1,3 +1,5 @@
+ipackage atapi.wrapper;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -10,13 +12,26 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import at.feedapi.ActiveTickServerAPI;
+import at.feedapi.Helpers;
+import at.shared.ATServerAPIDefines;
+import at.shared.ATServerAPIDefines.ATSYMBOL;
+import at.shared.ATServerAPIDefines.ATStreamRequestType;
+import at.utils.jlib.Errors;
+
 class CmdHandler implements Runnable{
 	private Socket socket;
 	private StreamerRun sr;
-            
+	public static ActiveTickServerAPI serverapi;
+    public static APISession apiSession;
+
+	 
 	public CmdHandler(Socket socket, StreamerRun srun)		 {
 		this.socket = socket;
 		this.sr = srun;
+		serverapi = new ActiveTickServerAPI();	      
+	     apiSession = new APISession(serverapi);
+	     serverapi.ATInitAPI();
 	}
 
 	//TODO: return values
@@ -57,6 +72,9 @@ class CmdHandler implements Runnable{
 									JSONArray symlist = (JSONArray)req.get("symlist");
 									String client = (String)req.get("client");
 									processSubscribe(client, (List<String>)symlist);
+									//if(!processSubscribe(client, (List<String>)symlist))
+									//	System.out.println("Error = " + Errors.GetStringFromError((int)request));
+										
 								}
 								else if (cmd.equalsIgnoreCase("unsubscribe"))
 								{
@@ -79,7 +97,7 @@ class CmdHandler implements Runnable{
         								System.out.println("received request is not a valid json input: " +jstr);
         								continue;
         							}
-										
+									
 									processUpdate(client, interval, bar_mask_num, ma_mask_num);   	                            	
 								}
 							}
@@ -155,27 +173,49 @@ class CmdHandler implements Runnable{
 	 * subscribe with atapi. add all sym with success to the clientmap. For those failed, print the reason
 	 * return the whole list for the client
 	 */
-	public String processSubscribe(String client, List<String> symlist)
+	public void processSubscribe(String client, List<String> symlist)
 	{
-		ArrayList<String> reducedsymlist = new ArrayList<String>();
+		//
+		ArrayList<String> newAddSymlist = new ArrayList<String>();
 		
+		// if client doesn't exist, create.
 		if(sr.m_clientSymMap.get(client) == null){
 			sr.m_clientSymMap.put(client,  new ArrayList<String>());
 		}
+		
+		//if client existed, check syms of this client existed or not
+		//add those not existed sym to newAddSymlist
 		ArrayList<String> exsymlist = sr.m_clientSymMap.get(client);
 		for (String sym : symlist) {
 			if(!exsymlist.contains(sym)){
 				exsymlist.add(sym);
-				reducedsymlist.add(sym);
+				newAddSymlist.add(sym);
 			}
 		}
-	
-		if(reducedsymlist.size()>0){
-			//subscribe all sym in the reduced list.			
+	    
+		//subscribe syms in newAddSymlist
+			List<ATSYMBOL> lstSymbols = new ArrayList<ATSYMBOL>();
+
+			if(!newAddSymlist.isEmpty() && !newAddSymlist.contains(","))
+			{
+				for(String strSymbols : newAddSymlist){
+					ATSYMBOL atSymbol = Helpers.StringToSymbol(strSymbols);
+					lstSymbols.add(atSymbol);
+				}			
+			
+			ATStreamRequestType requestType = (new ATServerAPIDefines()).new ATStreamRequestType();
+			requestType.m_streamRequestType = ATStreamRequestType.StreamRequestSubscribeTradesOnly ;
+			
+			long request = apiSession.GetRequestor().SendATQuoteStreamRequest(lstSymbols, requestType, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
+			if(request < 0)
+			{
+				// or throw an exception?
+				System.out.println("Error = " + Errors.GetStringFromError((int)request));
+				//return false;
+			}
 		}
 		
-		
-		return "";
+		//return true;
 	}	
 	
 	
@@ -184,9 +224,41 @@ class CmdHandler implements Runnable{
 	 * @param client: client name
 	 * @return response in json
 	 */
-	public String processUnsubscribe(String client)
+	//? what if some syms in this client also exist in other client' list?
+	public void processUnsubscribe(String client)
 	{
-		return "";
+		//if client does not exist, return false;
+		if(sr.m_clientSymMap.containsKey(client)){ 
+		
+		//if client exists, remove its symlist from map 
+		List<ATSYMBOL> lstSymbols = new ArrayList<ATSYMBOL>();
+		ArrayList<String> exsymlist = sr.m_clientSymMap.get(client);
+		
+		//remove symlist for client
+		sr.m_clientSymMap.remove(client);
+		
+		if(!exsymlist.isEmpty())
+		{
+			for(String strSymbols : exsymlist){
+				ATSYMBOL atSymbol = Helpers.StringToSymbol(strSymbols);
+				lstSymbols.add(atSymbol);
+			}			
+		
+		ATStreamRequestType requestType = (new ATServerAPIDefines()).new ATStreamRequestType();
+		requestType.m_streamRequestType = ATStreamRequestType.StreamRequestUnsubscribeTradesOnly ;
+		
+		long request = apiSession.GetRequestor().SendATQuoteStreamRequest(lstSymbols, requestType, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
+		if(request < 0)
+		{
+			// or throw an exception?
+			System.out.println("Error = " + Errors.GetStringFromError((int)request));
+			//return false;
+		}
+	}
+	
+	//return true;
+		
+		}
 	}
 	
 	/****************

@@ -117,5 +117,6 @@ note 6: returned data is the most recent and "accurate" data that the streamer o
 
 note 7: returned data be a list of records, each record contains symbol, bar data, moving average data and delayed tick data. "bar", "ma" and "delay" fields might be optional, depending on the request.
 
-note 8: when requesting bar data only, caller should send this message with the same interval as the bar interval. For example, if bar data is 1m long, then the caller should send the request every minute. However, due to clock drift, the caller might get same bar data via two consecutive messages. In this case, the caller need to resend the second message immediately and adjust its timer.   
+note 8: when requesting bar data only, caller should send this message with the same interval as the bar interval. For example, if bar data is 1m long, then the caller should send the request every minute. However, due to clock drift, the caller might get same bar data via two consecutive messages. In this case, the caller need to resend the second message immediately and adjust its timer.  
+note 9: The stream should skip all empty data set. i.e if there is no data from second 2 to second 5, then update should return data of second 6 after data of second 1.A client of the Stream Should check the timestamp in the response data package to know if there are data set skip to correctly to processs the data.
 
