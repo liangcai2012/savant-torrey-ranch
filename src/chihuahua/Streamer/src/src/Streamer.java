@@ -1,3 +1,16 @@
+
+package atapi.wrapper;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import at.feedapi.ActiveTickServerAPI;
+import at.feedapi.ActiveTickStreamListener;
+import at.feedapi.Session;
+import at.shared.ATServerAPIDefines;
+import at.shared.ATServerAPIDefines.ATGUID;
+import at.utils.jlib.PrintfFormat;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,7 +34,7 @@ public class Streamer extends ActiveTickStreamListener
 	private long tPrice = 0;
 	private long tSize = 0;
 	private String sTime = null;
-	//int i = 0;
+	int i = 0;
 	private int sec = 60;
 	private int min = 60;
 	
@@ -123,24 +136,24 @@ public class Streamer extends ActiveTickStreamListener
 			each[2] =  tPrice + "";
 			each[3] =  tSize + "";
 			each[4] = ((double)tPrice/(double)tSize) + "";
-				if(map.get(strSymbol) == null){
+				if(sr.m_tickDataMap.get(strSymbol) == null){
 					//
 				// String[][] aRR = new String[ARRAY_SIZE][3];
 					ArrayList<String[]> aPrice = new ArrayList<String[]>(); 
 					//aPrice.add(each);
 					//System.out.println("each is" + aPrice.get(0));
 					System.out.println("add" + strSymbol + "to map");
-					map.put(strSymbol, aPrice);     
+					sr.m_tickDataMap.put(strSymbol, aPrice);     
 				}else {
-					if(map.get(strSymbol).size() == ARRAY_SIZE){
+					if(sr.m_clientSymMap.get(strSymbol).size() == ARRAY_SIZE){
 						System.out.println("remove 1");
-						map.get(strSymbol).remove(0);
-						System.out.println("size is " + map.get(strSymbol).size());
+						sr.m_clientSymMap.get(strSymbol).remove(0);
+						System.out.println("size is " + sr.m_clientSymMap.get(strSymbol).size());
 					}
 				}
 				    System.out.println("now add is " + strSymbol);
-					map.get(strSymbol).add(each);
-					System.out.println("then size is " + map.get(strSymbol).size());
+				    sr.m_tickDataMap.get(strSymbol).add(each);
+					System.out.println("then size is " + sr.m_clientSymMap.get(strSymbol).size());
 				
 					timeGap = update.lastDateTime.second - sec;
 					System.out.println("timeGap is"+ timeGap);
@@ -152,9 +165,8 @@ public class Streamer extends ActiveTickStreamListener
 					
 					if (timeGap > 1){
 						System.out.println("hehehe timeGap > 1");
-						
 					
-						ArrayList<String[]> last = map.get(strSymbol);
+						ArrayList<String[]> last = sr.m_tickDataMap.get(strSymbol);
 						//new
 						int reSec = 0;
 						int reMin = 1;
@@ -190,8 +202,8 @@ public class Streamer extends ActiveTickStreamListener
 						    }
 							
 							System.out.println("now  pre Time is" + newArr[1]);
-							map.get(strSymbol).add(newArr);
-							System.out.println("ArrayList Size is " + map.get(strSymbol).size());
+							sr.m_tickDataMap.get(strSymbol).add(newArr);
+							System.out.println("ArrayList Size is " + sr.m_clientSymMap.get(strSymbol).size());
 							System.out.println("add a previous value!!!" + newArr[1] + " " + newArr[2]);
 						}
 					}
@@ -206,6 +218,9 @@ public class Streamer extends ActiveTickStreamListener
 			  System.out.println("sec is" + sec);
 			}
 		}
+
+}
+
 		
 		
 		// if cmd = update
@@ -300,4 +315,4 @@ public class Streamer extends ActiveTickStreamListener
 //		
 //		System.out.println("-------------------------------------------------------");
 //	}
-}
+//}
