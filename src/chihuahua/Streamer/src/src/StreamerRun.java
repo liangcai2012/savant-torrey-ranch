@@ -1,4 +1,7 @@
 //import JavaToJson;
+
+package atapi.wrapper;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -48,7 +51,8 @@ public class StreamerRun
 	private static ActiveTickServerAPI serverapi;
 	private static APISession apiSession;
 
-	public	HashMap<String, ArrayList<String>> m_clientSymMap; 
+	public	HashMap<String, ArrayList<String>> m_clientSymMap;
+	public HashMap <String, ArrayList<String[]>> m_tickDataMap;
 	public HashMap<String, Integer> m_symRefMap; 
 	public HashMap <String, SymData> m_symDataMap;
 	public HashMap <String, DelayedTicks> m_symDelayMap;
@@ -77,6 +81,7 @@ public class StreamerRun
 
  		//init data structure
 	 	m_clientSymMap = new HashMap<String, ArrayList<String>>();
+	 	m_tickSymMap = new HashMap<String, ArrayList<String[]>>();
 		m_symRefMap = new HashMap<String, Integer>();
 		m_symDataMap = new HashMap <String, SymData>();
 		m_symDelayMap = new HashMap <String, DelayedTicks>();
@@ -149,4 +154,3 @@ public class StreamerRun
     	  
    }
 }
-		 
