@@ -1,7 +1,7 @@
 import sqlalchemy
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 from savant.config import settings
 

@@ -24,8 +24,8 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 class Companies(db.Base):
     __tablename__ = "companies"
 
-    company_id = Column(Integer, primary_key=True)
-    company_name = Column(String(20), nullable=False)
+    id = Column(Integer, primary_key=True)
+    name = Column(String(20), nullable=False, unique=True)
 
     # Company ticker symbol
     symbol = Column(String(10), nullable=False)
@@ -65,8 +65,24 @@ class Companies(db.Base):
     # Date of the last update
     date_updated = Column(String)
 
-    def __init__(self, company_name, symbol, exchange_id=None, headquarter=None, year_founded=None, yahoo_sector_id=None, yahoo_industry_id=None, google_sector_id=None, google_industry_id=None, outstanding=None, current_shares=None, current_price=None, current_volume=None, current_p/e=None):
-        pass
+
+    def __init__(self, name, symbol, exchange_id=None, headquarter=None, year_founded=None, yahoo_sector_id=None, yahoo_industry_id=None, google_sector_id=None, google_industry_id=None, outstanding=None, current_shares=None, current_price=None, current_volume=None, current_p/e=None):
+        self.id = 
+        self.name = name
+        self.symbol = symbol
+        self.exchange_id = exchange_id
+        self.headquarter = headquarter
+        self.year_founded = year_founded
+        self.yahoo_sector_id = yahoo_sector_id
+        self.yahoo_industry_id = yahoo_industry_id
+        self.google_sector_id = google_sector_id
+        self.google_industry_id = google_industry_id
+        self.outstanding = outstanding
+        self.current_shares = current_shares
+        self.current_price = current_price
+        self.current_volume = current_volume
+        self.current_p/e = current_p/e
+        self.date_updated = str(datetime.now()).split()[0]
 
     def __repr__(self):
-        pass
+        return "<Company(name='%s', symbol='%s', current_shares='%s', current_price='%s', current_volume='%s', current_p/e='%s', date_updated='%s')>" % (self.name, self.symbol, self.current_shares, self.current_price, self.current_volume, self.current_p/e, self.date_updated)
