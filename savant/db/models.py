@@ -1,8 +1,8 @@
 from datetime import datetime
+from random import randint
 import sqlite3 as sqlite
-import uuid
 
-from sqlalchemy import event
+from sqlalchemy import event, Sequence
 from sqlalchemy import (Boolean, Column, DateTime, Enum, ForeignKey, Index,
                         Integer, Float, String, Text, TypeDecorator)
 from sqlalchemy.engine import Engine
@@ -24,7 +24,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 class Companies(db.Base):
     __tablename__ = "companies"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, Sequence('company_id_seq'), primary_key=True)
     name = Column(String(20), nullable=False, unique=True)
 
     # Company ticker symbol
@@ -67,7 +67,6 @@ class Companies(db.Base):
 
 
     def __init__(self, name, symbol, exchange_id=None, headquarter=None, year_founded=None, yahoo_sector_id=None, yahoo_industry_id=None, google_sector_id=None, google_industry_id=None, outstanding=None, current_shares=None, current_price=None, current_volume=None, current_p/e=None):
-        self.id = 
         self.name = name
         self.symbol = symbol
         self.exchange_id = exchange_id
