@@ -3,8 +3,8 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Vector;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import at.feedapi.ActiveTickStreamListener;
 import at.utils.jlib.PrintfFormat;
@@ -23,6 +23,8 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 	String premarketFilePath;
 	String marketFilePath;
 	String aftermarketFilePath;
+
+	Logger logger = Logger.getLogger(ATTickDataFetcher.class.getName());
 
 	public Requestor(APISession apiSession, ActiveTickStreamListener streamer, ATTickDataFetcher fetcher)
 	{
@@ -269,6 +271,9 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 			writer.putNextEntry(entry);
             */
 			File data = new File(filepath);
+			if (!data.exists()) {
+				data.createNewFile();
+			}
 			FileWriter fw = new FileWriter(data,true);
 			BufferedWriter writer = new BufferedWriter(fw);
 			for (String record : records) {

@@ -337,28 +337,23 @@ public class ATTickDataFetcher {
         }
         this.outputPath = DEFAULT_OUTPUT_DEST + "/" + date + "/" + symbol;
         String premarketFilePath = this.outputPath + "_premarket.tsv.tmp";
-        //createIfNotExist(premarketFilePath);
+        clearExisting(premarketFilePath);
         String marketFilePath = this.outputPath + "_markethours.tsv.tmp";
-        //createIfNotExist(marketFilePath);
+        clearExisting(marketFilePath);
         String aftermarketFilePath = this.outputPath + "_aftermarket.tsv.tmp";
-        //createIfNotExist(aftermarketFilePath);
+        clearExisting(aftermarketFilePath);
         apiSession.GetRequestor().setOutputPath(premarketFilePath,marketFilePath,aftermarketFilePath);
+    }
+
+    private void clearExisting(String filepath) {
+        File f = new File(filepath);
+        if (f.exists()) {
+            f.delete();
+        }
     }
 
     private void cancelRequest() {
         this.pendingRequests.clear();
-    }
-
-    private void createIfNotExist(String filepath) {
-        File data = new File(filepath);
-        if (data.exists()) {
-            data.delete();
-        }
-        try {
-            data.createNewFile();
-        } catch (IOException e) {
-            logger.log(Level.SEVERE,"Request halted: cannot create file");
-        }
     }
 
     private void exit() {
