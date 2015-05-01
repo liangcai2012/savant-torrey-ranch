@@ -7,15 +7,16 @@ import java.util.Properties;
 import java.util.logging.Logger;
 
 public class SavantConfig extends Properties {
-    private final static String DEFAULT_CONFIG_PATH;
+    public final static String DEFAULT_CONFIG_PATH;
     private static Logger log;
     private String configFilePath;
 
     static {
         log = Logger.getLogger(SavantConfig.class.getName());
 
-        String currentFilePath = new File("").getAbsolutePath();
-        DEFAULT_CONFIG_PATH = currentFilePath + "/default_settings.ini";
+        String currentFilePath = SavantConfig.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        int index = currentFilePath.indexOf("config");
+        DEFAULT_CONFIG_PATH = currentFilePath.substring(0,index) + "config/default_settings.ini";
     }
 
     private SavantConfig(String filePath) {
@@ -39,6 +40,10 @@ public class SavantConfig extends Properties {
         } catch (IOException e) {
             log.severe("Could not read config: bad io");
         }
+    }
+
+    public String getProperty(String key) {
+        return super.getProperty(key).replace("\'","");
     }
 
     public static SavantConfig getConfig() {

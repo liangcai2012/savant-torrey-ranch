@@ -17,7 +17,6 @@ import at.shared.ATServerAPIDefines.SYSTEMTIME;
 import org.json.JSONObject;
 import org.json.JSONException;
 
-
 public class ATTickDataFetcher {
     /*
     This class is used to fetch stock history data from ATTick server.
@@ -56,18 +55,12 @@ public class ATTickDataFetcher {
     }
 
     public void init() {
-        /*
-        String atHostName = "activetick1.activetick.com";
-        int atPort = 443;
-        String guid = "80af4953bb7f4dcf85523ad332161eff";
-        String userId = "liangcai";
-        String password = "S@^@nt932456";
-        */
         String atHostName = config.getProperty("AT_HOSTNAME");
         int atPort = Integer.parseInt(config.getProperty("AT_PORT"));
         String guid = config.getProperty("AT_GUID");
         String userId = config.getProperty("AT_USER");
         String password = config.getProperty("AT_PASSWORD");
+
         ATGUID atguid = (new ATServerAPIDefines()).new ATGUID();
         atguid.SetGuid(guid);
 
@@ -292,17 +285,17 @@ public class ATTickDataFetcher {
 
     private void completeFetch() {
         String filepath = this.outputPath + "_markethours.tsv";
-        if (new File(filepath).exists()) {
+        if (new File(filepath+".tmp").exists()) {
             compressFile(filepath);
         }
 
         filepath = this.outputPath + "_premarket.tsv";
-        if (new File(filepath).exists()) {
+        if (new File(filepath+".tmp").exists()) {
             compressFile(filepath);
         }
 
         filepath = this.outputPath + "_aftermarket.tsv";
-        if (new File(filepath).exists()) {
+        if (new File(filepath+".tmp").exists()) {
             compressFile(filepath);
         }
     }
@@ -344,11 +337,11 @@ public class ATTickDataFetcher {
         }
         this.outputPath = DEFAULT_OUTPUT_DEST + "/" + date + "/" + symbol;
         String premarketFilePath = this.outputPath + "_premarket.tsv.tmp";
-        createIfNotExist(premarketFilePath);
+        //createIfNotExist(premarketFilePath);
         String marketFilePath = this.outputPath + "_markethours.tsv.tmp";
-        createIfNotExist(marketFilePath);
+        //createIfNotExist(marketFilePath);
         String aftermarketFilePath = this.outputPath + "_aftermarket.tsv.tmp";
-        createIfNotExist(aftermarketFilePath);
+        //createIfNotExist(aftermarketFilePath);
         apiSession.GetRequestor().setOutputPath(premarketFilePath,marketFilePath,aftermarketFilePath);
     }
 
