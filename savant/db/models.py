@@ -2,10 +2,11 @@ from datetime import datetime
 from random import randint
 import sqlite3 as sqlite
 
-from sqlalchemy import event, Sequence
 from sqlalchemy import (Boolean, Column, DateTime, Enum, ForeignKey, Index,
-                        Integer, Float, String, Text, TypeDecorator)
+                        Integer, Float, String, Text, TypeDecorator, event,
+                        Sequence)
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import relationship, backref
 
 from savant import db
 
@@ -21,8 +22,8 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.close()
 
 
-class Companies(db.Base):
-    __tablename__ = "companies"
+class Company(db.Base):
+    __tablename__ = "company"
 
     id = Column(Integer, Sequence('company_id_seq'), primary_key=True)
     name = Column(String(20), nullable=False, unique=True)
@@ -32,6 +33,7 @@ class Companies(db.Base):
     
     # ID of the exchange on which the company is listed
     exchange_id = Column(Integer, ForeignKey('exchanges.id'))
+    exchange = relationship("Exchange", backref="company")
     
     # Company primary location
     headquarter = Column(String(100))
@@ -41,11 +43,15 @@ class Companies(db.Base):
     
     # Sector and industry provided by Yahoo
     yahoo_sector_id = Column(Integer, ForeignKey('sectors.id'))
+    yahoo_sector = relationship("Sector", backref="company")
     yahoo_industry_id = Column(Integer, ForeignKey('industries.id'))
+    yahoo_industry = relationship("Industry", backref="company")
 
     # Sector and industry provided by Google
     google_sector_id = Column(Integer, ForeignKey('sectors.id'))
+    google_sector = relationship("Sector", backref="company")
     google_industry_id = Column(Integer, ForeignKey('industries.id'))
+    google_industry = relationship("Industry", backref="company")
 
     # Outstanding shares
     outstanding = Column(Float)
@@ -65,11 +71,11 @@ class Companies(db.Base):
     # Date of the last update
     date_updated = Column(DateTime)
 
-
-    def __init__(self, name, symbol, exchange_id=None, headquarter=None, year_founded=None, yahoo_sector_id=None, yahoo_industry_id=None, google_sector_id=None, google_industry_id=None, outstanding=None, current_shares=None, current_price=None, current_volume=None, current_pe=None):
+    """
+    def __init__(self, name, symbol, exchange=None, headquarter=None, year_founded=None, yahoo_sector=None, yahoo_industry=None, google_sector=None, google_industry=None, outstanding=None, current_shares=None, current_price=None, current_volume=None, current_pe=None):
         self.name = name
         self.symbol = symbol
-        self.exchange_id = exchange_id
+        self.exchange = exchange
         self.headquarter = headquarter
         self.year_founded = year_founded
         self.yahoo_sector_id = yahoo_sector_id
@@ -82,13 +88,17 @@ class Companies(db.Base):
         self.current_volume = current_volume
         self.current_pe = current_pe
         self.date_updated = str(datetime.now()).split()[0]
+    """
+    def __init__(self, **params):
+        self.__dict__.update(params)
+
 
     def __repr__(self):
         return "<Company(name='%s', symbol='%s', current_shares='%s', current_price='%s', current_volume='%s', current_p/e='%s', date_updated='%s')>" % (self.name, self.symbol, self.current_shares, self.current_price, self.current_volume, self.current_p/e, self.date_updated)
 
 
-class Exchanges(db.Base):
-    __tablename__ = "exchanges"
+class Exchange(db.Base):
+    __tablename__ = "exchange"
 
     id = Column(Integer, Sequence("exchange_id_seq"), primary_key=True)
     name = Column(String(10), nullable=False, unique=True)
@@ -101,11 +111,11 @@ class Exchanges(db.Base):
         self.origin = origin
 
     def __repr__(self):
-        return "<Exchanges(name='%s', origin='%s')>" % (self.name, self.origin)
+        return "<Exchange(name='%s', origin='%s')>" % (self.name, self.origin)
 
 
-class Sectors(db.Base):
-    __tablename__ = "sectors"
+class Sector(db.Base):
+    __tablename__ = "sector"
 
     id = Column(Integer, Sequence("sector_id_seq"), primary_key=True)
     name = Column(String(20), nullable=False)
@@ -118,11 +128,11 @@ class Sectors(db.Base):
         self.provider = provider
 
     def __repr__(self):
-        return "<Sectors(name='%s', provider='%s')>" % (self.name, self.provider)
+        return "<Sector(name='%s', provider='%s')>" % (self.name, self.provider)
 
 
-class Industries(db.Base):
-    __tablename__ = "industries"
+class Industry(db.Base):
+    __tablename__ = "industry"
 
     id = Column(Integer, Sequence("industry_id_seq"), primary_key=True)
     name = Column(String(20), nullable=False)
@@ -135,11 +145,11 @@ class Industries(db.Base):
         self.provider = provider
 
     def __repr__(self):
-        return "<Industries(name='%s', provider='%s')>" % (self.name, self.provider)
+        return "<Industry(name='%s', provider='%s')>" % (self.name, self.provider)
 
 
-class Underwriters(db.Base):
-    __tablename__ = "underwriters"
+class Underwriter(db.Base):
+    __tablename__ = "underwriter"
 
     id = Column(Integer, Sequence("underwriter_id_seq"), primary_key=True)
     name = Column(String(100), nullable=False)
@@ -148,4 +158,8 @@ class Underwriters(db.Base):
         self.name = name
 
     def __repr__(self):
-        return "<Underwriters(name='%s')>" % self.name
+        return "<Underwriter(name='%s')>" % self.name
+
+
+if __name__ == "__main__":
+    comp = Company(**{"name": "Apple"})

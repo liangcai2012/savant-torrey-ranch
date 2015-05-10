@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 
 from savant.config import settings
 from savant.db import session, Base
-from savant.db.models import Companies
+from savant.db.models import Company
 
 
 def get_soup(url, params, timeout=5):
@@ -19,6 +19,14 @@ def scrape_yahoo(symbol):
     params = {"s":symbol}
     data = {}
 
+    ## Parsing quote summary page
+    soup = get_soup(base_url, params)
+    quote_tab = soup.find("div", {"class": "yfi_quote_summary"})
+    keys = quote_tab.find_all("th")
+    values = quote_tab.find_all("td", {"class": "yfnc_tabledata1"})
+    for key, value in zip(keys, values):
+        print key.text + ": " + value.text
+
     ## Parsing profile page
     soup = get_soup(profile_url, params)
     sum_tab = soup.find("table", {"id": "yfncsumtab"})
@@ -32,4 +40,5 @@ def scrape_yahoo(symbol):
         elif "Industry" in key.text:
             data["industry"] = value.text
     print data
-    
+
+
