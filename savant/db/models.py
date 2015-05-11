@@ -54,19 +54,19 @@ class Company(db.Base):
     google_industry = relationship("Industry", backref="company")
 
     # Outstanding shares
-    outstanding = Column(Float)
+    outstanding_shares = Column(Float)
     
     # Public shares as of the date this table is updated
-    current_shares = Column(Float)
+    float_shares = Column(Float)
 
     # Closing price as of the date this table is updated
-    current_price = Column(Float)
+    previous_close = Column(Float)
 
     # Volume as of the date this table is updated
-    current_volume = Column(Integer)
+    previous_volume = Column(Integer)
 
     # P/E ratio as of the date this table is updated
-    current_pe = Column(Float)
+    trailing_pe = Column(Float)
 
     # Date of the last update
     date_updated = Column(DateTime)
