@@ -2,7 +2,7 @@ class DataError(RuntimeError):
    def __init__(self, args):
       self.args = args
 
-class Data():
+class DataAPI():
 
     #cound is a static variable and used to generate a unique name for each Data instance to access streamer. 
     #the unique name shall be clientName+'_'+str(count), where clientName is specified in __init__ method. 	
