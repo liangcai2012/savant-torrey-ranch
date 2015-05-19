@@ -1,4 +1,4 @@
-ipackage atapi.wrapper;
+package atapi.wrapper;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -185,11 +185,13 @@ class CmdHandler implements Runnable{
 		
 		//if client existed, check syms of this client existed or not
 		//add those not existed sym to newAddSymlist
+		//SymData exsymlist = sr.m_symDataMap.get(client);
 		ArrayList<String> exsymlist = sr.m_clientSymMap.get(client);
 		for (String sym : symlist) {
 			if(!exsymlist.contains(sym)){
 				exsymlist.add(sym);
 				newAddSymlist.add(sym);
+				//sr.m_symDataMap.put(sym, new SymData());
 			}
 		}
 	    
@@ -269,230 +271,16 @@ class CmdHandler implements Runnable{
 	 * @param ma_mask: 9 digits with 0 and 1
 	 * @return
 	 */
-	public String processUpdate(String client, String interval, int bar_mask, int ma_mask)
+	public String processUpdate(String client, int interval,int second, int bar_mask, int ma_mask)
 	{
-	
-		return "";
+		 String ret = null;
+	     ArrayList<String> symDataList = sr.m_clientSymMap.get(client);
+	     for(String sym : symDataList){
+	    	 SymData sd = sr.m_symDataMap.get(sym);
+	    	  ret = sd.getBar( second, interval, bar_mask);
+	     }
+	     return ret;
 	}
+	     
+	     
 }
-
-
-//
-//
-///**********************************************************************
-// * //processInput
-// * Notes:
-// * -Process command line input
-// * @throws IOException 
-// **********************************************************************/
-//
-//
-//public void processInput(String userInput) throws IOException
-//{
-//	StringTokenizer st = new StringTokenizer(userInput);
-//	List ls = new ArrayList<String>();
-//	while(st.hasMoreTokens())
-//		ls.add(st.nextToken());
-//	int count = ls.size();
-//	
-//	
-//	
-//	/**********************************************************************
-//	 * //subscribeQuoteStream | unsubscribeQuoteStream
-//	 * Example:
-//	 * Single symbol request:
-//	 * 		subscribeQuoteStream	AAPL
-//	 * 		unsubscribeQuoteStream	AAPL
-//	 * Multiple symbol request:
-//	 * 		subscribeQuoteStream	AAPL,AMZN
-//	 * 		unsubscribeQuoteStream	AAPL,AMZN
-//	 **********************************************************************/
-//	if(count >= 2 && ( ((String)ls.get(0)).equalsIgnoreCase("subscribeQuoteStream") ||
-//			((String)ls.get(0)).equalsIgnoreCase("unsubscribeQuoteStream")))
-//	//else if(cmd.equals("subscribe"))
-//	{
-//		String strSymbols = ls.get(1).toString();
-//		//String strSymbols = "AAPL,AMZN";
-//		List<ATSYMBOL> lstSymbols = new ArrayList<ATSYMBOL>();
-//
-//		if(!strSymbols.isEmpty() && !strSymbols.contains(","))
-//		{
-//			ATSYMBOL atSymbol = Helpers.StringToSymbol(strSymbols);
-//			lstSymbols.add(atSymbol);
-//		}
-//		else
-//		{
-//			StringTokenizer symbolTokenizer = new StringTokenizer(strSymbols, ",");
-//			while(symbolTokenizer.hasMoreTokens())
-//			{
-//				ATSYMBOL atSymbol = Helpers.StringToSymbol(symbolTokenizer.nextToken());
-//				lstSymbols.add(atSymbol);
-//			}
-//		}			
-//		
-//		ATStreamRequestType requestType = (new ATServerAPIDefines()).new ATStreamRequestType();
-//		requestType.m_streamRequestType = ((String)ls.get(0)).equalsIgnoreCase("subscribeQuoteStream") ? 
-//										ATStreamRequestType.StreamRequestSubscribe : ATStreamRequestType.StreamRequestUnsubscribe;
-//		//requestType.m_streamRequestType = ATStreamRequestType.StreamRequestSubscribe;
-//		long request = apiSession.GetRequestor().SendATQuoteStreamRequest(lstSymbols, requestType, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
-//		
-//		System.out.println("SEND444 " + request + ": " + ls.get(0).toString() + " request [" + strSymbols + "]");
-//		if(request < 0)
-//		{
-//			System.out.println("Error = " + Errors.GetStringFromError((int)request));
-//		}else{
-//			returnMessage = "Subscribed!!";
-//		}
-//		
-//		
-//		OutputStream os = socket.getOutputStream();
-//		OutputStreamWriter osw = new OutputStreamWriter(os);
-//		//PrintWriter pw = new PrintWriter(os);
-//BufferedWriter bw = new BufferedWriter(osw);
-////System.out.println(returnMessage);
-//		try {
-//			bw.write(returnMessage);
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-////pw.println(returnMessage);
-//		System.out.println("Message sent to the client is "+returnMessage);
-//		
-//		bw.flush();
-//	}
-//	
-//	/**********************************************************************
-//	 * //subscribeQuotesOnlyQuoteStream | unsubscribeQuotesOnlyQuoteStream
-//	 * Example:
-//	 * Single symbol request:
-//	 * 		StreamRequestSubscribeQuotesOnly	AAPL
-//	 * 		StreamRequestUnsubscribeQuotesOnly	AAPL
-//	 * Multiple symbol request:
-//	 * 		StreamRequestSubscribeQuotesOnly	AAPL,AMZN
-//	 * 		StreamRequestUnsubscribeQuotesOnly	AAPL,AMZN
-//	 **********************************************************************/
-//	else if(count >= 2 && ( ((String)ls.get(0)).equalsIgnoreCase("subscribeQuotesOnlyQuoteStream") ||
-//			((String)ls.get(0)).equalsIgnoreCase("unsubscribeQuotesOnlyQuoteStream")))
-//	{
-//		String strSymbols = ls.get(1).toString();
-//		List<ATSYMBOL> lstSymbols = new ArrayList<ATSYMBOL>();
-//
-//		if(!strSymbols.isEmpty() && !strSymbols.contains(","))
-//		{
-//			ATSYMBOL atSymbol = Helpers.StringToSymbol(strSymbols);
-//			lstSymbols.add(atSymbol);
-//		}
-//		else
-//		{
-//			StringTokenizer symbolTokenizer = new StringTokenizer(strSymbols, ",");
-//			while(symbolTokenizer.hasMoreTokens())
-//			{
-//				ATSYMBOL atSymbol = Helpers.StringToSymbol(symbolTokenizer.nextToken());
-//				lstSymbols.add(atSymbol);
-//			}
-//		}			
-//		
-//		ATStreamRequestType requestType = (new ATServerAPIDefines()).new ATStreamRequestType();
-//		requestType.m_streamRequestType = ((String)ls.get(0)).equalsIgnoreCase("subscribeQuotesOnlyQuoteStream") ? 
-//										ATStreamRequestType.StreamRequestSubscribeQuotesOnly : ATStreamRequestType.StreamRequestUnsubscribeQuotesOnly;
-//		
-//		long request = apiSession.GetRequestor().SendATQuoteStreamRequest(lstSymbols, requestType, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
-//		
-//		System.out.println("SENDeeeeee " + request + ": " + ls.get(0).toString() + " request [" + strSymbols + "]");
-//		if(request < 0)
-//		{
-//			System.out.println("Error = " + Errors.GetStringFromError((int)request));
-//		}
-//	}else if (count == 1	&& ( ((String)ls.get(0)).equalsIgnoreCase("update"))){
-//		String strSymbols = "AAPL";
-//		System.out.println("get map!!");
-//		HashMap<String, ArrayList<String[]>> map = apiSession.GetStreamer().getMap();
-//		if (map.isEmpty()){
-//			System.out.println("Map is empty!!!");
-//		}else{
-//			ArrayList<String[]> ret = map.get(strSymbols);
-//			System.out.println("S size is " + ret.size());
-//			for(String[] s : ret){
-//				System.out.println("[" + s[0] + ", " + s[1] + ", " + s[2]+ ", "+ s[3] + ", " +s[4] + "]");
-//				
-//				OutputStream os = socket.getOutputStream();
-//			OutputStreamWriter osw = new OutputStreamWriter(os);
-//			//PrintWriter pw = new PrintWriter(os);
-//		BufferedWriter bw = new BufferedWriter(osw);
-//		//System.out.println(returnMessage);
-//			bw.write(returnMessage);
-//		//pw.println(returnMessage);
-//			System.out.println("Message sent to the client is "+returnMessage);
-//			
-//			bw.flush();
-//			}
-//		}
-//	}
-//	/**********************************************************************
-//	 * //subscribeTradesOnlyQuoteStream | unsubscribeTradesOnlyQuoteStream
-//	 * Example:
-//	 * Single symbol request:
-//	 * 		subscribeTradesOnlyQuoteStream	AAPL
-//	 * 		unsubscribeTradesOnlyQuoteStream	AAPL
-//	 * Multiple symbol request:
-//	 * 		subscribeTradesOnlyQuoteStream	AAPL,AMZN
-//	 * 		unsubscribeTradesOnlyQuoteStream	AAPL,AMZN
-//	 **********************************************************************/
-//	else if(count >= 2 && ( ((String)ls.get(0)).equalsIgnoreCase("subscribeTradesOnlyQuoteStream") ||
-//			((String)ls.get(0)).equalsIgnoreCase("unsubscribeTradesOnlyQuoteStream")))
-//	{
-//		String strSymbols = ls.get(1).toString();
-//		List<ATSYMBOL> lstSymbols = new ArrayList<ATSYMBOL>();
-//
-//		if(!strSymbols.isEmpty() && !strSymbols.contains(","))
-//		{
-//			ATSYMBOL atSymbol = Helpers.StringToSymbol(strSymbols);
-//			lstSymbols.add(atSymbol);
-//		}
-//		else
-//		{
-//			StringTokenizer symbolTokenizer = new StringTokenizer(strSymbols, ",");
-//			while(symbolTokenizer.hasMoreTokens())
-//			{
-//				ATSYMBOL atSymbol = Helpers.StringToSymbol(symbolTokenizer.nextToken());
-//				lstSymbols.add(atSymbol);
-//			}
-//		}			
-//		
-//		//ATStreamRequestType.
-//		
-//		ATStreamRequestType requestType = (new ATServerAPIDefines()).new ATStreamRequestType();
-//		requestType.m_streamRequestType = ((String)ls.get(0)).equalsIgnoreCase("subscribeTradesOnlyQuoteStream") ? 
-//										ATStreamRequestType.StreamRequestSubscribeTradesOnly : ATStreamRequestType.StreamRequestUnsubscribeTradesOnly;
-//		
-//		long request = apiSession.GetRequestor().SendATQuoteStreamRequest(lstSymbols, requestType, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
-//		
-//		System.out.println("SEND " + request + ": " + ls.get(0).toString() + " request [" + strSymbols + "]");
-//		if(request < 0)
-//		{
-//			System.out.println("Error = " + Errors.GetStringFromError((int)request));
-//		}
-//	}
-//	
-//	/**********************************************************************
-//	 * //MarketHolidays
-//	 * Example:
-//	 * Notes:
-//	 * 	-Currently not being used
-//	 **********************************************************************/
-//	else if(count >= 2 && ( ((String)ls.get(0)).equalsIgnoreCase("getMarketHolidays")))
-//	{
-//		short yearsGoingBack = Short.parseShort(ls.get(1).toString());
-//		short yearsGoingForward = Short.parseShort(ls.get(2).toString());
-//		
-//		long request = apiSession.GetRequestor().SendATMarketHolidaysRequest(yearsGoingBack, yearsGoingForward, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
-//
-//		System.out.println("SEND " + request + ":MarketHolidays request for " + yearsGoingBack + " years back and " + yearsGoingForward + " years forward");
-//		if(request < 0)
-//		{
-//			System.out.println("Error = " + Errors.GetStringFromError((int)request));
-//		}
-//	}			
-//}
-//
