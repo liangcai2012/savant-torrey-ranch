@@ -1,15 +1,4 @@
-
 package atapi.wrapper;
-
-import java.util.HashMap;
-import java.util.Map;
-
-import at.feedapi.ActiveTickServerAPI;
-import at.feedapi.ActiveTickStreamListener;
-import at.feedapi.Session;
-import at.shared.ATServerAPIDefines;
-import at.shared.ATServerAPIDefines.ATGUID;
-import at.utils.jlib.PrintfFormat;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,50 +26,46 @@ public class Streamer extends ActiveTickStreamListener
 	int i = 0;
 	private int sec = 60;
 	private int min = 60;
-	
-	
-	
-	
-	
 	private StreamerRun sr;
+	
+	private long preVol;
+	private double prePri;
+	
+	private DelayedTicks dt = new DelayedTicks();
 	//private HashMap<String, ArrayList<String[]>> map;
 	//= new HashMap<String, ArrayList<String[]>>();
 
 	//public void setMap(String key, ArrayList<String[]> arr){
-	//	map.put(key, arr);
+		//map.put(key, arr);
 	//}
-	//public HashMap<String, ArrayList<String[]>> getMap(){
-		/*
-		if(map.isEmpty()){
-			System.out.println("map is empty");
-		}
-		else{
-		ArrayList<String[]> ret = map.get("AAPL");
-		//for (int i = 0; i < 2; i++){
-		    for(String[] s : ret){
-			
-			   System.out.println("s is" + s);
-		    }
-		//}
-		}*/
-	//	return this.map;
-	//}
-
-	//public Streamer(APISession session, HashMap<String, ArrayList<String[]>> map)
-	public Streamer(APISession session, StreamerRun srun)
+	public Streamer(APISession session, HashMap<String, StreamerRun sr)
 	{
 		super(session.GetSession(), false);
 		m_session = session;
-		this.sr = srun;
+		this.sr = sr;
+		 
+
 		   
 	}
 	
-	public void init(){
+	public void init(String guid, String atHostName, int atPort, String userId, String password, HashMap<String, ArrayList<String[]>> map){
+		/*String atHostName = "activetick1.activetick.com";
+		          int atPort = 443;
+		          String guid = "80af4953bb7f4dcf85523ad332161eff";
+		          String userId = "liangcai";
+		          String password = "S@^@nt932456";
+		 */
+		          ATGUID atguid = (new ATServerAPIDefines()).new ATGUID();
+		          atguid.SetGuid(guid);
+		 
+		          boolean rc = m_session.Init(atguid, atHostName, atPort, userId, password, map);
+		          System.out.println("init status: " + (rc ? "ok" : "failed"));
 
 	}
 	
 	public void OnATStreamTradeUpdate(ATServerAPIDefines.ATQUOTESTREAM_TRADE_UPDATE update)
 	{		
+		
 		  
 		String strSymbol = new String(update.symbol.symbol);
 		int plainSymbolIndex = strSymbol.indexOf((byte)0);
@@ -88,8 +73,43 @@ public class Streamer extends ActiveTickStreamListener
 		int timeGap = 0;
 		StringBuffer sb = new StringBuffer();
 		//sb.append("[");
+		if(sr.m_symDataMap.get(strSymbol) == null){
+			sr.m_symDataMap.put(strSymbol,  new SymData());
+		}
+		
+		SymData sd = sr.m_symDataMap.get(strSymbol);
+		
+		String tTime = update.lastDateTime.hour +":" + update.lastDateTime.minute +":" + update.lastDateTime.second;
+		
+		String strFormat = "%0." + update.lastPrice.precision + "f";
+		String sPrice = new PrintfFormat(strFormat).sprintf(update.lastPrice.price);
+		Double lPrice = Double.parseDouble(sPrice);
+		
+		long size = update.lastSize;
+		//check if there is delay
+		
+		if (sTime == null){
+			sTime = tTime;
+		}
+		//System.out.println("hehhehe  sTime is" + sTime);
+		if(!sTime.equals(tTime)) System.out.println("time changed!!! privous is" + sTime + "now is" + tTime);
+		if(sec == 60) sec = update.lastDateTime.second;
+		if(min == 60) min = update.lastDateTime.minute;
+
+		dt.onDelayedTick(timeGap, preVod, prePri);
+						
+		if (dt.onBarRequest() != null){
+			sd = dt.onBarRequest();
+		}else{
+			sd.update(tTime, size, sPrice, 0);
+		}
+		sr.m_symDataMap.put(strSymbol, sd);
+		
+		long preVol = size;
+		double prePri = lPrice;
 		
 		
+		/*
 		sb.append(update.lastDateTime.hour);
 		sb.append(":");
 		sb.append(update.lastDateTime.minute);
@@ -124,8 +144,10 @@ public class Streamer extends ActiveTickStreamListener
 		long size = update.lastSize;
 		sb.append("]");
 		System.out.println(sb.toString());
-	
-		if(tTime.equals(sTime)){
+
+		
+		
+	    if(tTime.equals(sTime)){
 			tPrice += lPrice*size;
 			tSize += size;	
 			System.out.println("add to size.....");
@@ -136,24 +158,24 @@ public class Streamer extends ActiveTickStreamListener
 			each[2] =  tPrice + "";
 			each[3] =  tSize + "";
 			each[4] = ((double)tPrice/(double)tSize) + "";
-				if(sr.m_tickDataMap.get(strSymbol) == null){
+				if(map.get(strSymbol) == null){
 					//
 				// String[][] aRR = new String[ARRAY_SIZE][3];
 					ArrayList<String[]> aPrice = new ArrayList<String[]>(); 
 					//aPrice.add(each);
 					//System.out.println("each is" + aPrice.get(0));
 					System.out.println("add" + strSymbol + "to map");
-					sr.m_tickDataMap.put(strSymbol, aPrice);     
+					map.put(strSymbol, aPrice);     
 				}else {
-					if(sr.m_clientSymMap.get(strSymbol).size() == ARRAY_SIZE){
+					if(map.get(strSymbol).size() == ARRAY_SIZE){
 						System.out.println("remove 1");
-						sr.m_clientSymMap.get(strSymbol).remove(0);
-						System.out.println("size is " + sr.m_clientSymMap.get(strSymbol).size());
+						map.get(strSymbol).remove(0);
+						System.out.println("size is " + map.get(strSymbol).size());// save to another arrayList 
 					}
 				}
 				    System.out.println("now add is " + strSymbol);
-				    sr.m_tickDataMap.get(strSymbol).add(each);
-					System.out.println("then size is " + sr.m_clientSymMap.get(strSymbol).size());
+					map.get(strSymbol).add(each);
+					System.out.println("then size is " + map.get(strSymbol).size());
 				
 					timeGap = update.lastDateTime.second - sec;
 					System.out.println("timeGap is"+ timeGap);
@@ -165,8 +187,9 @@ public class Streamer extends ActiveTickStreamListener
 					
 					if (timeGap > 1){
 						System.out.println("hehehe timeGap > 1");
+						
 					
-						ArrayList<String[]> last = sr.m_tickDataMap.get(strSymbol);
+						ArrayList<String[]> last = map.get(strSymbol);
 						//new
 						int reSec = 0;
 						int reMin = 1;
@@ -202,8 +225,8 @@ public class Streamer extends ActiveTickStreamListener
 						    }
 							
 							System.out.println("now  pre Time is" + newArr[1]);
-							sr.m_tickDataMap.get(strSymbol).add(newArr);
-							System.out.println("ArrayList Size is " + sr.m_clientSymMap.get(strSymbol).size());
+							map.get(strSymbol).add(newArr);
+							System.out.println("ArrayList Size is " + map.get(strSymbol).size());
 							System.out.println("add a previous value!!!" + newArr[1] + " " + newArr[2]);
 						}
 					}
@@ -218,101 +241,101 @@ public class Streamer extends ActiveTickStreamListener
 			  System.out.println("sec is" + sec);
 			}
 		}
-
-}
-
 		
 		
 		// if cmd = update
 		
 		//read data, write into Output Stream
 		
+	*/	
+	}	
+	
+	
+	public HashMap<String, SymData()> getSymMap(){
+		return this.sr.m_symDataMap;
+	}
+	
+	public void OnATStreamQuoteUpdate(ATServerAPIDefines.ATQUOTESTREAM_QUOTE_UPDATE update) 
+	{
 		
+  /* String[][] aRR = new String[ARRAY_SIZE][3];
 		
-	
-	
-	
-//	public void OnATStreamQuoteUpdate(ATServerAPIDefines.ATQUOTESTREAM_QUOTE_UPDATE update) 
-//	{
-//		
-//  /* String[][] aRR = new String[ARRAY_SIZE][3];
-//		
-//        this.map.put("AAPL", aRR); 
-//		
-//		 this.map.get("AAPL")[i][0] = "10:10:00";
-//		  this.map.get("AAPL")[i][1] = "110";
-//		  this.map.get("AAPL")[i][2] = "200";
-//		  String[][] ret = this.map.get("AAPL");
-//		  for(int j = 0; j < 3; j++){
-//				
-//			   System.out.println("s is" + ret[i][j]);
-//		    }*/
-//		String strSymbol = new String(update.symbol.symbol);
-//		int plainSymbolIndex = strSymbol.indexOf((byte)0);
-//		strSymbol = strSymbol.substring(0, plainSymbolIndex);
-//		StringBuffer sb = new StringBuffer();
-//		sb.append("[");
-//		sb.append(update.quoteDateTime.hour);
-//		sb.append(":");
-//		sb.append(update.quoteDateTime.minute);
-//		sb.append(":");
-//		sb.append(update.quoteDateTime.second);
-//		sb.append(":");
-//		sb.append(update.quoteDateTime.milliseconds);
-//		sb.append("] STREAMQUOTE [symbol:");
-//		sb.append(strSymbol);
-//		sb.append(" bid:");
-//		String strFormat = "%0." + update.bidPrice.precision + "f";
-//		sb.append(new PrintfFormat(strFormat).sprintf(update.bidPrice.price));
-//		sb.append(" ask:");
-//		strFormat = "%0." + update.askPrice.precision + "f";
-//		sb.append(new PrintfFormat(strFormat).sprintf(update.askPrice.price));
-//		sb.append(" bidSize:");
-//		sb.append(update.bidSize);
-//		sb.append(" askSize:");
-//		sb.append(update.askSize);
-//		sb.append("]");
-//		//System.out.println(sb.toString());	
-//	}
-//
-//	public void OnATStreamTopMarketMoversUpdate(ATServerAPIDefines.ATMARKET_MOVERS_STREAM_UPDATE update) 
-//	{
-//		String strSymbol = new String(update.marketMovers.symbol.symbol);
-//		int plainSymbolIndex = strSymbol.indexOf((byte)0);
-//		strSymbol = strSymbol.substring(0, plainSymbolIndex);
-//		StringBuffer sb = new StringBuffer();
-//		sb.append("RECV: [");
-//		sb.append(update.lastUpdateTime.hour);
-//		sb.append(":");
-//		sb.append(update.lastUpdateTime.minute);
-//		sb.append(":");
-//		sb.append(update.lastUpdateTime.second);
-//		sb.append(":");
-//		sb.append(update.lastUpdateTime.milliseconds);
-//		sb.append("] STREAMMOVERS [symbol:");
-//		sb.append(strSymbol);
-//		sb.append("]");
-//		System.out.println(sb.toString());
-//		
-//		String strFormat = "";
-//		for(int i = 0; i < update.marketMovers.items.length; i++)
-//		{
-//			StringBuilder sb2 = new StringBuilder();
-//			String strItemSymbol = new String(update.marketMovers.items[i].symbol.symbol);
-//			int plainItemSymbolIndex = strItemSymbol.indexOf((byte)0);
-//			strItemSymbol = strItemSymbol.substring(0, plainItemSymbolIndex);
-//
-//			sb2.append("symbol:");
-//			sb2.append(strItemSymbol);
-//			
-//			strFormat = "%0." + update.marketMovers.items[i].lastPrice.precision + "f";
-//			sb2.append("  \t[last:" + new PrintfFormat(strFormat).sprintf(update.marketMovers.items[i].lastPrice.price));
-//			
-//			sb2.append(" volume:");
-//			sb2.append(update.marketMovers.items[i].volume);
-//			System.out.println(sb2.toString());
-//		}
-//		
-//		System.out.println("-------------------------------------------------------");
-//	}
-//}
+        this.map.put("AAPL", aRR); 
+		
+		 this.map.get("AAPL")[i][0] = "10:10:00";
+		  this.map.get("AAPL")[i][1] = "110";
+		  this.map.get("AAPL")[i][2] = "200";
+		  String[][] ret = this.map.get("AAPL");
+		  for(int j = 0; j < 3; j++){
+				
+			   System.out.println("s is" + ret[i][j]);
+		    }*/
+		String strSymbol = new String(update.symbol.symbol);
+		int plainSymbolIndex = strSymbol.indexOf((byte)0);
+		strSymbol = strSymbol.substring(0, plainSymbolIndex);
+		StringBuffer sb = new StringBuffer();
+		sb.append("[");
+		sb.append(update.quoteDateTime.hour);
+		sb.append(":");
+		sb.append(update.quoteDateTime.minute);
+		sb.append(":");
+		sb.append(update.quoteDateTime.second);
+		sb.append(":");
+		sb.append(update.quoteDateTime.milliseconds);
+		sb.append("] STREAMQUOTE [symbol:");
+		sb.append(strSymbol);
+		sb.append(" bid:");
+		String strFormat = "%0." + update.bidPrice.precision + "f";
+		sb.append(new PrintfFormat(strFormat).sprintf(update.bidPrice.price));
+		sb.append(" ask:");
+		strFormat = "%0." + update.askPrice.precision + "f";
+		sb.append(new PrintfFormat(strFormat).sprintf(update.askPrice.price));
+		sb.append(" bidSize:");
+		sb.append(update.bidSize);
+		sb.append(" askSize:");
+		sb.append(update.askSize);
+		sb.append("]");
+		//System.out.println(sb.toString());	
+	}
+
+	public void OnATStreamTopMarketMoversUpdate(ATServerAPIDefines.ATMARKET_MOVERS_STREAM_UPDATE update) 
+	{
+		String strSymbol = new String(update.marketMovers.symbol.symbol);
+		int plainSymbolIndex = strSymbol.indexOf((byte)0);
+		strSymbol = strSymbol.substring(0, plainSymbolIndex);
+		StringBuffer sb = new StringBuffer();
+		sb.append("RECV: [");
+		sb.append(update.lastUpdateTime.hour);
+		sb.append(":");
+		sb.append(update.lastUpdateTime.minute);
+		sb.append(":");
+		sb.append(update.lastUpdateTime.second);
+		sb.append(":");
+		sb.append(update.lastUpdateTime.milliseconds);
+		sb.append("] STREAMMOVERS [symbol:");
+		sb.append(strSymbol);
+		sb.append("]");
+		System.out.println(sb.toString());
+		
+		String strFormat = "";
+		for(int i = 0; i < update.marketMovers.items.length; i++)
+		{
+			StringBuilder sb2 = new StringBuilder();
+			String strItemSymbol = new String(update.marketMovers.items[i].symbol.symbol);
+			int plainItemSymbolIndex = strItemSymbol.indexOf((byte)0);
+			strItemSymbol = strItemSymbol.substring(0, plainItemSymbolIndex);
+
+			sb2.append("symbol:");
+			sb2.append(strItemSymbol);
+			
+			strFormat = "%0." + update.marketMovers.items[i].lastPrice.precision + "f";
+			sb2.append("  \t[last:" + new PrintfFormat(strFormat).sprintf(update.marketMovers.items[i].lastPrice.price));
+			
+			sb2.append(" volume:");
+			sb2.append(update.marketMovers.items[i].volume);
+			System.out.println(sb2.toString());
+		}
+		
+		System.out.println("-------------------------------------------------------");
+	}
+
