@@ -1,6 +1,10 @@
+package atapi.wrapper;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 
 //data structure to store delayed ticks for each subscribed symbol
@@ -21,30 +25,69 @@ import java.util.List;
 // add it to all entries. 
 
 
+//05/06:
+	
+//send this delay data to who? send related interval
+//per symbol datastructure
 
 public class DelayedTicks{
 
 	//these arraylistes should be of same length
-	private ArrayList<Integer> timestamps;
+	private ArrayList<Long> timestamps;
 	private ArrayList<Integer> intervals;
-	private ArrayList<ArrayList<String>> delays;
-
+	//private ArrayList<ArrayList<String>> delays;
+	private Queue<SymData> delays;  // maybe use Queue instead
+	
 	public DelayedTicks(){
-		timestamps = new ArrayList<Integer>();
+		timestamps = new ArrayList<Long>();
 		intervals= new ArrayList<Integer>();
-		delays = new ArrayList<ArrayList<String>>();
+		//delays = new ArrayList<ArrayList<String>>();
+		delays = new LinkedList<SymData>();
 	}
 
-
-	public void onDelayedTick(long second, long vol, long price){
-		synchronized(this){ 
+//check if there is a delay
+//if Yes, add last data as current one
+//quan ju de biao 
+	//fanhui wanle shandiao 
+	//public void onDelayedTick(long second, long vol, long price){
+	public void onDelayedTick(long preTime, long curTime, long vol, long price){
+	synchronized(this){ 
+		
+		long timeGap = curTime - preTime;
+		long dTime = preTime;
+		if(timeGap > 1 || timeGap < 0){
+			timeGap = Math.abs(timeGap);
+			while((timeGap-1) != 0){
+				SymData lSd = new SymData();
+				lSd.update(dTime+1, vol, price, 0);
+				delays.add(lSd);
+				timestamps.add(dTime+1);
+				dTime ++;
+				timeGap--;
+			}
+		}
+			
+			
 		}
 	}
-
-	public String onBarRequest(long second, long interval){
+//? the same as getBar
+//generat append string
+//
+//every time when the streamer got request
+//check onBarRequest to see if there is any data
+//if has, then return 
+	public SymData onBarRequest(long second, int interval){
 		synchronized(this){ 
-			return "";
+			SymData ret = new SymData();
+			if(!delays.isEmpty() && timestamps.get((int) second) != null){
+				
+				ret = delays.remove();
+				timestamps.remove(second);
+			
+			}
+			return ret;
 		}
 	}
 	
 }
+
