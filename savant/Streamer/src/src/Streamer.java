@@ -18,11 +18,9 @@ public class Streamer extends ActiveTickStreamListener
 	
 	private final static int ARRAY_SIZE = 3600;
 	
-	//String[][] aPrice = new String[ARRAY_SIZE][3];
-	//String[][] aSize = new String[ARRAY_SIZE][2];
 	private long tPrice = 0;
 	private long tSize = 0;
-	private String sTime = null;
+	private long sTime = 0;
 	int i = 0;
 	private int sec = 60;
 	private int min = 60;
@@ -32,13 +30,8 @@ public class Streamer extends ActiveTickStreamListener
 	private double prePri;
 	
 	private DelayedTicks dt = new DelayedTicks();
-	//private HashMap<String, ArrayList<String[]>> map;
-	//= new HashMap<String, ArrayList<String[]>>();
-
-	//public void setMap(String key, ArrayList<String[]> arr){
-		//map.put(key, arr);
-	//}
-	public Streamer(APISession session, HashMap<String, StreamerRun sr)
+	
+	public Streamer(APISession session,  StreamerRun sr)
 	{
 		super(session.GetSession(), false);
 		m_session = session;
@@ -48,7 +41,7 @@ public class Streamer extends ActiveTickStreamListener
 		   
 	}
 	
-	public void init(String guid, String atHostName, int atPort, String userId, String password, HashMap<String, ArrayList<String[]>> map){
+	public void init(String guid, String atHostName, int atPort, String userId, String password, StreamerRun sr){
 		/*String atHostName = "activetick1.activetick.com";
 		          int atPort = 443;
 		          String guid = "80af4953bb7f4dcf85523ad332161eff";
@@ -58,7 +51,7 @@ public class Streamer extends ActiveTickStreamListener
 		          ATGUID atguid = (new ATServerAPIDefines()).new ATGUID();
 		          atguid.SetGuid(guid);
 		 
-		          boolean rc = m_session.Init(atguid, atHostName, atPort, userId, password, map);
+		          boolean rc = m_session.Init(atguid, atHostName, atPort, userId, password, sr);
 		          System.out.println("init status: " + (rc ? "ok" : "failed"));
 
 	}
@@ -79,7 +72,7 @@ public class Streamer extends ActiveTickStreamListener
 		
 		SymData sd = sr.m_symDataMap.get(strSymbol);
 		
-		String tTime = update.lastDateTime.hour +":" + update.lastDateTime.minute +":" + update.lastDateTime.second;
+		long tTime = update.lastDateTime.hour * 1000 + update.lastDateTime.minute * 100 + update.lastDateTime.second;
 		
 		String strFormat = "%0." + update.lastPrice.precision + "f";
 		String sPrice = new PrintfFormat(strFormat).sprintf(update.lastPrice.price);
@@ -88,25 +81,27 @@ public class Streamer extends ActiveTickStreamListener
 		long size = update.lastSize;
 		//check if there is delay
 		
-		if (sTime == null){
+		if (sTime == 0){
 			sTime = tTime;
 		}
 		//System.out.println("hehhehe  sTime is" + sTime);
-		if(!sTime.equals(tTime)) System.out.println("time changed!!! privous is" + sTime + "now is" + tTime);
+		if(sTime != tTime) System.out.println("time changed!!! privous is" + sTime + "now is" + tTime);
 		if(sec == 60) sec = update.lastDateTime.second;
 		if(min == 60) min = update.lastDateTime.minute;
 
-		dt.onDelayedTick(timeGap, preVod, prePri);
+		dt.onDelayedTick(sTime, tTime, preVol, prePri);
+		
+		
 						
-		if (dt.onBarRequest() != null){
-			sd = dt.onBarRequest();
+		if (dt.onBarRequest(tTime) != null){
+			sd = dt.onBarRequest(tTime);
 		}else{
-			sd.update(tTime, size, sPrice, 0);
+			sd.update(tTime, size, lPrice, 0);
 		}
 		sr.m_symDataMap.put(strSymbol, sd);
 		
-		long preVol = size;
-		double prePri = lPrice;
+		preVol = size;
+	    prePri = lPrice;
 		
 		
 		/*
@@ -251,25 +246,14 @@ public class Streamer extends ActiveTickStreamListener
 	}	
 	
 	
-	public HashMap<String, SymData()> getSymMap(){
+	public HashMap<String, SymData> getSymMap(){
 		return this.sr.m_symDataMap;
 	}
 	
 	public void OnATStreamQuoteUpdate(ATServerAPIDefines.ATQUOTESTREAM_QUOTE_UPDATE update) 
 	{
 		
-  /* String[][] aRR = new String[ARRAY_SIZE][3];
-		
-        this.map.put("AAPL", aRR); 
-		
-		 this.map.get("AAPL")[i][0] = "10:10:00";
-		  this.map.get("AAPL")[i][1] = "110";
-		  this.map.get("AAPL")[i][2] = "200";
-		  String[][] ret = this.map.get("AAPL");
-		  for(int j = 0; j < 3; j++){
-				
-			   System.out.println("s is" + ret[i][j]);
-		    }*/
+
 		String strSymbol = new String(update.symbol.symbol);
 		int plainSymbolIndex = strSymbol.indexOf((byte)0);
 		strSymbol = strSymbol.substring(0, plainSymbolIndex);
@@ -338,4 +322,5 @@ public class Streamer extends ActiveTickStreamListener
 		
 		System.out.println("-------------------------------------------------------");
 	}
+}
 
