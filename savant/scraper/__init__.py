@@ -40,8 +40,14 @@ def scrape_yahoo(symbol, full=False):
         print "Could not reach url for", symbol
         return data
 
+    if soup.find("div", {"class": "obsoleteSymbol"}):
+        return data
+
     if full:
-        header = soup.find("div", {"class": "yfi_rt_quote_summary"}).find("div", {"class": "title"})
+        header = soup.find("div", {"class": "yfi_rt_quote_summary"})
+        if not header:
+            return data
+        header = header.find("div", {"class": "title"})
         name = header.h2.text
         data["name"] = name[:name.rindex("(")].strip()
         exch = header.find("span", {"class": "rtq_exch"}).text
@@ -65,7 +71,7 @@ def scrape_yahoo(symbol, full=False):
                 elif value.endswith("K"):
                     data["market_cap"] = int(float(value[:-1])*1000)
                 else:
-                    data["market_cap"] = int(value.replace(",",""))
+                    data["market_cap"] = int(float(value.replace(",","")))
             elif key == "Beta" and value != "N/A":
                 data["nasdaq_beta"] = float(value)
             elif "P/E" in key and value != "N/A":
@@ -206,10 +212,11 @@ def get_symbols(market):
 
 
 if __name__ == "__main__":
-    data = scrape_nasdaq("ADP")
+    symbol = "LEVY"
+    data = scrape_nasdaq(symbol)
     print data
     if len(data.keys()) == 1:
-        data.update(scrape_yahoo("ADP", full=True))
+        data.update(scrape_yahoo(symbol, full=True))
     else:
-        data.update(scrape_yahoo("ADP"))
+        data.update(scrape_yahoo(symbol))
     print data

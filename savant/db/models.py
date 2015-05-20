@@ -80,7 +80,7 @@ class Exchange(db.Base):
     __tablename__ = "exchange"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(10), nullable=False)
+    name = Column(String(10), nullable=False, unique=True)
 
     company = relationship("Company", backref="exchange")
 
@@ -96,7 +96,7 @@ class Sector(db.Base):
     __tablename__ = "sector"
     
     id = Column(Integer, primary_key=True)
-    name = Column(String(20), nullable=False)
+    name = Column(String(20), nullable=False, unique=True)
 
     company = relationship("Company", backref="sector")
 
@@ -111,7 +111,7 @@ class Industry(db.Base):
     __tablename__ = "industry"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(20), nullable=False)
+    name = Column(String(20), nullable=False, unique=True)
 
     company = relationship("Company", backref="industry")
 
@@ -135,7 +135,7 @@ class Underwriter(db.Base):
     __tablename__ = "underwriter"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
+    name = Column(String(100), nullable=False, unique=True)
 
     def __init__(self, name):
         self.name = name
