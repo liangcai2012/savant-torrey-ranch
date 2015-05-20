@@ -1,3 +1,5 @@
+package atapi.wrapper;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -31,8 +33,7 @@ public class APISession extends ATCallback implements
 	String m_userid;
 	String m_password;
 	ATGUID m_apiKey;
-
-   boolean m_loginSucceed = false;
+	public boolean m_loginSucceed;
 	
 	public APISession(ActiveTickServerAPI serverapi)
 	{
@@ -59,14 +60,13 @@ public class APISession extends ATCallback implements
 		return m_requestor;
 	}
 	
-	public boolean Init(ATGUID apiKey, String serverHostname, int serverPort, String userId, String password, StreamerRun srun)
+	public boolean Init(ATGUID apiKey, String serverHostname, int serverPort, String userId, String password, StreamerRun sr)
 	{
 		if(m_session != null)
 			m_serverapi.ATShutdownSession(m_session);
 		
 		m_session = m_serverapi.ATCreateSession();
-		m_sr = srun;
-		m_streamer = new Streamer(this, m_sr);
+		m_streamer = new Streamer(this, sr);
 		m_requestor = new Requestor(this, m_streamer);
 		
 		m_userid = userId;
@@ -105,7 +105,7 @@ public class APISession extends ATCallback implements
 		String strLoginResponseType = "";
 		switch(response.loginResponse.m_atLoginResponseType)
 		{
-		case ATServerAPIDefines.ATLoginResponseType.LoginResponseSuccess: strLoginResponseType = "LoginResponseSuccess"; m_loginSucceed = true; break;
+		case ATServerAPIDefines.ATLoginResponseType.LoginResponseSuccess: strLoginResponseType = "LoginResponseSuccess"; break;
 		case ATServerAPIDefines.ATLoginResponseType.LoginResponseInvalidUserid: strLoginResponseType = "LoginResponseInvalidUserid"; break;
 		case ATServerAPIDefines.ATLoginResponseType.LoginResponseInvalidPassword: strLoginResponseType = "LoginResponseInvalidPassword"; break;
 		case ATServerAPIDefines.ATLoginResponseType.LoginResponseInvalidRequest: strLoginResponseType = "LoginResponseInvalidRequest"; break;
