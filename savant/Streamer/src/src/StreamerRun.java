@@ -1,7 +1,7 @@
-//import JavaToJson;
-
 package atapi.wrapper;
 
+
+//import JavaToJson;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -51,14 +51,13 @@ public class StreamerRun
 	private static ActiveTickServerAPI serverapi;
 	private static APISession apiSession;
 
-	public	HashMap<String, ArrayList<String>> m_clientSymMap;
-	public HashMap <String, ArrayList<String[]>> m_tickDataMap;
+	public	HashMap<String, ArrayList<String>> m_clientSymMap; 
 	public HashMap<String, Integer> m_symRefMap; 
 	public HashMap <String, SymData> m_symDataMap;
 	public HashMap <String, DelayedTicks> m_symDelayMap;
 	//private HashMap<String, ArrayList<String>> m_clientmap;
 	//private ArrayList<String> m_allsymlist;
-  	//private HashMap<String, SymData> m_map;
+ 	//private HashMap<String, SymData> m_map;
 
 	//this is a time gap between Streamer's system clock and timestamp received in tick data. This value is set when first tick data is received and never changed. 
 	private long m_atTimeGap=-1;
@@ -79,20 +78,19 @@ public class StreamerRun
 	     	serverapi = new ActiveTickServerAPI();
 		apiSession = new APISession(serverapi);
 
- 		//init data structure
+		//init data structure
 	 	m_clientSymMap = new HashMap<String, ArrayList<String>>();
-	 	m_tickSymMap = new HashMap<String, ArrayList<String[]>>();
 		m_symRefMap = new HashMap<String, Integer>();
 		m_symDataMap = new HashMap <String, SymData>();
 		m_symDelayMap = new HashMap <String, DelayedTicks>();
 
 //	 	m_allsymlist = new ArrayList<String>();
 //	 	m_map = new HashMap<String, ArrayList<String[]>>() ;
-   	}
+  	}
 
-   	public boolean Init() throws IOException, InterruptedException{
+  	public boolean Init() throws IOException, InterruptedException{
 
-     	//initialize the api and login to the service
+    	//initialize the api and login to the service
 	      	serverapi.ATInitAPI();
 		String atHostName = "activetick1.activetick.com";
 	      	int atPort = 443;
@@ -112,20 +110,20 @@ public class StreamerRun
 	         	return false;
 	      	}
 
-      //initialize the server socket
+     //initialize the server socket
 		InetAddress bindAdd = InetAddress.getByName(m_hostIP);
 		serverSocket = new ServerSocket(m_hostPort, 100, bindAdd);
 		int totalNum = Runtime.getRuntime().availableProcessors()*POOL_SIZE;
 		exService = Executors.newFixedThreadPool(totalNum);		
 		System.out.println("Server Started and listening to the port 8091");
-      		return true;
+     		return true;
 	}
 
 
 	public void acceptClient()
 	{	
 		while (true){
-         		Socket socket = null;
+        		Socket socket = null;
 			try{
 	         		socket = serverSocket.accept();
 		      		System.out.println("ready for next client");
@@ -134,23 +132,24 @@ public class StreamerRun
 		        catch (Exception e){
 		      		e.printStackTrace();
 		   	}	 		
-      		}		
+     		}		
 	}
 
 
-   	
-   public static void main(String[] args) throws IOException, InterruptedException 
-   {		
-      StreamerRun sr = new StreamerRun();
-      if (sr.Init()){
-         sr.acceptClient();
+  	
+  public static void main(String[] args) throws IOException, InterruptedException 
+  {		
+     StreamerRun sr = new StreamerRun();
+     if (sr.Init()){
+        sr.acceptClient();
 		apiSession.UnInit();
 		serverapi.ATShutdownAPI();
-      }
-      else{
-    	  System.out.println("Fail to initialize Streamer. Exiting");
-    	  System.exit(-1);
-      }
-    	  
-   }
+     }
+     else{
+   	  System.out.println("Fail to initialize Streamer. Exiting");
+   	  System.exit(-1);
+     }
+   	  
+  }
 }
+		 
