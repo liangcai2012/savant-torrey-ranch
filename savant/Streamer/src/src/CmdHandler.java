@@ -12,6 +12,8 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import com.sun.jmx.snmp.Timestamp;
+
 import at.feedapi.ActiveTickServerAPI;
 import at.feedapi.Helpers;
 import at.shared.ATServerAPIDefines;
@@ -58,6 +60,7 @@ class CmdHandler implements Runnable{
 							JSONParser parser = new JSONParser();
 							//Object oObj=JSONValue.parse(jstr);
 							Object oObj;
+							long getTime = System.currentTimeMillis();
 							try{
 								oObj = parser.parse(jstr);
 								JSONObject obj = (JSONObject) oObj;
@@ -98,7 +101,7 @@ class CmdHandler implements Runnable{
         								continue;
         							}
 									
-									processUpdate(client, interval, bar_mask_num, ma_mask_num);   	                            	
+									processUpdate(client, Integer.parseInt(interval), getTime, bar_mask_num, ma_mask_num);   	                            	
 								}
 							}
 							catch(ParseException pe){
@@ -271,7 +274,7 @@ class CmdHandler implements Runnable{
 	 * @param ma_mask: 9 digits with 0 and 1
 	 * @return
 	 */
-	public String processUpdate(String client, int interval,int second, int bar_mask, int ma_mask)
+	public String processUpdate(String client, int interval,long second, int bar_mask, int ma_mask)
 	{
 		 String ret = null;
 	     ArrayList<String> symDataList = sr.m_clientSymMap.get(client);
