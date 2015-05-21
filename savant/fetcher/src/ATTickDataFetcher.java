@@ -17,7 +17,6 @@ import at.shared.ATServerAPIDefines.SYSTEMTIME;
 import org.json.JSONObject;
 import org.json.JSONException;
 
-
 public class ATTickDataFetcher {
     /*
     This class is used to fetch stock history data from ATTick server.
@@ -30,6 +29,7 @@ public class ATTickDataFetcher {
     private static APISession apiSession;
     private static boolean CANCEL = false;
     private static final Logger logger = Logger.getLogger(ATTickDataFetcher.class.getName());
+    private static final SavantConfig config = SavantConfig.getConfig();
     private static final int MIN_INTERVAL = 60;  //minimum allowed time window
     private static final String DEFAULT_BEGIN_TIME = "060000"; //default query start time
     private static final String DEFAULT_END_TIME = "200000"; //default query end time
@@ -42,13 +42,7 @@ public class ATTickDataFetcher {
     public int timeWindow;
 
     static {
-        String dataPath = "";
-        String[] pathComp = Arrays.copyOfRange(new File("").getAbsolutePath().split("/"),1,5);
-        for (String c : pathComp) {
-            dataPath += "/" + c;
-        }
-        dataPath += "/savant/data";
-        DEFAULT_OUTPUT_DEST = dataPath;
+        DEFAULT_OUTPUT_DEST = config.getProperty("OUTPUT_DIR") + "/data";
     }
 
     public ATTickDataFetcher() {
@@ -61,17 +55,17 @@ public class ATTickDataFetcher {
     }
 
     public void init() {
-        String atHostName = "activetick1.activetick.com";
-        int atPort = 443;
-        String guid = "80af4953bb7f4dcf85523ad332161eff";
-        String userId = "liangcai";
-        String password = "S@^@nt932456";
+        String atHostName = config.getProperty("AT_HOSTNAME");
+        int atPort = Integer.parseInt(config.getProperty("AT_PORT"));
+        String guid = config.getProperty("AT_GUID");
+        String userId = config.getProperty("AT_USER");
+        String password = config.getProperty("AT_PASSWORD");
 
         ATGUID atguid = (new ATServerAPIDefines()).new ATGUID();
         atguid.SetGuid(guid);
 
         boolean rc = apiSession.Init(atguid, atHostName, atPort, userId, password);
-        System.out.println("init status: " + (rc ? "ok" : "failed"));
+        logger.info("init status: " + (rc ? "ok" : "failed"));
     }
 
     public Map processRequest(JSONObject request) throws JSONException {
@@ -291,25 +285,18 @@ public class ATTickDataFetcher {
 
     private void completeFetch() {
         String filepath = this.outputPath + "_markethours.tsv";
-        renameFile(filepath);
-        compressFile(filepath);
+        if (new File(filepath+".tmp").exists()) {
+            compressFile(filepath);
+        }
 
         filepath = this.outputPath + "_premarket.tsv";
-        renameFile(filepath);
-        compressFile(filepath);
+        if (new File(filepath+".tmp").exists()) {
+            compressFile(filepath);
+        }
 
         filepath = this.outputPath + "_aftermarket.tsv";
-        renameFile(filepath);
-        compressFile(filepath);
-    }
-
-    private void renameFile(String filepath) {
-        try {
-            String tempFilePath = filepath + ".tmp";
-            Runtime.getRuntime().exec("mv " + tempFilePath + " " + filepath);
-            new File(filepath);
-        } catch (IOException e) {
-            logger.log(Level.SEVERE, "Failed to rename temp file");
+        if (new File(filepath+".tmp").exists()) {
+            compressFile(filepath);
         }
     }
 
@@ -317,6 +304,7 @@ public class ATTickDataFetcher {
         try {
             byte[] data = new byte[BUFFER];
             String zipFilePath = filepath + ".zip";
+            filepath = filepath + ".tmp";
             BufferedInputStream in = new BufferedInputStream(new FileInputStream(filepath), BUFFER);
             FileOutputStream zipFile = new FileOutputStream(zipFilePath);
             ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(zipFile));
@@ -349,28 +337,23 @@ public class ATTickDataFetcher {
         }
         this.outputPath = DEFAULT_OUTPUT_DEST + "/" + date + "/" + symbol;
         String premarketFilePath = this.outputPath + "_premarket.tsv.tmp";
-        createIfNotExist(premarketFilePath);
+        clearExisting(premarketFilePath);
         String marketFilePath = this.outputPath + "_markethours.tsv.tmp";
-        createIfNotExist(marketFilePath);
+        clearExisting(marketFilePath);
         String aftermarketFilePath = this.outputPath + "_aftermarket.tsv.tmp";
-        createIfNotExist(aftermarketFilePath);
+        clearExisting(aftermarketFilePath);
         apiSession.GetRequestor().setOutputPath(premarketFilePath,marketFilePath,aftermarketFilePath);
+    }
+
+    private void clearExisting(String filepath) {
+        File f = new File(filepath);
+        if (f.exists()) {
+            f.delete();
+        }
     }
 
     private void cancelRequest() {
         this.pendingRequests.clear();
-    }
-
-    private void createIfNotExist(String filepath) {
-        File data = new File(filepath);
-        if (data.exists()) {
-            data.delete();
-        }
-        try {
-            data.createNewFile();
-        } catch (IOException e) {
-            logger.log(Level.SEVERE,"Request halted: cannot create file");
-        }
     }
 
     private void exit() {

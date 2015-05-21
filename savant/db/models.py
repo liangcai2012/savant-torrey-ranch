@@ -1,13 +1,14 @@
-from datetime import datetime
+from datetime import date
 from random import randint
 import sqlite3 as sqlite
 
-from sqlalchemy import event, Sequence
-from sqlalchemy import (Boolean, Column, DateTime, Enum, ForeignKey, Index,
-                        Integer, Float, String, Text, TypeDecorator)
+from sqlalchemy import (Boolean, Column, Date, Enum, ForeignKey, Index,
+                        Integer, Float, String, Text, TypeDecorator, event,
+                        Sequence, Table)
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import relationship, backref
 
-from savant.chihuahua import db
+from savant import db
 
 
 @event.listens_for(Engine, 'connect')
@@ -21,67 +22,125 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.close()
 
 
-class Companies(db.Base):
-    __tablename__ = "companies"
+class Company(db.Base):
+    __tablename__ = "company"
 
-    id = Column(Integer, Sequence('company_id_seq'), primary_key=True)
+    id = Column(Integer, primary_key=True)
     name = Column(String(20), nullable=False, unique=True)
 
     # Company ticker symbol
     symbol = Column(String(10), nullable=False)
+
+    # Exchange
+    exchange_id = Column(Integer, ForeignKey("exchange.id"))
     
-    # ID of the exchange on which the company is listed
-    exchange_id = Column(Integer, ForeignKey('exchanges.id'))
-    
+    # Sector
+    sector_id = Column(Integer, ForeignKey("sector.id"))
+
+    # Industry
+    industry_id = Column(Integer, ForeignKey("industry.id"))
+
     # Company primary location
-    headquarter = Column(String(100))
+    #headquarter = Column(String(100))
     
-    # Yead of foundation
-    year_founded = Column(Integer)
-    
-    # Sector and industry provided by Yahoo
-    yahoo_sector_id = Column(Integer, ForeignKey('sectors.id'))
-    yahoo_industry_id = Column(Integer, ForeignKey('industries.id'))
-
-    # Sector and industry provided by Google
-    google_sector_id = Column(Integer, ForeignKey('sectors.id'))
-    google_industry_id = Column(Integer, ForeignKey('industries.id'))
-
-    # Outstanding shares
-    outstanding = Column(Float)
+    # Market cap
+    market_cap = Column(Integer)
     
     # Public shares as of the date this table is updated
-    current_shares = Column(Float)
+    float_shares = Column(Integer)
 
     # Closing price as of the date this table is updated
-    current_price = Column(Float)
+    prev_close = Column(Float)
 
     # Volume as of the date this table is updated
-    current_volume = Column(Integer)
+    prev_volume = Column(Integer)
 
     # P/E ratio as of the date this table is updated
-    current_p/e = Column(Float)
+    trailing_pe = Column(Float)
+
+    # Beta rating for NASDAQ tickers
+    nasdaq_beta = Column(Float)
 
     # Date of the last update
-    date_updated = Column(String)
+    date_updated = Column(Date)
+
+    # Relationship
+    underwriters = relationship("CompanyUnderwriterAssociation")
 
 
-    def __init__(self, name, symbol, exchange_id=None, headquarter=None, year_founded=None, yahoo_sector_id=None, yahoo_industry_id=None, google_sector_id=None, google_industry_id=None, outstanding=None, current_shares=None, current_price=None, current_volume=None, current_p/e=None):
-        self.name = name
-        self.symbol = symbol
-        self.exchange_id = exchange_id
-        self.headquarter = headquarter
-        self.year_founded = year_founded
-        self.yahoo_sector_id = yahoo_sector_id
-        self.yahoo_industry_id = yahoo_industry_id
-        self.google_sector_id = google_sector_id
-        self.google_industry_id = google_industry_id
-        self.outstanding = outstanding
-        self.current_shares = current_shares
-        self.current_price = current_price
-        self.current_volume = current_volume
-        self.current_p/e = current_p/e
-        self.date_updated = str(datetime.now()).split()[0]
+    def __init__(self, **params):
+        params["date_updated"] = date.today()
+        self.__dict__.update(params)
 
     def __repr__(self):
-        return "<Company(name='%s', symbol='%s', current_shares='%s', current_price='%s', current_volume='%s', current_p/e='%s', date_updated='%s')>" % (self.name, self.symbol, self.current_shares, self.current_price, self.current_volume, self.current_p/e, self.date_updated)
+        return "<Company(name='%s', symbol='%s', exchange_id='%s', market_cap='%s', float_shares='%s', previous_close='%s', previous_volume='%s', trailing_p/e='%s', beta='%s', date_updated='%s')>" % (self.name, self.symbol, self.exchange_id, self.market_cap, self.float_shares, self.prev_close, self.prev_volume, self.trailing_pe, self.nasdaq_beta, self.date_updated)
+
+
+class Exchange(db.Base):
+    __tablename__ = "exchange"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(10), nullable=False, unique=True)
+
+    company = relationship("Company", backref="exchange")
+
+    def __init__(self, name):
+        #self.company_id = company_id
+        self.name = name
+
+    def __repr__(self):
+        return "<Exchange(name='%s')>" % (self.name)
+
+
+class Sector(db.Base):
+    __tablename__ = "sector"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(20), nullable=False, unique=True)
+
+    company = relationship("Company", backref="sector")
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return "<Sector(name='%s')>" % self.name
+
+
+class Industry(db.Base):
+    __tablename__ = "industry"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(20), nullable=False, unique=True)
+
+    company = relationship("Company", backref="industry")
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return "<Industry(name='%s')>" % self.name
+
+
+class CompanyUnderwriterAssociation(db.Base):
+    __tablename__ = "company_underwriter_association"
+
+    company_id = Column(Integer, ForeignKey("company.id"), primary_key=True)
+    underwriter_id = Column(Integer, ForeignKey("underwriter.id"), primary_key=True)
+    lead = Column(Boolean)
+    company = relationship("Underwriter", backref="companies")
+
+
+class Underwriter(db.Base):
+    __tablename__ = "underwriter"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False, unique=True)
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return "<Underwriter(name='%s')>" % self.name
+
+

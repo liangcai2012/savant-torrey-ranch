@@ -10,12 +10,13 @@ public class RequestListener {
 
     public static void main(String[] args) throws InterruptedException {
         // Java server
+        SavantConfig config = SavantConfig.getConfig();
         ATTickDataFetcher fetcher = new ATTickDataFetcher();
         fetcher.init();
         Thread.sleep(2000);
 
         String hostName = "localhost";
-        int port = 8080;
+        int port = Integer.parseInt(config.getProperty("FETCHER_PORT"));
         try {
             ServerSocket serverSocket = new ServerSocket(port);
             while (true) {
