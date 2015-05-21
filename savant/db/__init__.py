@@ -2,6 +2,7 @@ import sqlalchemy
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from savant.config import settings
 
@@ -29,7 +30,6 @@ def create_engine():
 
     if url.drivername == 'sqlite' and url.database in (None, '', ':memory:'):
         options.update(
-            connect_args={'check_some_thread':False},
             poolclass=StaticPool)
         
         engine = sqlalchemy.create_engine(url, **options)

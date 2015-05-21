@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 
 from savant.config import settings
 from savant.db import session, Base
-from savant.db.models import Company
+from savant.db.models import Company, Exchange, Industry
 
 
 def get_soup(url, params, timeout=5):
@@ -41,4 +41,14 @@ def scrape_yahoo(symbol):
             data["industry"] = value.text
     print data
 
+def collect_company_info():
+    data = {"symbol": "BABA", "name": "Alibaba Group Holding Limited", "exchange": "NYSE", "headquarter": "Hangzhou, China", "yahoo_sector": "Services", "yahoo_industry": "Specialty Retail, Other", "google_sector": "N/A", "google_industry": "N/A", "outstanding_shares": 2500000000, "floating_shares": 1040000000, "prev_close": 88.40, "prev_volume": 11017929, "trailing_pe": 56.63}
+    res = Exchange.query.filter_by(name=data["exchange"]).first()
+    if res is None:
+        session.add(Exchange(name=data["exchange"], origin="us"))
+    print Exchange.query.filter_by(name=data["exchange"]).first()
+    #comp = Company(**data)
 
+
+if __name__ == "__main__":
+    collect_company_info()

@@ -32,26 +32,17 @@ class Company(db.Base):
     symbol = Column(String(10), nullable=False)
     
     # ID of the exchange on which the company is listed
-    exchange_id = Column(Integer, ForeignKey('exchanges.id'))
+    exchange_id = Column(Integer, ForeignKey('exchange.id'))
     exchange = relationship("Exchange", backref="company")
     
     # Company primary location
     headquarter = Column(String(100))
     
-    # Yead of foundation
-    year_founded = Column(Integer)
-    
     # Sector and industry provided by Yahoo
-    yahoo_sector_id = Column(Integer, ForeignKey('sectors.id'))
-    yahoo_sector = relationship("Sector", backref="company")
-    yahoo_industry_id = Column(Integer, ForeignKey('industries.id'))
-    yahoo_industry = relationship("Industry", backref="company")
-
-    # Sector and industry provided by Google
-    google_sector_id = Column(Integer, ForeignKey('sectors.id'))
-    google_sector = relationship("Sector", backref="company")
-    google_industry_id = Column(Integer, ForeignKey('industries.id'))
-    google_industry = relationship("Industry", backref="company")
+    sector_id = Column(Integer, ForeignKey('sector.id'))
+    sector = relationship("Sector", backref="company")
+    industry_id = Column(Integer, ForeignKey('industry.id'))
+    industry = relationship("Industry", backref="company")
 
     # Outstanding shares
     outstanding = Column(Float)
