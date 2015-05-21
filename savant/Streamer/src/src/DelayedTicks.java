@@ -50,7 +50,7 @@ public class DelayedTicks{
 //quan ju de biao 
 	//fanhui wanle shandiao 
 	//public void onDelayedTick(long second, long vol, long price){
-	public void onDelayedTick(long preTime, long curTime, long vol, long price){
+	public void onDelayedTick(long preTime, long curTime, long vol, double price){
 	synchronized(this){ 
 		
 		long timeGap = curTime - preTime;
@@ -76,7 +76,7 @@ public class DelayedTicks{
 //every time when the streamer got request
 //check onBarRequest to see if there is any data
 //if has, then return 
-	public SymData onBarRequest(long second, int interval){
+	public SymData onBarRequest(long second){
 		synchronized(this){ 
 			SymData ret = new SymData();
 			if(!delays.isEmpty() && timestamps.get((int) second) != null){
@@ -90,4 +90,3 @@ public class DelayedTicks{
 	}
 	
 }
-
