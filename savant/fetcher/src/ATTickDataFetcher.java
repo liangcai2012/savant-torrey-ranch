@@ -285,8 +285,11 @@ public class ATTickDataFetcher {
 
     private void completeFetch() {
         String filepath = this.outputPath + "_markethours.tsv";
+        logger.log(Level.INFO, "output file is "+filepath);
+       
         if (new File(filepath+".tmp").exists()) {
-            compressFile(filepath);
+            logger.log(Level.INFO, "compress "+filepath+".tmp");
+        	compressFile(filepath);
         }
 
         filepath = this.outputPath + "_premarket.tsv";
@@ -298,7 +301,7 @@ public class ATTickDataFetcher {
         if (new File(filepath+".tmp").exists()) {
             compressFile(filepath);
         }
-    }
+     }
 
     private void compressFile(String filepath) {
         try {
