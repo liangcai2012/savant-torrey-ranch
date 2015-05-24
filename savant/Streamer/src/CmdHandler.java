@@ -29,6 +29,7 @@ class CmdHandler implements Runnable{
 	public CmdHandler(Socket socket, StreamerRun srun)		 {
 		this.socket = socket;
 		this.sr = srun;
+        //[Liang] we should not create a new api session here. This is already done. Please change sr.apisession to public or package and use it. 
 		serverapi = new ActiveTickServerAPI();	      
 	     apiSession = new APISession(serverapi);
 	     serverapi.ATInitAPI();
@@ -195,6 +196,8 @@ class CmdHandler implements Runnable{
 				//sr.m_symDataMap.put(sym, new SymData());
 			}
 		}
+		//[Liang:] The symbol is not subscribed for this client does not necessarily mean it is not subscribed yet. It can be previously subscribed for another client. And we should not subscribe it again if so. For this we need add a public array of all symbols that we can subscribed. StreamerRunner should be maintaining this array. Once we get a new subscribe request, we need to check here whether this symbol is in the list, if so we only need to add it to m_clientSymMap; otherwise we need to call ATAPI to subscribe it as well. This logic should also affect handler of client unsubscribe. 
+  
 	    
 		//subscribe syms in newAddSymlist
 			List<ATSYMBOL> lstSymbols = new ArrayList<ATSYMBOL>();
@@ -281,6 +284,8 @@ class CmdHandler implements Runnable{
 	    	  ret = sd.getBar( second, interval, bar_mask);
 	     }
 	     return ret;
+
+	//[Liang] This is a common error, you only return the bar data of last symbol in the list. You need to encode them into one json response. 
 	}
 	     
 	     
