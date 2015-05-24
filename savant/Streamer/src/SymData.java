@@ -1,5 +1,3 @@
-package atapi.wrapper;
-
 import java.util.Arrays;
 
 //data structure for each subscribed symbol

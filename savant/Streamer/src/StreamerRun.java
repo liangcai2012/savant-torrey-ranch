@@ -1,6 +1,3 @@
-package atapi.wrapper;
-
-
 //import JavaToJson;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
