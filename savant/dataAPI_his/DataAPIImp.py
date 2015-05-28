@@ -15,7 +15,7 @@ class DataAPIImp(dataAPI.DataAPI):
         endDay = parameters["endDay"]
         self.HistoricalDataReader = HistoricalDataReader.HistoricalDataReader(symbol, startDay, endDay)
     def update(self, interval, bar_mask, ma_mask):
-        pass
+         return  self.HistoricalDataReader.update(interval, bar_mask, ma_mask)
 
 
 if __name__ == "__main__":
@@ -23,6 +23,7 @@ if __name__ == "__main__":
     data = DataAPIImp("backtest", None, None, parameters)
 
     try:
-        data.update(1, "", "")
+        ret = data.update(1, "", "")
+        print(ret)
     except dataAPI.DataError, e:
             print(e)
