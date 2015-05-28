@@ -49,4 +49,15 @@ There are a few other ant commands supported, such as clean and jar, but you don
 
 4) Python components
 
+add the absolute path to project home (ends with "savant-torrey-ranch") to ~/.bashrc or ~/.bash_profile
+export PYTHONPATH=xxxxx/savant-torrey-ranch
+
+enter the component folder to execute python file
+
+For scapper, you need to install the following python components: requests, xlrd, beautifulsoup4, with MacOS you can install these components with pip
+You might also need to properly setup the config file in savant/config/default_settings.ini. You can set the sqlite path 
+DATABASE_URI = 'sqlite:///../data/savant.db'
+
+For database population, you need run "python admin.py setup-database" first to initialize the database.
+
 
