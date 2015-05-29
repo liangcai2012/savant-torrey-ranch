@@ -25,8 +25,8 @@ SQLite will be used for development and testing. When the code reaches productio
 The database built for this module will contain the following tables:
 
 a) Company overview:
-    -- Schema: Company_ID(int primary key), Company_name(char), Symbol(char), Exchange_ID(int), Headquarter_location(char), Year_founded(int), YHOO_Sector_ID(int), YHOO_Industry_ID(int), GOOG_Sector_ID(int), GOOG_Industry_ID(int), Outstanding(float), Current_shares(float), Current_price(float), Current_volume(int), Current_P/E(float), Date_updated(char)
-    -- Source: yahoo and google finance
+    -- Schema: id(int primary key), name(char), symbol(char), exchange_id(int), sector_ID(int), industry_ID(int), market_cap(int), float_shares(float), prev_close(float), prev_volume(int), trailing_pe(float), nasdaq_beta(float), date_updated(date)
+    -- Source: yahoo finance and nasdaq
     -- Note: this table will be used by SAVANT. It will be updated on a regular basis
 
 b) Historical IPO overview:
@@ -41,16 +41,16 @@ c) IPO Analytics:
     -- Note: the schema for this table is not permanent.
 
 d) Exchange:
-    -- Schema: Exchange_ID(int), Exchange_name(char), Market(char)
+    -- Schema: id(int), name(char)
 
 e) Sector:
-    -- Schema: Sector_ID(int), Sector_name(char), Source(char)
+    -- Schema: id(int), name(char)
 
 f) Industry:
-    -- Schema: Industry_ID(int), Industry_name(char), Source(char)
+    -- Schema: id(int), name(char)
 
 g) Underwriter:
-    -- Schema: Underwriter_ID(int), Underwriter_name(char)
+    -- Schema: id(int), name(char), lead(Boolean)
 
 The following tables maybe implemented in the future:
 
