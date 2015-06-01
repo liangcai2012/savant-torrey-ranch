@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+
+import os
+import argparse
+from savant.db.admin import *
+
+"""
+Command-line interface to SavantDB administrative tools
+"""
+
+parser = argparse.ArgumentParser(description="SavantDB administrative tools")
+subparsers = parser.add_subparsers(title="subcommands")
+
+# Subparser 'setup-database'
+db_parser = subparsers.add_parser("setup-database", help="initialize SavantDB tables if not exist")
+db_parser.add_argument("-r", "--reset", dest="reset", action="store_true", help="reset db tables")
+db_parser.add_argument("-c", "--alembic-config", metavar="ALEMBIC_CONFIG", dest="alembic_config_path", help="path to alembic.ini")
+db_parser.set_defaults(func=setup_database)
+
+
+args = parser.parse_args()
+try:
+    args.func(**{k: v for k, v in vars(args).items() if k not in ("func")})
+except UserError as e:
+    parser.error(unicode(e))

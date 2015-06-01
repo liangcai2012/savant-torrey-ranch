@@ -12,6 +12,7 @@ config = {
     'author_email': 'My email.',
     'version': '0.1',
     'install_requires': ['nose', 'sqlalchemy>=1.0.3'],
+    'scripts': ['bin/model.py'],
     'packages': ['savant'],
     'scripts': [],
     'name': 'projectname'
