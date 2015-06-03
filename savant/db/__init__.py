@@ -3,8 +3,11 @@ from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.pool import StaticPool
-
 from savant.config import settings
+import logging
+
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
 
 
 class SessionFactory(sessionmaker):
@@ -29,8 +32,7 @@ def create_engine():
         options.update(echo=True)
 
     if url.drivername == 'sqlite' and url.database in (None, '', ':memory:'):
-        options.update(
-            poolclass=StaticPool)
+        options.update(poolclass=StaticPool)
         
         engine = sqlalchemy.create_engine(url, **options)
 

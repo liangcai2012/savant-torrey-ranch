@@ -1,6 +1,6 @@
 import os
 import argparse
-
+from sqlalchemy import Table
 from savant import db
 from savant.db import models
 
@@ -16,6 +16,7 @@ def setup_database(alembic_config_path=None, reset=False):
         raise UserError("alembic file does not exist")
 
     if reset:
+        db.Base.metadata.remove(Table("industry", db.Base.metadata))
         db.Base.metadata.drop_all(db.session.get_bind())
     db.Base.metadata.create_all(db.session.get_bind())
 
