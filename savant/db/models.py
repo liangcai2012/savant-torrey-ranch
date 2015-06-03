@@ -26,7 +26,7 @@ class Company(db.Base):
     __tablename__ = "company"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(20), nullable=False, unique=True)
+    name = Column(String(100), nullable=False, unique=True)
 
     # Company ticker symbol
     symbol = Column(String(10), nullable=False)
@@ -144,3 +144,18 @@ class Underwriter(db.Base):
         return "<Underwriter(name='%s')>" % self.name
 
 
+class IPOInfoURL(db.Base):
+    __tablename__ = "ipo_url"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50), nullable=False, unique=True)
+    symbol = Column(String(10), nullable=False, unique=True)
+    url = Column(String(100), unique=True)
+
+    def __init__(self, name, symbol, url):
+        self.name = name
+        self.symbol = symbol
+        self.url = url
+
+    def __repr__(self):
+        return "<IPOInfoURL(company_name='%s', symbol='%s', url='%s')>" % (self.name, self.symbol, self.url)
