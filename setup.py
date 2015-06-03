@@ -14,7 +14,7 @@ config = {
     'install_requires': [
         'nose', 'sqlalchemy>=1.0.3', 'psycopg2'
     ],
-    'scripts': ['bin/model.py'],
+    'scripts': ['bin/savantor'],
     'packages': ['savant'],
     'scripts': [],
     'name': 'projectname'
