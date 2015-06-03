@@ -357,6 +357,14 @@ class DataPlotter(threading.Thread):
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
     
+    
+def test():
+    command_add=dumps({'cmd':'add', 'symbol':'QQQ', 'type':'r','interval':'1s','pos':0,'price':'h','movingave':['1m','5m'],'volume':'y'})
+    print command_add
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)            
+    client.connect(("localhost", 8090))
+    client.send(command_add)
+
 
 
 
