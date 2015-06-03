@@ -6,7 +6,7 @@ import socket
 import threading 
 import time
 #import sys
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 #import numpy as np
 #import re
 import dataAPI
@@ -20,10 +20,11 @@ RTDataReceiver={}      # this is the dictionary mapping interval to a thread of 
 class ViewerCmdHandler(SocketServer.BaseRequestHandler):
 
     ##  override the handle() method to implement communication to the client
-    def handler(self): 
+    def handle(self): 
         global q
+        print 'handler started..'
         cmd_type,ID, pos, interval, params = self.parseCmd() 	#parseCmd recev/parse cmd from controller
-      
+        print cmd_type,ID, pos, interval, params
         if cmd_type == 'del':
             delSymbol=q[ID]['cmd']['symbol']
             delSymType=q[ID]['cmd']['type']
@@ -117,6 +118,8 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
         params={'type':None,'symbol':None,'interval':None,'start':None,'end':None,'price':None,'volume':None,'movingave':None}
         #cmd={}
         cmd=loads(self.request.recv(10*1024).strip())     # self.request is the TCP socket connected to the client	    
+        
+        print 'parseCmd started..'
         print cmd  
         cmd_type=cmd['cmd']
         
@@ -172,8 +175,10 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
 # DataReceiver class, multiple instances
 class DataReceiver(threading.Thread):
     def __init__(self, client,params):    
+        super(DataReceiver, self).__init__()
+        self.running = True
         
-        self.dataapi=  dataAPI(client)	 
+        self.dataapi=  dataAPI.DataAPI(client)	 
         self.interval=params['interval']
         self.dataType=params['type']
         self.priceType=params['price']
@@ -216,14 +221,19 @@ class DataReceiver(threading.Thread):
         elif self.dataType=='r':
             previousTimeStmp=''
             next_call = time.time() 
-            while not self.stopped.wait(next_call - time.time()):  #timer compensate            
+#             while not self.stopped.wait(next_call - time.time()):  #timer compensate   
+            while not time.sleep(next_call - time.time()):         
                 print "##Debug: price type is %s" %self.priceType                
                 data = loads(self.dataapi.update(self.interval,self.priceType,self.maType))                
+                print data
                 if data is not None:
-                    while data['timestamp']==previousTimeStmp:          # re-send update() if timestamp no change
+                    while data['timestamp']==previousTimeStmp :          # re-send update() if timestamp no change
+#                     if 0:
+                        print 'detected same timestamp, re-send request...'
                         data = loads(self.dataapi.update(self.interval,self.priceType,self.maType))
                     
                     self.fillDataQueue(q, data)     #q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[[20:1700, 19.8:1800],[19.8:1600, 19.9:1600],..]}                   
+                    print '##for debug: q now is:', q
                     previousTimeStmp=data['timestamp']
                 next_call = next_call+ self.ConvertInterval(self.interval)
                 
@@ -235,27 +245,31 @@ class DataReceiver(threading.Thread):
             global q      # we need change global q in this function
             xdata=RevData['timestamp']     
             
-            for symData in RevData['data']:            # DataAPI should return bar data like:   'bar': {'high':200}  .
+            for symData in RevData['data']:            # DataAPI should return bar data like:   'bar': {'h':200,'vol':20000}  .
                 sym=symData['symbol']
                 bar=symData['bar'].keys()           # get bar data type from received data, it's a list
-                ma=symData['ma'].keys()                # get bar data type from received data, it's a list
+                ma=set(symData['ma'].keys())                # get bar data type from received data, it's a set
                 delay=symData['delay']                 # issue: what we use delay for?
                 
                 for q1 in q:                 # note: there could be multiple item in q be feed data from current symData, like differnt price/ma type
                     barTyp=q1['cmd']['price']       # get bar type from item in q
-                    maTyp= q1['cmd']['movingave']   # get ma type from item in q, maTyp is a list
-                    
-                    if (q1['cmd']['interval']==self.interval) and  (q1['cmd']['symbol']==sym) and (barTyp in bar) and (maTyp in ma) and (q1['cmd']['type']==self.dataType):
-                        q1['data']['time'].append(xdata)
-                        q1['data']['price'].append(symData['bar'][barTyp])
-                        q1['data']['vol'].append(symData['bar']['vol'])
+                    maTyp= set(q1['cmd']['movingave'])   # get ma type from item in q, maTyp is a set
+                    print barTyp, maTyp
+                    print 'loop check to items in q, now is:', q1
+                    #print "####### current thread params:",self.interval,sym,bar,ma,self.dataType 
+                    if (q1['cmd']['interval']==self.interval) and  (q1['cmd']['symbol']==sym) and (barTyp in bar) and (q1['cmd']['type']==self.dataType) and (maTyp.issubset(ma)):
+                        print 'found matched item in q'
+                        idx=q.index(q1)
+                        q[idx]['data']['time'].append(xdata)
+                        q[idx]['data']['price'].append(symData['bar'][barTyp])
+                        q[idx]['data']['vol'].append(symData['bar']['vol'])
                         
                         tempMA=[]
                         for i in maTyp:           # in order of ma type in q1
-                            tempMA.append=symData['ma'][i]   # return ma value:vol pair, after append,  data looks like:['20:1700', '19.8:1800']                      
+                            tempMA.append(symData['ma'][i])   # return ma value:vol pair, after append,  data looks like:['20:1700', '19.8:1800']                      
                         
-                        q1['data']['ma'].append(tempMA)        
-                        q1['dirty'] = True
+                        q[idx]['data']['ma'].append(tempMA)        
+                        q[idx]['dirty'] = True
         
     
 ## to-do: finish the implement of plot block
@@ -263,6 +277,9 @@ class DataReceiver(threading.Thread):
 # dataplotter class, single instance
 class DataPlotter(threading.Thread):
     def __init__(self):       
+        super(DataPlotter, self).__init__()
+        self.running = True
+        
         #Set up # of subplots
         self.figure, self.axarr = plt.subplots(2,sharex=True)       # to-do: extend to 6 subplots
         
@@ -292,7 +309,7 @@ class DataPlotter(threading.Thread):
     def run(self):
         global q
         next_call = time.time() 
-        while not self.stopped.wait(next_call - time.time()):  #timer  
+        while not time.sleep(next_call - time.time()):  #timer  
             #for qi in q[0:2]:
                 #if qi[dirty] = True:            
             self.plotData(q[0:2])
@@ -349,8 +366,8 @@ if __name__ == "__main__":
     RTDataReceiver={"1s":None,"5s":None, "10s":None, "30s":None, "1m":None, "5m":None, "10m":None, "30m":None, "1h":None} 
     
     #start a plotData thread. 
-    plot = DataPlotter()
-    plot.start()
+#     plot = DataPlotter()
+#     plot.start()
 
     server = SocketServer.TCPServer(('localhost', 8090), ViewerCmdHandler)
     server.serve_forever()
