@@ -32,6 +32,7 @@ public class RequestListener {
                     jsonResponse.put((String)key,response.get(key));
                 }
                 out.write(jsonResponse.toString());
+                out.flush();
                 socket.close();
             }
         }
