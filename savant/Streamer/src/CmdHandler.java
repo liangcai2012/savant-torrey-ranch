@@ -275,7 +275,7 @@ class CmdHandler implements Runnable{
 	 * @param ma_mask: 9 digits with 0 and 1
 	 * @return
 	 */
-	public String processUpdate(String client, int interval,long second, int bar_mask, int ma_mask)
+	public JSONObject processUpdate(String client, int interval,long second, int bar_mask, int ma_mask)
 	{
 		 String ret = null;
 	     ArrayList<String> symDataList = sr.m_clientSymMap.get(client);
@@ -283,7 +283,8 @@ class CmdHandler implements Runnable{
 	    	 SymData sd = sr.m_symDataMap.get(sym);
 	    	  ret = sd.getBar( second, interval, bar_mask);
 	     }
-	     return ret;
+	     JSONObject jsOutput  = new JSONObject(ret);
+	     return jsOutput;
 
 	//[Liang] This is a common error, you only return the bar data of last symbol in the list. You need to encode them into one json response. 
 	}
