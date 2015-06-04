@@ -30,8 +30,8 @@ class CmdHandler implements Runnable{
 		this.socket = socket;
 		this.sr = srun;
         //[Liang] we should not create a new api session here. This is already done. Please change sr.apisession to public or package and use it. 
-		serverapi = new ActiveTickServerAPI();	      
-	     apiSession = new APISession(serverapi);
+	//	serverapi = new ActiveTickServerAPI();	      
+	     apiSession = sr.apisession;
 	     serverapi.ATInitAPI();
 	}
 
