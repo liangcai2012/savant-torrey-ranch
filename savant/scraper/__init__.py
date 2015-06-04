@@ -177,6 +177,7 @@ def scrape_nasdaq(symbol):
             data["nasdaq_beta"] = float(tds[1].text.replace(",",""))
     return data
 
+"""
 def get_underwriters(row_offset=31):
     download_url = "https://www.iposcoop.com/images/trackrecord/IPOScoop_Track_Record.xls" 
     outdir = settings["OUTPUT_DIR"]
@@ -196,7 +197,8 @@ def get_underwriters(row_offset=31):
         unwrs = values[3]
         unwr_dict[symbol] = unwrs
     return unwr_dict
-    
+"""
+
 def get_symbols(market):
     conn = httplib.HTTPConnection("www.eoddata.com")
     ll = string.uppercase[:26]

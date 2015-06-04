@@ -64,10 +64,6 @@ class Company(db.Base):
     # Date of the last update
     date_updated = Column(Date)
 
-    # Relationship
-    underwriters = relationship("CompanyUnderwriterAssociation")
-
-
     def __init__(self, **params):
         params["date_updated"] = date.today()
         self.__dict__.update(params)
@@ -159,3 +155,34 @@ class IPOInfoURL(db.Base):
 
     def __repr__(self):
         return "<IPOInfoURL(company_name='%s', symbol='%s', url='%s')>" % (self.name, self.symbol, self.url)
+
+
+class HistoricalIPO(db.Base):
+    __tablename__ = "historical_ipo"
+    
+    company_id = Column(Integer, primary_key=True, ForeignKey("company.id"))
+
+    ipo_date = Column(Date)
+    price = Column(Float)
+    shares = Column(Integer)
+    outstanding = Column(Integer)
+    scoop_rating = Column(Integer)
+
+    # Related to first day trading
+    1st_day_opening_price = Column(Float)
+    1st_day_closing_price = Column(Float)
+    1st_trade_time = Column(String)
+    1st_day_high = Column(Float)
+    1st_day_high_%_change = Column(Float)
+    1st_day_low = Column(Float)
+    1st_day_low_%_change = Column(Float)
+    1st_day_volumn = Column(Integer)
+    
+    # Relationship
+    underwriters = relationship("CompanyUnderwriterAssociation")
+
+    def __init__(self, **params):
+        self.__dict__.update(params)
+
+    def __repr__(self):
+        return "<Historical_IPO(company_id='%s', ipo_date='%s', price='%s', shares='%s', outstanding='%s', scoop_rating='%s')>" % (self.company_id, self.ipo_date, self.price, self.shares, self.outstanding, self.scoop_rating)
