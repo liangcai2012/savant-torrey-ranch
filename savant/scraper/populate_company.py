@@ -11,12 +11,11 @@ logging.getLogger("savant").setLevel(logging.DEBUG)
 symbols = scraper.get_symbols("NASDAQ")
 symbols += scraper.get_symbols("NYSE")
 
-unwr_dict = scraper.get_underwriters()
+#unwr_dict = scraper.get_underwriters()
 count = 0
-known_exchs = set()
-known_industries = set()
-known_sectors = set()
-known_unwrs = set()
+known_exchs = set([e.name for e in Exchange.query.all()])
+known_industries = set([e.name for e in Industry.query.all()])
+known_sectors = set([e.name for e in Sector.query.all()])
 
 for symbol in symbols:
     count += 1
@@ -80,6 +79,7 @@ for symbol in symbols:
     session.add(comp)
     session.commit()
 
+    """
     if symbol in unwr_dict:
         underwriters = [u.strip() for u in unwr_dict[symbol].split("/")]
         for u in underwriters:
@@ -93,6 +93,7 @@ for symbol in symbols:
             a = CompanyUnderwriterAssociation(company_id=comp.id, underwriter_id=unwr.id, lead=True)
             comp.underwriters.append(a)
             session.commit()
+    """
 
 session.commit()
 

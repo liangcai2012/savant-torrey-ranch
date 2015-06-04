@@ -174,19 +174,17 @@ public class ATTickDataFetcher {
         if (this.timeWindow >= MIN_INTERVAL) {
             try {
                 String symbol = (String)lastRequest.get("symbol");
-                String date = (String)lastRequest.get("date");
                 String beginDateTime = (String)lastRequest.get("beginDateTime");
                 String endDateTime = (String)lastRequest.get("endDateTime");
+                String date = beginDateTime.substring(0, 8);
                 int deltaT = (int)subtractTime(endDateTime.substring(8),beginDateTime.substring(8));
                 if (deltaT != this.timeWindow * 2) {
                     logger.log(Level.INFO,"Reset time window");
                     this.setTimeWindow(deltaT/2);
                 }
-                String midPointDateTime = date + addTime(this.beginTime,this.timeWindow);
-                //logger.log(Level.INFO, "Second half: " + midPointDateTime + " --- " + endDateTime);
-                this.insertPendingRequest(buildRequest(symbol, date, midPointDateTime, endDateTime));
-                //logger.log(Level.INFO,"First half: " + beginDateTime + " --- " + midPointDateTime);
-                this.insertPendingRequest(buildRequest(symbol, date, beginDateTime, midPointDateTime));
+                String midPointTime = addTime(this.beginTime,this.timeWindow);
+                this.insertPendingRequest(buildRequest(symbol, date, midPointTime, endDateTime.substring(8)));
+                this.insertPendingRequest(buildRequest(symbol, date, beginDateTime.substring(8), midPointTime));
                 System.out.println(pendingRequests);
                 this.sendNextRequest();
             } catch (ParseException pe) {

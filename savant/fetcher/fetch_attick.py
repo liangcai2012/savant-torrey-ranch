@@ -3,9 +3,9 @@ import socket
 import json
 import argparse
 
+from savant.config import settings
+
 class FetcherCaller:
-    HOST = "localhost"
-    PORT = 8080
 
     def __init__(self,json_request):
         self.request = json_request+"\n"
@@ -13,8 +13,8 @@ class FetcherCaller:
         self.send_request()
 
     def connect(self):
-        self.socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        self.socket.connect((self.HOST,self.PORT))
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect((settings.FETCHER_HOST, self.FETCHER_PORT))
 
     def send_request(self):
         print self.request
