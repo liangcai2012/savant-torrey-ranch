@@ -2,25 +2,33 @@ import os, os.path, sys
 import logging
 import datetime
 
+from savant.config import settings
+
 class SavantLogger:
-    BASE_DIR = "/".join(os.path.realpath(__file__).split("/")[:-5]+["savant/log"])
-    MODULES = ["streamer","viewer","fetcher"]
+    MODULES = ["streamer","viewer","fetcher","db"]
     DEFAULT_FORMAT = "%(asctime)-15s %(name)s %(levelname)s %(message)s"
 
     def __init__(self,mod,log_format=None,level=None):
         if mod not in self.MODULES:
             raise Exception("Module %s not supported" % mod)
+        self.mod = mod
+        self.log_format = log_format if log_format else self.DEFAULT_FORMAT
+        self.level = level
+        self.config()
+
+    def config(self):
+        self.base_dir = os.path.join(settings.OUTPUT_DIR, "log", self.mod)
+        if not os.path.exists(self.base_dir):
+            os.makedirs(self.base_dir)
         date = datetime.date.today().strftime("%Y%m%d")
-        self.log_file = os.path.join(self.BASE_DIR,"%s/%s.python.log" % (mod,date))
-        if not log_format:
-            self.log_format = self.DEFAULT_FORMAT
-        self.logger = logging.getLogger(mod)
+        self.log_file = os.path.join(self.base_dir,"%s.python.log" % date)
+        self.logger = logging.getLogger(self.mod)
         self.hdlr = logging.FileHandler(self.log_file,mode="a")
         self.formatter = logging.Formatter(self.log_format)
         self.hdlr.setFormatter(self.formatter)
         self.logger.addHandler(self.hdlr)
-        if level:
-            self.logger.setLevel(getattr(logging,level.upper()))
+        if self.level:
+            self.logger.setLevel(getattr(logging, self.level.upper()))
 
     def info(self,message):
         self.logger.info(message)
