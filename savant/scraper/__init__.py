@@ -177,6 +177,48 @@ def scrape_nasdaq(symbol):
             data["nasdaq_beta"] = float(tds[1].text.replace(",",""))
     return data
 
+
+def scrape_ipo(url):
+    data = {}
+    
+    try:
+        soup = get_soup(url)
+    except:
+        print "Unable to reach or parse url:", url
+        return data
+
+    table = soup.find("div", {"id": "infoTable"}).table
+    rows = table.find_all("tr")
+    for row in rows:
+        key = row.td.text.strip()
+        if key == "Share Price":
+            data["price"] = float(row.find_all("td")[1].text.strip("$"))
+        elif key == "Status":
+            data["ipo_date"] = row.find_all("td")[1].text.split("(")[1].strip(")")
+        elif key == "Shares Offered":
+            data["shares"] = int(row.find_all("td")[1].text.replace(",", ""))
+        elif key == "Total Expenses":
+            data["expenses"] = float(row.find_all("td")[1].text.strip("$").replace(",", ""))
+        elif key == "Shares Outstanding":
+            data["outstanding"] = int(row.find_all("td")[1].text.replace("," ,""))
+
+    exp_table = soup.find("div", {"class": "tab3"}).div.table
+    rows = exp_table.find_all("tr")
+    data["lead_underwriters"] = []
+    data["underwriters"] = []
+    for row in rows:
+        key = row.td.text.strip()
+        print key
+        if key == "Lead Underwriter":
+            data["lead_underwriters"].append(row.find_all("td")[1].text)
+        elif key == "Underwriter":
+            agent = row.find_all("td")[1].text
+            if agent not in data["lead_underwriters"]:
+                data["underwriters"].append(row.find_all("td")[1].text)
+
+    return data
+
+
 """
 def get_underwriters(row_offset=31):
     download_url = "https://www.iposcoop.com/images/trackrecord/IPOScoop_Track_Record.xls" 

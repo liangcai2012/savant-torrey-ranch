@@ -64,6 +64,9 @@ class Company(db.Base):
     # Date of the last update
     date_updated = Column(Date)
 
+    # Relationship
+    underwriters = relationship("CompanyUnderwriterAssociation")
+
     def __init__(self, **params):
         params["date_updated"] = date.today()
         self.__dict__.update(params)
@@ -140,7 +143,7 @@ class Underwriter(db.Base):
         return "<Underwriter(name='%s')>" % self.name
 
 
-class IPOInfoURL(db.Base):
+class IPOInfoUrl(db.Base):
     __tablename__ = "ipo_url"
 
     id = Column(Integer, primary_key=True)
@@ -160,7 +163,7 @@ class IPOInfoURL(db.Base):
 class HistoricalIPO(db.Base):
     __tablename__ = "historical_ipo"
     
-    company_id = Column(Integer, primary_key=True, ForeignKey("company.id"))
+    company_id = Column(Integer, ForeignKey("company.id"), primary_key=True)
 
     ipo_date = Column(Date)
     price = Column(Float)
@@ -169,18 +172,15 @@ class HistoricalIPO(db.Base):
     scoop_rating = Column(Integer)
 
     # Related to first day trading
-    1st_day_opening_price = Column(Float)
-    1st_day_closing_price = Column(Float)
-    1st_trade_time = Column(String)
-    1st_day_high = Column(Float)
-    1st_day_high_%_change = Column(Float)
-    1st_day_low = Column(Float)
-    1st_day_low_%_change = Column(Float)
-    1st_day_volumn = Column(Integer)
+    first_opening_price = Column(Float)
+    first_closing_price = Column(Float)
+    first_trade_time = Column(String)
+    first_day_high = Column(Float)
+    first_day_high_percent_change = Column(Float)
+    first_day_low = Column(Float)
+    first_day_low_percent_change = Column(Float)
+    first_day_volumn = Column(Integer)
     
-    # Relationship
-    underwriters = relationship("CompanyUnderwriterAssociation")
-
     def __init__(self, **params):
         self.__dict__.update(params)
 
