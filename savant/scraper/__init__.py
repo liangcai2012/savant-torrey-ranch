@@ -197,8 +197,6 @@ def scrape_ipo(url):
             data["ipo_date"] = row.find_all("td")[1].text.split("(")[1].strip(")")
         elif key == "Shares Offered":
             data["shares"] = int(row.find_all("td")[1].text.replace(",", ""))
-        elif key == "Total Expenses":
-            data["expenses"] = float(row.find_all("td")[1].text.strip("$").replace(",", ""))
         elif key == "Shares Outstanding":
             data["outstanding"] = int(row.find_all("td")[1].text.replace("," ,""))
 
@@ -256,7 +254,7 @@ def get_symbols(market):
 
 
 if __name__ == "__main__":
-    symbol = "LEVY"
+    symbol = "AAL"
     data = scrape_nasdaq(symbol)
     print data
     if len(data.keys()) == 1:

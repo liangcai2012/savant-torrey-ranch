@@ -2,7 +2,7 @@ import os, sys
 import logging
 import requests
 from savant.db import session
-from savant.db.models import IPOInfoURL
+from savant.db.models import IPOInfoUrl
 from savant import scraper
 from datetime import date
 
@@ -41,10 +41,10 @@ while cur_date >= oldest_date:
         name = tds[0].text
         url = tds[0].a["href"]
         symbol = tds[1].text
-        ipo_url = IPOInfoURL(name, symbol, url)
-        if IPOInfoURL.query.filter_by(name=name).first() is not None:
+        ipo_url = IPOInfoUrl(name, symbol, url)
+        if IPOInfoUrl.query.filter_by(name=name).first() is not None:
             continue
-        if IPOInfoURL.query.filter_by(symbol=symbol).first() is not None:
+        if IPOInfoUrl.query.filter_by(symbol=symbol).first() is not None:
             continue
         session.add(ipo_url)
 

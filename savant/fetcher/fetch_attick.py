@@ -14,7 +14,7 @@ class FetcherCaller:
 
     def connect(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.connect((settings.FETCHER_HOST, self.FETCHER_PORT))
+        self.socket.connect((settings.FETCHER_HOST, int(settings.FETCHER_PORT)))
 
     def send_request(self):
         print self.request
