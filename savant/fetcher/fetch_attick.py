@@ -1,20 +1,22 @@
 import os, os.path, sys
 import socket
-import json
+import cjson
 import argparse
 
 from savant.config import settings
 
 class FetcherCaller:
 
-    def __init__(self,json_request):
+    def __init__(self, json_request):
         self.request = json_request+"\n"
         self.connect()
-        self.send_request()
 
     def connect(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((settings.FETCHER_HOST, int(settings.FETCHER_PORT)))
+
+    def set_request(self, json_request):
+        self.request = json_request+"\n"
 
     def send_request(self):
         print self.request
@@ -28,20 +30,23 @@ def get_data(args):
     symbol = args.symbol
     date = args.date
     request = {"command":cmd,"symbol":symbol,"date":date}
-    json_request = json.dumps(request)
+    json_request = cjson.encode(request)
     caller = FetcherCaller(json_request)    
+    caller.send_request()
 
 def check_status(args):
     cmd = "check"
     request = {"command":cmd}
-    json_request = json.dumps(request)
+    json_request = cjson.encode(request)
     caller = FetcherCaller(json_request)
+    caller.send_request()
 
 def cancel(args):
     cmd = "cancel"
     request = {"command":cmd}
-    json_request = json.dumps(request)
+    json_request = cjson.encode(request)
     caller = FetcherCaller(json_request)
+    caller.send_request()
 
 def main():
     parser = argparse.ArgumentParser()

@@ -206,7 +206,6 @@ def scrape_ipo(url):
     data["underwriters"] = []
     for row in rows:
         key = row.td.text.strip()
-        print key
         if key == "Lead Underwriter":
             data["lead_underwriters"].append(row.find_all("td")[1].text)
         elif key == "Underwriter":
