@@ -5,6 +5,11 @@ import argparse
 
 from savant.config import settings
 
+from savant.logger import getLogger
+
+log = getLogger("fetcher", level="INFO")
+
+
 class FetcherCaller:
 
     def __init__(self, json_request):
@@ -13,17 +18,20 @@ class FetcherCaller:
 
     def connect(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setblocking(0)
+        self.socket.settimeout(5.0)
         self.socket.connect((settings.FETCHER_HOST, int(settings.FETCHER_PORT)))
 
     def set_request(self, json_request):
         self.request = json_request+"\n"
 
     def send_request(self):
-        print self.request
+        log.info("Request sent: %s" % self.request)
         self.socket.sendall(self.request)
         resp = self.socket.recv(1024)
-        print "Response:",resp
+        log.info("Fetcher response: %s" % resp)
         self.socket.close()
+        return resp
 
 def get_data(args):
     cmd = "get"

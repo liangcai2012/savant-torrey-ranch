@@ -116,9 +116,11 @@ public class ATTickDataFetcher {
                 }
             } else if (cmd.equals("check")) {
                 if (this.isIdle()) {
-                    errcode = "-1";
-                    errmsg = "Idle";
+                    //errcode = "-1";
+                    //errmsg = "Idle";
+                    response.put("state", "Idle");
                 } else {
+                    response.put("state", "busy");
                     response.put("latest",this.beginTime);
                 }
             } else if (cmd.equals("cancel")) {
@@ -128,6 +130,9 @@ public class ATTickDataFetcher {
                 } else {
                     CANCEL = true;
                 }
+            } else {
+                errcode = "-1";
+                errmsg = "Unknown command";
             }
         }
         response.put("errcode", errcode);
