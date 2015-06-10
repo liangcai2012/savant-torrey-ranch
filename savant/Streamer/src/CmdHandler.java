@@ -64,6 +64,7 @@ class CmdHandler implements Runnable{
 								oObj = parser.parse(jstr);
 								JSONObject obj = (JSONObject) oObj;
 								JSONObject req	= (JSONObject)obj.get("request");
+								req = (JSONObject) req.get("request");
 								if (req==null){
 									System.out.println("receiving invalid request: " +jstr);
 									continue;
