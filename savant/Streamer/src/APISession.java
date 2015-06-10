@@ -31,7 +31,7 @@ public class APISession extends ATCallback implements
 	String m_userid;
 	String m_password;
 	ATGUID m_apiKey;
-	public boolean m_loginSucceed;
+	//public boolean m_loginSucceed;
 	
 	public APISession(ActiveTickServerAPI serverapi)
 	{
