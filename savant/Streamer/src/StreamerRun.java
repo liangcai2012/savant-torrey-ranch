@@ -102,10 +102,10 @@ public class StreamerRun
 		if (!rc)
 	       		return false;
 	      	Thread.sleep(5000);
-	      	if(!apiSession.m_loginSucceed){
+	        /*	if(!apiSession.m_loginSucceed){
 	        	System.out.println("Login failed!");
 	         	return false;
-	      	}
+	      	}*/
 
      //initialize the server socket
 		InetAddress bindAdd = InetAddress.getByName(m_hostIP);
