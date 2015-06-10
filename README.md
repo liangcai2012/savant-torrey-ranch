@@ -1,17 +1,17 @@
-##cDependency
+##Dependency
 You need to have a command line environment such as Linux, MacOS or Cygwin. However, Cygwin is not tested.
 
 You need to install the following software:
-1) python (2.7 preferred)
-2) Java (JDK 1.7 or above preferred)
-3) ant (optional, this is for building java projects. If you dont use ant, then you might want to create java projects through an IDE such as eclipse or javabean) Install ant is very straightforward. See instruction from apache ant project page. 
-4) Required Java libraries are all located in lib folder.
+1. python (2.7 preferred)
+2. Java (JDK 1.7 or above preferred)
+3. ant (optional, this is for building java projects. If you dont use ant, then you might want to create java projects through an IDE such as eclipse or javabean) Install ant is very straightforward. See instruction from apache ant project page. 
+4. Required Java libraries are all located in lib folder.
 
 For python, you need to install the following libs:
-1) requests
-2) xlrd
-3) beautifulsoup4
-4) sqlalchemy
+1. requests
+2. xlrd
+3. beautifulsoup4
+4. sqlalchemy
 
 
 On MacOS or Linux  you can install these components with pip
@@ -19,14 +19,13 @@ On MacOS or Linux  you can install these components with pip
 
 ## Before you run
 A few items before you run:
-1) properly setup the config file (savant/config/default_settings.ini 
-2) rename the ignore file gitignore to .gitignore under the project home directory
-3) add the following statement to your ~/.bashrc or ~/.bash_profile
+1. properly setup the config file (savant/config/default_settings.ini 
+2. rename the ignore file gitignore to .gitignore under the project home directory
+3. add the following statement to your ~/.bashrc or ~/.bash_profile
       export PYTHONPATH=xxxxx/savant-torrey-ranch
           where xxxxx is the absolute path to your project home
 
 ## Run Java components
-
 Fetcher and Streamer are Java components. To run them , change to the component dir and run 
 $ant
 $ant run
@@ -34,11 +33,9 @@ $ant run
 There are a few other ant commands supported, such as clean and jar, but you don't have to use them. 
 
 ## Run Python components
+Enter the component folder to execute python file
 
-
-enter the component folder to execute python file
-
-1) database population:  
+1. database population:  
    enter db folder 
    run "$python admin.py setup-database" dwfirst to initialize the database.
    enter ../scraer
@@ -46,6 +43,7 @@ enter the component folder to execute python file
 
 
 ## Directory structure (in change)
+'''
 --------------------------------------------------------------------
 |	git_dir (savant-torrey-ranch)
 |	       savant 
@@ -69,4 +67,4 @@ enter the component folder to execute python file
 |	       spec:  message specification, database schema, file formate etc.
 |	       lib: all java code dependent lib 
 --------------------------------------------------------------------
-
+'''
