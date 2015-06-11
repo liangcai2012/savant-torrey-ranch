@@ -45,8 +45,8 @@ public class StreamerRun
 	private final int POOL_SIZE = 10;
 	private ServerSocket serverSocket;
 
-	private static ActiveTickServerAPI serverapi;
-	private static APISession apiSession;
+	public static ActiveTickServerAPI serverapi;
+	public static APISession apiSession;
 
 	public	HashMap<String, ArrayList<String>> m_clientSymMap; 
 	public HashMap<String, Integer> m_symRefMap; 
