@@ -39,21 +39,6 @@ public class Streamer extends ActiveTickStreamListener
 		   
 	}
 	
-	public void init(String guid, String atHostName, int atPort, String userId, String password, StreamerRun sr){
-		/*String atHostName = "activetick1.activetick.com";
-		          int atPort = 443;
-		          String guid = "80af4953bb7f4dcf85523ad332161eff";
-		          String userId = "liangcai";
-		          String password = "S@^@nt932456";
-		 */
-		          ATGUID atguid = (new ATServerAPIDefines()).new ATGUID();
-		          atguid.SetGuid(guid);
-		 
-		          boolean rc = m_session.Init(atguid, atHostName, atPort, userId, password, sr);
-		          System.out.println("init status: " + (rc ? "ok" : "failed"));
-
-	}
-	
 	public void OnATStreamTradeUpdate(ATServerAPIDefines.ATQUOTESTREAM_TRADE_UPDATE update)
 	{		
 		
