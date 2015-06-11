@@ -31,8 +31,12 @@ class CmdHandler implements Runnable{
 		this.sr = srun;
         //[Liang] we should not create a new api session here. This is already done. Please change sr.apisession to public or package and use it. 
 	//	serverapi = new ActiveTickServerAPI();	      
-	     apiSession = sr.apisession;
-	     serverapi.ATInitAPI();
+	     
+		serverapi = srun.serverapi;	      
+	        apiSession = srun.apiSession;
+	        serverapi.ATInitAPI();
+	}
+
 	}
 
 	//TODO: return values
