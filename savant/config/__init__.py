@@ -45,3 +45,8 @@ class SavantConfig(dict, AttributeDictMixin):
 
 default_settings_file = os.path.join(os.path.split(__file__)[0],"default_settings.ini")
 settings = SavantConfig(default_settings_file)
+
+alembic_settings_file = os.path.join(os.path.dirname(__file__), "alembic.ini")
+config = ConfigParser()
+config.read(alembic_settings_file)
+db_settings = config._sections
