@@ -30,8 +30,10 @@ class FetcherCaller:
         self.socket.sendall(self.request)
         resp = self.socket.recv(1024)
         log.info("Fetcher response: %s" % resp)
-        self.socket.close()
         return resp
+
+    def close(self):
+        self.socket.close()
 
 def get_data(args):
     cmd = "get"

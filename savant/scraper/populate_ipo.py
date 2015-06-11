@@ -1,7 +1,7 @@
 import os, sys
 import requests
 import socket
-import datetime
+import datetime, time
 import cjson
 
 from savant.config import settings
@@ -42,19 +42,28 @@ for url in ipo_urls:
         continue
         
     ipo_data_dir = os.path.join(tickdata_dir, ipo_date)
-    if os.path.exists(ipo_data_dir) and os.path.exists(os.path.join(ipo_data_dir, "%s_markethours.tsv.zip" % url.symbol)):
+    ipo_data_path = os.path.join(ipo_data_dir, "%s_markethours.tsv.zip" % url.symbol)
+    if os.path.exists(ipo_data_dir) and os.path.exists(ipo_data_path):
         log.info("IPO data found")
     else:
         request = {"command": "get", "symbol": url.symbol, "date": ipo_date}
         fetcher_caller.set_request(cjson.encode(request))
         response = fetcher_caller.send_request()
 
+        """
         request = {"command": "check"}
         fetcher_caller.set_request(cjson.encode(request))
         fetcher_state = ""
         while fetcher_state != "Idle":
             response = fetcher_caller.send_request()
             fetcher_state = response["state"]
-        log.info("IPO data fetched: %s" % url.symbol)
+        """
+        count_down = 60
+        while count_down > 0:
+            if os.path.exists(ipo_data_path):
+                log.info("IPO data fetched: %s" % url.symbol)
+                break
+            time.sleep(1)
+            count_down -= 1
         
     raw_input("")
