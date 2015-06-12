@@ -1,6 +1,6 @@
 # Installation
 
-renamce the project name to `savant`.
+rename the project name to `savant`.
 
 ## dev mode install
 
@@ -13,3 +13,6 @@ Use the --uninstall or -u option to develop for uninstallation, i.e:
 ## Command Line Interface
 
 check out the `./bin` folder, execute `./bin/savantor -h`  for details
+
+## Fetching data from ActiveTick.com
+execute 'python fetcher/fetch_attick get symbol date(yyyymmdd)'
