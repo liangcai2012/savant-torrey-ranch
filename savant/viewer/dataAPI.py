@@ -1,8 +1,7 @@
-### only used for Viewer test ####
-
 from json import loads,dumps 
 import time
 import datetime 
+import random
 
 class DataError(RuntimeError):
    def __init__(self, args):
@@ -23,8 +22,10 @@ class DataAPI:
     # generates a DataError exception if it fails to connect to the streamer server.
     def __init__(self, clientName, serverIP= None, port= None,parameters= None):
 #         raise NotImplementedError("Subclass must implement abstract method")
-        pass
-
+        self.price1_h_last=200
+        self.price1_l_last=180
+        self.vol_last=20000
+        
     # subscribe a list of symbals in this interface instance for obtaining realtime.
     # raise an error if serverIp or port is not specified in __init__ 
     def subscribeRealtime(self, symList):
@@ -55,7 +56,15 @@ class DataAPI:
 #         raise NotImplementedError("Subclass must implement abstract method")
         now=time.time()
         st = datetime.datetime.fromtimestamp(now)#.strftime('%Y-%m-%d %H:%M:%S')
-        data=dumps({'client':'viewer_1s','timestamp':int(now),'data':[{'symbol':'QQQ','bar':{'h':200,'l':188,'o':191, 'vol':20000},'ma':{'1m':'190:20000','5m':'201:21000'},'delay':'1s'}]})
+        
+        self.price1_h_new=random.uniform(self.price1_h_last*0.9,self.price1_h_last*1.1)
+        self.price1_h_last=self.price1_h_new
+        self.price1_l_new=random.uniform(self.price1_l_last*0.9,self.price1_l_last*1.1)
+        self.price1_l_last=self.price1_l_new
+        self.vol_new=random.uniform(self.vol_last*0.95,self.vol_last*1.05)
+        self.vol_last=self.vol_new
+        
+        data=dumps({'client':'viewer_1s','timestamp':int(now),'data':[{'symbol':'QQQ','bar':{'h':self.price1_h_new,'l':self.price1_l_new, 'vol':self.vol_new},'ma':{'1m':'190:20000','5m':'201:21000'},'delay':'1s'}]})
         return data
 
 #    def setReponseMsg(self, client, symbol, bar, ma, delay, timestamp, interval):
