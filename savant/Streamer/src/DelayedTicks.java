@@ -50,20 +50,31 @@ public class DelayedTicks{
 	//public void onDelayedTick(long second, long vol, long price){
 	public void onDelayedTick(long preTime, long curTime, long vol, double price){
 	synchronized(this){ 
-		
+		System.out.println("ondt");
 		long timeGap = curTime - preTime;
 		long dTime = preTime;
+		SymData lSd = new SymData();
+		
+		
 		if(timeGap > 1 || timeGap < 0){
+			System.out.println("timeGap is" + timeGap);
 			timeGap = Math.abs(timeGap);
+			
+			
 			while((timeGap-1) != 0){
-				SymData lSd = new SymData();
+				
 				lSd.update(dTime+1, vol, price, 0);
+				System.out.println("symData updated");
 				delays.add(lSd);
 				timestamps.add(dTime+1);
 				dTime ++;
 				timeGap--;
+				
 			}
+		}else{
+			System.out.println("No Delay");
 		}
+		
 			
 			
 		}
