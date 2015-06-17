@@ -5,6 +5,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -306,13 +308,11 @@ public class ATTickDataFetcher {
     private void compressFile(String filepath) {
         try {
             byte[] data = new byte[BUFFER];
-            String zipFilePath = filepath + ".zip";
-            filepath = filepath + ".tmp";
+            String zipFilePath = filepath + ".gz";
+            new File(filepath + ".tmp").renameTo(new File(filepath));
             BufferedInputStream in = new BufferedInputStream(new FileInputStream(filepath), BUFFER);
             FileOutputStream zipFile = new FileOutputStream(zipFilePath);
-            ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(zipFile));
-            ZipEntry entry = new ZipEntry(filepath);
-            out.putNextEntry(entry);
+            GZIPOutputStream out = new GZIPOutputStream(new BufferedOutputStream(zipFile));
             int count;
             while((count = in.read(data, 0, BUFFER)) != -1) {
                 out.write(data, 0, count);
