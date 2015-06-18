@@ -6,12 +6,13 @@ import socket
 import threading 
 import time
 #import sys
-# import matplotlib
+import matplotlib
 # matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 plt.ion()
 from matplotlib.finance import *
 import matplotlib.dates as md
+from matplotlib import gridspec
 
 import numpy
 #import re
@@ -30,34 +31,30 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
         global q
         print '\n #####################debug:handler started..'
         while True:    
-            temp=self.request.recv(10*1024).strip()   # loop to keep receiving   # self.request is the TCP socket connected to the client
-            
+            temp=self.request.recv(10*1024).strip()   # loop to keep receiving   # self.request is the TCP socket connected to the client            
             if not temp:                          # in case if server didn't received any valid cmd
                 continue
             else:
-                cmd=loads(temp)               # load() must deal with Json object, can not handle if temp=None or ''
-            
-            cmd_type,ID, pos, interval, params = self.parseCmd(cmd) 	#parseCmd recev/parse cmd from controller
-            
+                cmd=loads(temp)               # load() must deal with Json object, can not handle if temp=None or ''            
+            cmd_type,ID, pos, interval, params = self.parseCmd(cmd) 	#parseCmd recev/parse cmd from controller            
             print '\n #####################debug:received cmd is:',cmd_type,ID, pos, interval, params
+            
             if cmd_type == 'del':
                 delSymbol=q[ID]['cmd']['symbol']
                 delSymType=q[ID]['cmd']['type']
                 delInterval=q[ID]['cmd']['interval']
                 print '\n #####################debug: del symbol is:',delSymbol
+                
                 if delSymType=='r': 
-                    RTDataReceiver[delInterval].unsubscribeRealtime(delSymbol)  # need use 'delInterval' here instead of 'interval', the later one is None
-          
-                    
+                    RTDataReceiver[delInterval].unsubscribeRealtime(delSymbol)  # need use 'delInterval' here instead of 'interval', the later one is None    
                 elif delSymType=='h': 
                     delStarTime=q[ID]['cmd']['start']
                     delStopTime=q[ID]['cmd']['end']
-                    RTDataReceiver[delInterval].unsubscribeHistory([delSymbol,delStarTime,delStopTime])     #For history data, this api should not have real effect
-                           
+                    RTDataReceiver[delInterval].unsubscribeHistory([delSymbol,delStarTime,delStopTime])     #For history data, this api should not have real effect                           
                 else:
                     print "unvalid symbol type!!"			               
-                self.delfromQueue(ID)
                 
+                self.delfromQueue(ID)
                 #need reset followed subplots xlim
                 for i in range(ID,min(2,len(q))):   # note: need reset all followed subplot's xlim, and need check each one if real/history!!
                         if q[i]['cmd']['type']=='r':
@@ -116,7 +113,7 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
                         histRcver = DataReceiver('Viewer_history_'+params['symbol'],params)     # clientName,params
                         histRcver.subscribeHistory([params['symbol'],params['start'],params['end']]) 
                         histRcver.start()    
-#                         plot.reset_xlim_history(pos)      # NOTE:need reset the xlim, unless there will be 'blank' in previous x                        
+#                         plot.reset_xlim_history(pos)      # no need set here, will be setup in plot loop                      
                 
                     elif(params['type'] == 'r'):         #real time data	    	
                     
@@ -124,30 +121,24 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
                         if(RTDataReceiver[interval]) == None:                              
                             RTDataReceiver[interval] =  DataReceiver('Viewer_real_'+interval,params)  
                             RTDataReceiver[interval].subscribeRealtime(params['symbol'])
-                            RTDataReceiver[interval].start()
-                            
-                    
+                            RTDataReceiver[interval].start()  
                         else:      # if it's existing  interval                        
                             symbolPool=[i['cmd']['symbol'] for i in q ] 
 #                             print'\n#####################debug: symbolPool is:',symbolPool
 #                             print'\n#####################debug: current symbol and interval  is:',params['symbol'],interval
-                            
                             if params['symbol'] in symbolPool:     # if it's a existing symbol 
                                 price,ma,vol=self.findCommonPriceMA(interval,params['symbol'])
                                 print '\n #####################debug: add a existing symbol, but different price/MA type###########'
 #                                 print '#####################debug: udpated price/MA is:',price,ma
                                 RTDataReceiver[interval].updatePriceMAtype(price,ma,vol)   	    
-                   
                             else:             # if it's a new symbol		     
                                 price,ma,vol=self.findCommonPriceMA(interval,params['symbol'])
                                 RTDataReceiver[interval].subscribeRealtime(params['symbol'])			         
-                        
+                            #reset xlim of new added plot    
+                        plot.reset_xlim_real(pos,True)    # NOTE:need reset the xlim, unless there will be 'blank' in previous x 
                     else:
                         print 'not valid data type!!'
                         
-                    #reset xlim of new added plot    
-                    plot.reset_xlim_real(pos,True)    # NOTE:need reset the xlim, unless there will be 'blank' in previous x 
-                    
                     #reset xlim of all followd plots
                     for i in range(pos+1,min(2,len(q))):   # note: need reset all followed subplot's xlim, and need check each one if real/history!!
                         if q[i]['cmd']['type']=='r':
@@ -155,9 +146,7 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
                         elif q[i]['cmd']['type']=='h': 
                             plot.reset_xlim_history(i) 
                         else:
-                            print 'there are invalid data type!!'    
-                    
-                        
+                            print 'there are invalid data type!!'      
             else:
                 pass
 
@@ -173,7 +162,7 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
                 ma+=i['cmd']['movingave']
                 if i['cmd']['volume']=='y':
                     vol='y' 
-             
+                    
         price=list(set(price))
         ma=list(set(ma))        
         return price, ma, vol
@@ -208,8 +197,7 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
         elif cmd_type=='list':
             ID=None; pos=None; interval=None
         else: 
-            print 'Not valid cmd type!' 
-                
+            print 'Not valid cmd type!'     
         return cmd_type,ID,pos,interval,params
 
 
@@ -240,7 +228,21 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
 # global func    
 def ConvertInterval( interval):              # issue: should we write this as seperate lib?
     ConvTable={"1s":1, "5s":5 ,"10s":10, "30s":30, "1m":60, "5m":300, "10m":600, "30m":1800, "1h":3600}
-    return ConvTable[interval]       
+    return ConvTable[interval] 
+      
+def ConvertMA( idx):              # issue: should we write this as seperate lib?
+    ConvTable1={0:'1s', 1:"5s" ,2:"10s", 3:"30s", 4:"1m", 5:"5m", 6:"10m", 7:"30m", 8:"1h"}
+    ConvTable2={"1s":0, "5s":1,"10s":2, "30s":3, "1m":4,"5m":5, "10m":6, "30m":7, "1h":8}
+    MA=[]
+
+    for i in idx:
+        if isinstance(idx[0], int): 
+            MA.append(ConvTable1[i])
+        elif isinstance(idx[0], basestring):
+            MA.append(ConvTable2[i])
+        else:
+            print 'Wrong MA type'
+    return MA       
 
  
 # DataReceiver class, multiple instances
@@ -277,8 +279,10 @@ class DataReceiver(threading.Thread):
     def run(self):
         global q      
         if  self.dataType=='h':            
-            while 1:
-                time.sleep(0.1)   # temp for debugging
+            i=0
+            while i<6200:
+                i=i+1
+                time.sleep(0.01)   # temp for debugging
                 data = loads(self.dataapi.update(self.interval,self.priceType,self.maType))    # issue:dataAPI update() do not have volume parameter?
                 if data is not None:
                     self.fillDataQueue(q, data)     #q[id][data]= {'time':[],'price':[],'vol':[],'ma':[[],[],..]}
@@ -300,13 +304,11 @@ class DataReceiver(threading.Thread):
                         data = loads(self.dataapi.update(self.interval,self.priceType,self.maType))
                     
                     self.fillDataQueue(q, data)     #q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[[20:1700, 19.8:1800],[19.8:1600, 19.9:1600],..]}                   
-                    
 #                     print '\n ##for debug: q now is:', q
                     previousTimeStmp=data['timestamp']
                 next_call = next_call+ ConvertInterval(self.interval)
-                
         else:
-            print '\n Not valid data_type!'
+            print '\n Not valid data_type or history data ALL received!'
 
 
     def fillDataQueue(self, QData,RevData):      #q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[['20:1700', '19.8:1800'],['19.8:1600', '19.9:1600'],..]}
@@ -316,7 +318,8 @@ class DataReceiver(threading.Thread):
             for symData in RevData['data']:            # DataAPI should return bar data like:   'bar': {'h':200,'vol':20000}  .
                 sym=symData['symbol']
                 bar=symData['bar'].keys()           # get bar data type from received data, it's a list
-                ma=set(symData['ma'].keys())                # get bar data type from received data, it's a set
+                ma=set(symData['ma'].keys())                # get bar data type from received data, it's a set,because it's easy to use issubset()
+#                 ma=set(ConvertMA([i for i,j in enumerate(symData['ma']) if j is not None]))
                 delay=symData['delay']                 # issue: what we use delay for?
                 
                 for q1 in q:                 # note: there could be multiple item in q be feed data from current symData, like differnt price/ma type
@@ -346,7 +349,9 @@ class DataReceiver(threading.Thread):
                         
                         tempMA=[]
                         for i in maTyp:           # in order of ma type in q1
-                            tempMA.append(symData['ma'][i])   # return ma value:vol pair, after append,  data looks like:['20:1700', '19.8:1800']                      
+#                             print i
+                            tempMA.append(symData['ma'][i]) 
+#                             tempMA.append(symData['ma'][ConvertMA(str(i))])   # return ma value:vol pair, after append,  data looks like:['20:1700', '19.8:1800']                      
                         
                         q[idx]['data']['ma'].append(tempMA)        
                         q[idx]['dirty'] = True
@@ -362,53 +367,58 @@ class DataPlotter():
 
     def launch(self):          
         #Set up of subplots
-        self.figure, self.axarr = plt.subplots(2,2,sharex='col')       # to-do: extend to 6 subplots
+#         self.figure, self.axarr = plt.subplots(4,3)       # to-do: extend to 6 subplots
         
+        self.axarr=[]
+        self.figure =plt.figure() 
+        gs =gridspec.GridSpec(4,3,width_ratios=[1,1,1],height_ratios=[3,1,3,1])
+        for i in range(12):
+            self.axarr.append(plt.subplot(gs[i]))
+            self.axarr[i].grid()  # add grid to all subplots
         #Set up 1st plot
-        self.lines11, = self.axarr[0,0].plot([],[],'b-')   # price        
+        self.lines11, = self.axarr[0].plot([],[],'b-')   # price        
 #         self.ax12=self.axarr[0].twinx()
-        self.lines12,= self.axarr[1,0].plot([],[],'ro')   
+        self.lines12,= self.axarr[3].plot([],[],'ro-')   
         
 #         self.lines13, = self.axarr[0].plot([],[])   # ma1
 #         self.lines14, = self.axarr[0].plot([],[])   # ma1_vol
 #         self.lines15, = self.axarr[0].plot([],[])   # ma2
 #         self.lines16, = self.axarr[0].plot([],[])   # ma2_vol     # to-do: add more ma type
 #         self.axarr[0,0].set_autoscaley_on(True)    # auto-scale on y
-        self.axarr[0,0].set_xlim(int(time.time()),int(time.time())+100)   # we need set correct xlim here! unless may not see plot cureve because incorrect x-scale
-        self.axarr[1,0].set_xlim(int(time.time()),int(time.time())+100) 
-        self.axarr[0,0].grid()        # add grid
-        self.axarr[1,0].grid()
+        self.axarr[0].set_xlim(matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time()))),matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time())))+100)   # we need set correct xlim here! unless may not see plot cureve because incorrect x-scale
+        self.axarr[3].set_xlim(matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time()))),matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time())))+100) 
 
-         
+
         #Set up 2nd plot 
-        self.lines21, = self.axarr[0,1].plot([],[],'b-')   # price
-        self.lines22, = self.axarr[1,1].plot([],[],'ro-')   # vol
+        self.lines21, = self.axarr[1].plot([],[],'b-')   # price
+        self.lines22, = self.axarr[4].plot([],[],'ro-')   # vol
 #         self.lines23, = self.axarr[1].plot([],[])   # ma1
 #         self.lines24, = self.axarr[1].plot([],[])   # ma1_vol
 #         self.lines25, = self.axarr[1].plot([],[])   # ma2
 #         self.lines26, = self.axarr[1].plot([],[])   # ma2_vol
 #         self.axarr[0,1].set_autoscaley_on(True)  
-        self.axarr[0,1].set_xlim(int(time.time()),int(time.time())+100) 
-        self.axarr[1,1].set_xlim(int(time.time()),int(time.time())+100)    # we need set xlim here! unless may not see plot cureve because incorrect x-scale
-        self.axarr[0,1].grid()
-        self.axarr[1,1].grid()
+        self.axarr[1].set_xlim(matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time()))),matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time())))+100) 
+        self.axarr[4].set_xlim(matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time()))),matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time())))+100)    # we need set xlim here! unless may not see plot cureve because incorrect x-scale
+
+#         plt.tight_layout()
 
     def reset_xlim_real(self,subplot,new=True):    # to deal such case: when subplot change stock, reset this subplot's xlim
         if subplot==0:    # always keep fix points ploting, not fix 'time', so we need mutiple by interval
             if new==True:   # if is called by 'add', means item may not have real 'data'
-                self.axarr[0,0].set_xlim(int(time.time())+100*ConvertInterval(q[0]['cmd']['interval']))   # we use 'int(time.time()' here,because there may still no real data yet in the new item
-                self.axarr[1,0].set_xlim(int(time.time()),int(time.time())+100*ConvertInterval(q[0]['cmd']['interval'])) 
+#                 print '####Ture!!'
+                self.axarr[0].set_xlim(matplotlib.dates.date2num(datetime.datetime.fromtimestamp(time.time())),matplotlib.dates.date2num(datetime.datetime.fromtimestamp(time.time())+100*datetime.timedelta(0,ConvertInterval(q[0]['cmd']['interval']))))   # we use 'int(time.time()' here,because there may still no real data yet in the new item
+                self.axarr[3].set_xlim(matplotlib.dates.date2num(datetime.datetime.fromtimestamp(time.time())),matplotlib.dates.date2num(datetime.datetime.fromtimestamp(time.time())+100*datetime.timedelta(0,ConvertInterval(q[0]['cmd']['interval']))))
             else:
-                self.axarr[0,0].set_xlim(int(q[0]['data']['time'][0]),int(q[0]['data']['time'][0])+100*ConvertInterval(q[0]['cmd']['interval']))   
-                self.axarr[1,0].set_xlim(int(q[0]['data']['time'][0]),int(q[0]['data']['time'][0])+100*ConvertInterval(q[0]['cmd']['interval']))
+                self.axarr[0].set_xlim(q[0]['data']['time'][0],matplotlib.dates.date2num(matplotlib.dates.num2date(q[0]['data']['time'][0])+100*datetime.timedelta(0,ConvertInterval(q[0]['cmd']['interval']))))   
+                self.axarr[3].set_xlim(q[0]['data']['time'][0],matplotlib.dates.date2num(matplotlib.dates.num2date(q[0]['data']['time'][0])+100*datetime.timedelta(0,ConvertInterval(q[0]['cmd']['interval']))))
                 
         elif subplot==1:
             if new==True:  # if is called by 'add', means item may not have real 'data'
-                self.axarr[0,1].set_xlim(int(time.time()),int(time.time())+100*ConvertInterval(q[1]['cmd']['interval']))   
-                self.axarr[1,1].set_xlim(int(time.time()),int(time.time())+100*ConvertInterval(q[1]['cmd']['interval'])) 
+                self.axarr[1].set_xlim(matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time()))),matplotlib.dates.date2num(datetime.datetime.fromtimestamp(time.time())+100*datetime.timedelta(0,ConvertInterval(q[1]['cmd']['interval']))))   
+                self.axarr[4].set_xlim(matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time()))),matplotlib.dates.date2num(datetime.datetime.fromtimestamp(time.time())+100*datetime.timedelta(0,ConvertInterval(q[1]['cmd']['interval']))))
             else:
-                self.axarr[0,1].set_xlim(int(q[1]['data']['time'][0]),int(q[1]['data']['time'][0])+100*ConvertInterval(q[1]['cmd']['interval']))   
-                self.axarr[1,1].set_xlim(int(q[1]['data']['time'][0]),int(q[1]['data']['time'][0])+100*ConvertInterval(q[1]['cmd']['interval']))
+                self.axarr[1].set_xlim(q[1]['data']['time'][0],matplotlib.dates.date2num(matplotlib.dates.num2date(q[1]['data']['time'][0])+100*datetime.timedelta(0,ConvertInterval(q[1]['cmd']['interval']))))   
+                self.axarr[4].set_xlim(q[1]['data']['time'][0],matplotlib.dates.date2num(matplotlib.dates.num2date(q[1]['data']['time'][0])+100*datetime.timedelta(0,ConvertInterval(q[1]['cmd']['interval']))))
         else:
             print 'will implement other subplots'  
             
@@ -418,15 +428,15 @@ class DataPlotter():
 #             self.axarr[0,0].set_xlim(md.date2num(q[0]['cmd']['start']),md.date2num(q[0]['cmd']['end']))   # NOTE: we use use q[0]['cmd']['start'] here, because ['cmd'] is always there even there is no 'data' yet
 #             self.axarr[1,0].set_xlim(md.date2num(q[0]['cmd']['start']),md.date2num(q[0]['cmd']['end']))
             ## opt2 ###
-            self.axarr[0,0].set_autoscalex_on(True)   
-            self.axarr[1,0].set_autoscalex_on(True)
+            self.axarr[0].set_autoscalex_on(True)   
+            self.axarr[3].set_autoscalex_on(True)
         elif subplot==1:
             ### real code ###
 #             self.axarr[0,1].set_xlim(md.date2num(q[1]['cmd']['start']),md.date2num(q[1]['cmd']['end']))  
 #             self.axarr[1,1].set_xlim(md.date2num(q[1]['cmd']['start']),md.date2num(q[1]['cmd']['end'])) 
             #### opt2  ####
-            self.axarr[0,1].set_autoscalex_on(True)  
-            self.axarr[1,1].set_autoscalex_on(True) 
+            self.axarr[1].set_autoscalex_on(True)  
+            self.axarr[4].set_autoscalex_on(True) 
         else:
             print 'to implement'        
         
@@ -438,7 +448,7 @@ class DataPlotter():
         while not time.sleep(next_call - time.time()):    # somehow need add +0.00001 to remove errno22 exception in Linux env. For Windows, we don't need add this          
 #             print '^^^^^^^^^^^^'
             if  len(q)!=0  :
-#                 print "\n@@@@@@@@@@@@@@@@@ under plotting q is:", q
+                print "\n@@@@@@@@@@@@@@@@@ under plotting q is:", q
                 self.plotData()
             next_call = next_call+ 1              # plot all subplots every 1s
                 
@@ -456,10 +466,9 @@ class DataPlotter():
 #             self.ax12.add_collection(vc)      
 #         self.ax12.bar(q[0]['data']["time"],q[0]['data']['vol'],color='r',)   # to-do, this cost huge cpu, need change to REAL animation
             
-            self.axarr[0,0].set_ylim(0.5*min(q[0]['data']['price']),1.5*max(q[0]['data']['price'])) #dynamic adj the y limi here!
-            self.axarr[1,0].set_ylim(0,2*max(q[0]['data']['vol']))
-            
-                
+            self.axarr[0].set_ylim(0.5*min(q[0]['data']['price']),1.5*max(q[0]['data']['price'])) #dynamic adj the y limi here!
+            self.axarr[3].set_ylim(0,2*max(q[0]['data']['vol']))
+               
 #         self.lines13.set_xdata(xdata)         # to-do: auto select ma type based on data
 #         self.lines13.set_ydata([i[0].split(':')[0] for i in data[0]['data']["ma"] ])   # ma1 value
 #         self.lines14.set_xdata(xdata)
@@ -468,13 +477,14 @@ class DataPlotter():
 #         self.lines15.set_ydata([i[1].split(':')[0] for i in data[0]['data']["ma"] ])   # ma2 value
 #         self.lines16.set_xdata(xdata)
 #         self.lines16.set_ydata([i[1].split(':')[1] for i in data[0]['data']["ma"] ])   # ma2 vol
-            if q[0]['cmd']['type']=='h':
+
+            if q[0]['cmd']['type']=='h':  # realtime xlim will be set in other block
                 self.reset_xlim_history(0)
         ### set labels
-            self.axarr[0,0].set_title('id:0, Stock name: %s, type: %s, interval: %s, current price: %s' %(q[0]['cmd']['symbol'],q[0]['cmd']['type'],q[0]['cmd']['interval'],q[0]['data']['price'][-1]) )
-            self.axarr[1,0].set_title('id:0, Stock name: %s, type: %s, interval: %s, vol: %s'  %(q[0]['cmd']['symbol'],q[0]['cmd']['type'],q[0]['cmd']['interval'],q[0]['data']['vol'][-1]))
-            self.axarr[0,0].set_ylabel(q[0]['cmd']["price"], color='b')
-            self.axarr[1,0].set_ylabel('vol', color='r')  
+            self.axarr[0].set_title('id:0, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' %(q[0]['cmd']['symbol'],q[0]['cmd']['type'],q[0]['cmd']['interval'],q[0]['data']['price'][-1],q[0]['data']['vol'][-1]) )
+#             self.axarr[1,0].set_title('id:0, Stock name: %s, type: %s, interval: %s, vol: %2f'  %(q[0]['cmd']['symbol'],q[0]['cmd']['type'],q[0]['cmd']['interval'],q[0]['data']['vol'][-1]))
+            self.axarr[0].set_ylabel('price type: %s' %q[0]['cmd']["price"], color='b')
+            self.axarr[3].set_ylabel('vol', color='r')  
          
         #Update 2nd subplot data
         if len(q)>1 and q[1]['dirty']==True:        # need check 'dirty' in case there is no real data stored here yet
@@ -491,29 +501,26 @@ class DataPlotter():
 #         self.lines26.set_xdata(data[1]['data']["time"])
 #         self.lines26.set_ydata([i[1].split(':')[1] for i in data[1]['data']["ma"] ])   # ma2 vol
             
-            self.axarr[0,1].set_ylim(0.5*min(q[1]['data']['price']),1.5*max(q[1]['data']['price']))
-            self.axarr[1,1].set_ylim(0,2*max(q[1]['data']['vol']))
+            self.axarr[1].set_ylim(0.5*min(q[1]['data']['price']),1.5*max(q[1]['data']['price']))
+            self.axarr[4].set_ylim(0,2*max(q[1]['data']['vol']))
             
             if q[1]['cmd']['type']=='h':
                 self.reset_xlim_history(1)
             
-            self.axarr[0,1].set_title('id:1, Stock name: %s, type: %s, interval: %s, current price: %s' %(q[1]['cmd']['symbol'],q[1]['cmd']['type'],q[1]['cmd']['interval'],q[1]['data']['price'][-1]) )
-            self.axarr[1,1].set_title('id:1, Stock name: %s, type: %s, interval: %s, vol: %s'  %(q[1]['cmd']['symbol'],q[1]['cmd']['type'],q[1]['cmd']['interval'],q[1]['data']['vol'][-1]))
-            self.axarr[0,1].set_ylabel('price tyep: %s' %q[1]['cmd']["price"], color='b')
-            self.axarr[1,1].set_ylabel('vol', color='r')
+            self.axarr[1].set_title('id:1, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' %(q[1]['cmd']['symbol'],q[1]['cmd']['type'],q[1]['cmd']['interval'],q[1]['data']['price'][-1],q[1]['data']['vol'][-1])) 
+            self.axarr[1].set_ylabel('price type: %s' %q[1]['cmd']["price"], color='b')
+            self.axarr[4].set_ylabel('vol', color='r')
 #             self.ax22.set_ylabel('vol', color='r')
                     
         #auto rescale
         for i in self.axarr:
-            for j in i:
-                j.relim()
-                j.autoscale_view()
+            i.relim()
+            i.autoscale_view()
 
         #We need to draw *and* flush         
         self.figure.canvas.draw()                   # will cause isse, Tkinter is intended to be run in a single thread      
         self.figure.canvas.flush_events()
 #         print '$$$$$$$$$$$$$$$$$$$$$$ draw done $$$$$$$$'
-
 
 
 if __name__ == "__main__":
@@ -530,7 +537,6 @@ if __name__ == "__main__":
     t.daemon=True   #ctrl+c kill the main thread only. Need put sub-thread in daemon mode so that can be killed by ctrl+c
     t.start()
 
-    
     plot.go()   # need run in main thread,so replace start()
 
 
