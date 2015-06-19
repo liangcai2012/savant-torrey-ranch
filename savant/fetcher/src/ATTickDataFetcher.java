@@ -40,6 +40,9 @@ public class ATTickDataFetcher {
     public LinkedList<JSONObject> pendingRequests;
     public String beginTime;
     public int timeWindow;
+    //QL
+    public Date time_begin,time_end;
+    public long time_diff;
 
     static {
         DEFAULT_OUTPUT_DEST = config.getProperty("OUTPUT_DIR") + "/data";
@@ -87,6 +90,9 @@ public class ATTickDataFetcher {
 
                 String symbol = (String)request.get("symbol");
                 String date = (String)request.get("date");
+                
+                time_begin = new Date();
+                                
                 logger.log(Level.INFO,"SEND request [" + symbol + ":" + date + "]");
                 if (!checkDate(date)) {
                     errcode = "-1";
@@ -197,6 +203,34 @@ public class ATTickDataFetcher {
         }
     }
 
+    public void readLog(long[] ts,String fn) 
+    {
+        Reader reader = null;
+        BufferedReader br = null;
+        try {
+            reader = new FileReader(fn);
+            br = new BufferedReader(reader);
+            
+            String data = null;
+            int cnt=0;
+            while (cnt<1 && (data = br.readLine()) != null) {
+                  ts[cnt++]=Long.parseLong(data);    
+            }
+        } 
+        catch (IOException e) {
+            e.printStackTrace();
+        } 
+        finally {
+            try {
+                reader.close();
+                br.close();
+            } 
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public void onRequestComplete() {
         logger.log(Level.INFO,"new data recorded");
         try {
@@ -208,9 +242,32 @@ public class ATTickDataFetcher {
             if (!this.isIdle()) {
                 this.sendNextRequest();
             } else {
-                this.completeFetch();
+                long totalLength=this.completeFetch();
                 this.reset();
                 logger.log(Level.INFO, "request complete");
+                
+                SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+                time_end = new Date();
+                try{
+                    long[] ts={0,0};
+                    readLog(ts,".\\output.txt");
+
+                    File writename = new File(".\\output.txt"); 
+                    writename.createNewFile();
+                    BufferedWriter out = new BufferedWriter(new FileWriter(writename));  
+                
+                    time_diff=(time_end.getTime()-time_begin.getTime())/1000;
+                
+                    out.write(String.valueOf(ts[0]+totalLength/1024));
+                    
+                    out.flush();
+                    out.close();
+                }
+                catch(Exception e)
+                {
+                    e.printStackTrace();
+                }
+                
             }
         } catch (JSONException e) {
             logger.log(Level.SEVERE,e.getMessage());
@@ -281,27 +338,30 @@ public class ATTickDataFetcher {
         this.timeWindow = window;
     }
 
-    private void completeFetch() {
+    private long completeFetch() {
         String filepath = this.outputPath + "_markethours.tsv";
         logger.log(Level.INFO, "output file is "+filepath);
        
+        long res=0;
+
         if (new File(filepath+".tmp").exists()) {
             logger.log(Level.INFO, "compress "+filepath+".tmp");
-        	compressFile(filepath);
+        	res+=compressFile(filepath);
         }
 
         filepath = this.outputPath + "_premarket.tsv";
         if (new File(filepath+".tmp").exists()) {
-            compressFile(filepath);
+            res+=compressFile(filepath);
         }
 
         filepath = this.outputPath + "_aftermarket.tsv";
         if (new File(filepath+".tmp").exists()) {
-            compressFile(filepath);
+            res+=compressFile(filepath);
         }
+        return res;
      }
 
-    private void compressFile(String filepath) {
+    private long compressFile(String filepath) {
         try {
             byte[] data = new byte[BUFFER];
             String zipFilePath = filepath + ".zip";
@@ -319,9 +379,11 @@ public class ATTickDataFetcher {
             out.close();
             zipFile.close();
             new File(filepath).delete();
+            return new File(zipFilePath).length();
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Failed to compress data file");
             logger.log(Level.SEVERE, e.getMessage());
+            return -1;
         }
     }
 

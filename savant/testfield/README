@@ -1,0 +1,24 @@
+- USAGE
+
+The python script 'evaluate.py' is composed to estimate the time and space cost of getting (as in 'fetch_attick.py') all the symbol / date trading data in the 'company' table of the generated 'savant.db'. To run the script, type the line 'python evaluate.py <percent>', where percent could be any float number in [0.0 - 100.0], which indicates how big one step in percentage is when walking the whole table by descending order the 'prev_volume' column. The expected result would be like:
+
+Time / Space Cost Measurement for 20.0% step sampling
+40 S
+2863 K
+Time / Space Cost Calculation for whole table with 1045.2 scaling
+11H 36M 48S
+2G 874M 279K
+
+Where the top section has the observation of real cost by the given percenatge parameter, and the bottom one has the estimation after a corresponding scaling.
+
+The idea is to assume that each row in the table has the same chance to be sampled, and then a walking through the evenly-distributed ordered rows would represent a sampling of the table.
+
+- DEPENDENCY
+
+A. Generate 'savant.db' in data folder by running 'populate_company.py';
+B. 'ant' rebuild 'fetcher' folder b/c the 'ATTickDataFetcher.java' was changed to support a few functions.
+
+- CHECKLIST
+
+2 files (including this README) in testfield folder
+3 files in fetcher folder

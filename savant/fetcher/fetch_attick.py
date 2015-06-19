@@ -8,6 +8,7 @@ from savant.config import settings
 class FetcherCaller:
 
     def __init__(self,json_request):
+        self.stat=-99
         self.request = json_request+"\n"
         self.connect()
         self.send_request()
@@ -22,6 +23,7 @@ class FetcherCaller:
         resp = self.socket.recv(1024)
         print "Response:",resp
         self.socket.close()
+        self.stat=resp
 
 def get_data(args):
     cmd = "get"
