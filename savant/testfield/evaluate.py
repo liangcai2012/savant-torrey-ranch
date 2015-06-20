@@ -38,7 +38,7 @@ def detail(v,vc,vf):
 vc=[[1,60,60,24],[1,1024,1024,1024]]
 vf=['SMHD','KMGT']
 
-def queryTable(perc):
+def queryTable(n):
     logpath='../fetcher/output.txt'
     if os.path.exists(logpath)==True:
         os.remove(logpath)
@@ -46,33 +46,37 @@ def queryTable(perc):
     curs=conn.cursor()
     curs.execute("select prev_volume, symbol, date_updated from company order by prev_volume desc")
     ds= curs.fetchall()
-    #step= perc*float(len(ds))/float(100)
-    step= len(ds)*perc/100
-    print step
-    count=0
+    if n<1:
+        n=1
+    step= float(len(ds))/n
+    if step<1:
+        step=1
+    #print step
+    ind=0
+    cnt=0
     time.clock()
     for s in ds:
-        if count==0:
+        if ind==int((cnt*step + (cnt+1) * step)/2):
+            print 'sample index',ind
             print s
             sym=s[1]
             dat=s[2].replace('-','')
             get_data(sym,dat)
+            cnt+=1
             while 1:
                 stat=check_status()
                 if stat.find('Idle')>-1:
                     break
                 time.sleep(4)     
-        count=count+1
-        if count>=step:
-            count=0
+        ind+=1
     curs.close()
     conn.close()
-    print '\nTime / Space Cost Measurement for '+str(perc)+'% step sampling'
+    print '\nTime / Space Cost Measurement for '+str(n)+' sampling'
     ti=long(round(time.clock()))
-    print ti,'S'
+    print detail(ti,vc[0],vf[0])
     file = open(logpath)
     sp=long(file.readline())
-    print sp,'K'  
+    print detail(sp,vc[1],vf[1])
     print 'Time / Space Cost Calculation for whole table with '+str(step)+' scaling'
     print detail(long(ti*step),vc[0],vf[0])    
     print detail(long(sp*step),vc[1],vf[1])
@@ -80,4 +84,4 @@ def queryTable(perc):
 
 if __name__ == "__main__":
     
-    mult=queryTable(float(sys.argv[1]))
+    mult=queryTable(long(float(sys.argv[1])))
