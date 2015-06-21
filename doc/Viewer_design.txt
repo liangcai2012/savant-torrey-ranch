@@ -68,50 +68,124 @@ class: Viewer(rpyc.Service):  use rpyc to communicate with controller, controlle
 def: 
 	init():
 		call Recvdata.Connect_streamer and Recvdata.Connect_historic to create connection
-		init dict of dict to store stock data
+		init dict of dict to store stock data, and plotDict
 		call Plotdata.on_launch to init all plot using fixed configur
+	
+	Connect_controller(): 
+		connect to controller and wait for any command->
+		dump command and call below functions to proceed it	
 		 
-	list(command):
-		dump json command-> 
+	list():
 		list all key value in data storing dict 
 
-	remove(command):
-		dump json command-> 
+	remove(stock):
 		remove specified key-pair in data storing dict->
 		if the removed stock is on plotting->
 		need also call move() to move next up-shown stock to current plot position. 
 
-	move(command):
-		dump json command->
+	move(stock,position):
 		display specified data in dict in specified plot->
 		update 'plotDict'		
 
-	add(command):
-		dump json command-> 
+	add_real(stock,position):
 		display head data in dict in plot#1 (default) or specified plot->
-		update'plotDict' 
-
-	subscrb_streamer(command):
-		dump json command-> 
-		call Recvdata.Subscrib to subscribe new stock from streamer->
-		update'plotDict'; (can also default to call add() after subscb command)
-
+		call Recvdata.Subscrib to subscribe new stock from streamer and append new stock in dict, and update plotDict
+		need to call move() to replace on plotting plot
+		
 	update_streamer(command):
-		dump json command-> 
 		call Recvdata.streaming to update all stock from streamer->
 		update'plotDict'
 
 	unsubscrb_streamer():
-		dump json command-> 
 		call Recvdata.Unsubscrib to unsubsrib all stock, close socket, remove all temp memory->
 		update'plotDict'
 
-	subscrb_historic(command): similar as real time data case, but update 'plotDict_hist'
+	add_hist(stock,position):
+		similar as real time data case, but update 'plotDict_hist'
 	update_historic(command): similar as real time data case,  but update 'plotDict_hist'
-	unsubscrb_historic(command): similar as real time data case, but update 'plotDict_hist'
+	unsubscrb_historic(): similar as real time data case, but update 'plotDict_hist'
 
+	############pseudo code:  ############
+	init():
+		globle y_data{}{}
+	        globle xdata{}
+		globle plotDict{}
+		self.update_command{}    #used to store udpate_command, in case need call update() after changed plotDict causing current streaming looop terminated
+		self.update_command_hist{}
+		
+		Recvdata.Connect_streamer(ipAddr)
+		Recvdata.Connect_historic(ipAddr)
+		Plotdata.on_launch(plotConf_default) 
+		Connect_controller()
+		
+	Connect_controller()	
+		self.socket_contr = socket.socket()      
+     		port = 8090           
+     		s.bind(("ipAddr", port))        # Bind to the port for controller
+     		s.listen()
+     		
+     		while True:
+     			client, addr = s.accept()
+            		ready = select.select([client,],[], [],2)  #wait for I/O complete
+            		if ready[0]:
+                 		recv_data = client.recv(1024*24)
+                 		command=loads(recv_data)
+                 		
+                 		if command['cmd']=='list':
+                 			list()
+		                elif command['cmd']=='remove':
+		                	stock=command['stock']
+					remove(stock)
+	                        elif command['cmd']=='move':
+		                        stock=command['stock']
+		                        position=command['position']
+					move(stock,position)
+				elif command['cmd']=='add_real':
+	                                stock=command['stock']
+	                                position=command['position']
+					add(stock,position)
+				elif command['cmd']=='update_real':
+					self.update_command=command
+					update_streamer(self.update_command)
+				elif command['cmd']=='unsubscrb_real':
+					unsubscrb_streamer():
+					
+				elif command['cmd']=='add_hist':
+					stock=command['stock']
+	                                position=command['position']
+					add_hist(stock,position)
+				elif command['cmd']=='update_hist':
+					self.update_command_hist{}=command
+					update_historic(self.update_command_hist)
+				elif command['cmd']=='unsubscrb_hist':
+					unsubscrb_historic():
+				else: unvalid command; continue
+			
+			
+	add_real(stock,position):
+		Subscrib_streamer(stock,position)					
+		position=1 if no position
+		move(stock,position)
+						
+	update_streamer(command):
+		update_command=command
+		Recvdata.streaming(interval,bar,ma,plotDict)				
+					
+	unsubscrb_streamer():
+		y_data={}{}
+		plotDict={}
+	
+	list():	 				
+		print i for i in y_data{}
+		print j for j in plotDict{}
+	
+	move(stock,position):	
+	        plotDict[position]=stock
+	        update_streamer(update_command,plotDict)  # issue: need make sure re-call update() after previous update() loop finish
+	
 
-
+						
+					
 1.real-time data requestor:
 request real-time data from streamer. Will send request every interval. Store temp data(1 hour or WHOLE day) in memory and display.
 when requesting bar data only, caller should send this message with the same interval as the bar interval. 
@@ -122,8 +196,7 @@ class:
 defs: 
 	Connect_streamer(ipAddr):
 		connect streamer based on ipAddr->
-		create socket instance(globle)->
-		call Plotdata.on_launch() to init 6 plots for real-time
+		create socket instance(globle)
 	
 	
 	Subscrib_streamer(Command):
@@ -132,8 +205,7 @@ defs:
 		add key in dict of stock data->
 		update'plotDict'
 	
-	streaming(command,plotDict):
-		Analys command information-> 
+	streaming(interval,bar,ma,plotDict,plotDict):
 		decide request frequency based on 'interval', and check if there is plot order change based on 'plotDict' -> 
 		'while' loop + time() to controll updating ->
 			inside each loop: sent 'update' command to streamer -> 
@@ -146,6 +218,78 @@ defs:
 	issue: what if streamming is on-runing, we entry another new 'update' command to call a new streamming command(like change the interval)?
 		option: in the 'plotDict', add a 'interval' key to record if there is interval change, if there is, break current streaming runing
 
+	############pseudo code:  ############
+	Recvdata(Thread):  
+		self.socket
+		
+	
+	Connect_streamer(ipAddr):
+		self.socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)       
+                socket.connect((ipAddr,8091))
+               
+        
+        
+	Subscrib_streamer(stock,position):
+		subscrb_command= create_command_toStreamer(subscrib,stock)
+		self.socket.send(subscrb_command)
+		response = self.socket.recv(1024*10)
+		stock_new=new_added(stocklist, subscrb_command['stocklist'] )  
+		if stock_new:
+			self.ydata[].append(stock_new)
+			plotDict['position']=stock_new; 
+			plotDict['change']=1
+		
+
+	streaming(interval,bar,ma,plotDict):	
+		update_command=create_command_toStreamer(update,interval,bar,ma)
+		interval_new=update_command{'interval'}
+		interval= maxCommonDiv(interval_new,interval)
+		
+		Bar_new=update_command('bar')
+		Bar=Bar_new
+		MA_new=update_command('ma')
+		MA=MA_new
+		MA_rate=MA/interval
+		
+		plotDict['interval','bar','ma']=interval_new,Bar, MA
+		
+		if plotDict!=plotDict_new:
+			Plotdata.on_launch(plotDict)	# on_launch will only reset specified sub-plot
+		        plotDict_new=plotDict            # issue: plotDict detail during streaming
+		
+		next_call = time.time() 
+        	while not self.stopped.wait(next_call - time.time()):  #timer compensate
+
+			if plotDict!=plotDict_new:     # exit current function, and re-call it(in case change bar data's interval)
+				break
+				
+	    		self.socket.send(self.input_update)
+	    		
+	   		data = self.socket.recv(1024*10)
+			data_plot=dumps(data)      # 2D dict
+
+			while data_plot[]['timestamp'] unchanged:    # issue: what if only 1 stock time stamp unchanged, we need re-send update to ALL stocks?
+				self.socket.send(self.input_update)
+				data = self.socket.recv(1024*10)
+			        data_plot=dumps(data) 
+			        
+			self.ydata[]['bar'].append(data_plot[]['bar'])
+			self.ydata[]['timestamp'].append(data_plot[]['timestamp'])
+			
+		        if MA_new ==interval:         			 # MA wil update as frequence as MA's interval
+				self.ydata[]['ma'].append(data_plot[]['ma'])
+				MA_new=MA_new/MA_rate
+			else:
+				MA_new=+MA_new
+			
+			self.xdata.append(interval)  	#issue: how to disply x data based on differetn interval on plot
+			
+			Plotdata.on_running(self.xdata, self.ydata)
+			
+			next_call = next_call+interval  #timer=interval
+
+
+
 2. same day 'historical' data requestor:
 work in same thread with 'real-time data requestor'.  get same day previous data from Fetcher
 
@@ -157,7 +301,7 @@ defs:
 		call Plotdata.on_launch() to init 2-6 plots for historical
 
 	Subscrib_hist(Command): same as 'Subscrib_streamer', we can seperately maintain a ''
-	update_hist(command,plotDict_hist): same with streaming, but not need check 'interval' and only check 'plotDict' outside the loop; just loop very 0.001s, and check if each data's time-stamp is valid
+	update_hist(command,plotDict_hist): same with streaming, but not need check 'interval' and only check 'plotDict' outside the loop; just loop every 0.001s, and check if each data's time-stamp is valid
 
 
 
@@ -186,17 +330,56 @@ defs:
 	
 	config_plot()  (TBD, will implement in next version)
 
+	############pseudo code:  ############
+	on_launch(plotDict):
+        	self.figure, self.axarr = plt.subplots(6,sharex=True)       #Set up plot
+        	self.lines0[1-14] = self.axarr[0].plot([],[])  # bar/MA/Vol, total 14 max overlap
+        	self.lines1[1-14] = self.axarr[1].plot([],[])
+        	self.lines2[1-14] = self.axarr[2].plot([],[])
+        	self.lines3[1-14] = self.axarr[3].plot([],[])
+        	self.lines4[1-14] = self.axarr[4].plot([],[])
+        	self.lines5[1-14] = self.axarr[5].plot([],[])
+        	
+        	self.axarr[:].set_autoscaley_on(True)      # set auto-scale(temp)
+        	self.axarr[:].set_xlim(0, plotDict['interval']*2000)  # set x limit.   issue: interval only changed during update(), which apply to ALL stock, what if we want seperately?		
+        	self.axarr[:].grid()
+        		
+	        to-do: default set up each sub-plot display all MA+BAR+val
 
-
-
-
+	 on_running(self, xdata, ydata):
+	 	self.lines0[1-14].set_xdata(xdata[])     
+	 	#set plot1's ydata
+	        self.lines0[1].set_ydata(ydata[0]['open']) 
+		self.lines0[2].set_ydata(ydata[0]['high'])
+		self.lines0[3].set_ydata(ydata[0]['low'])
+		self.lines0[4].set_ydata(ydata[0]['close'])
+		self.lines0[5].set_ydata(ydata[0]['MA1'])
+		self.lines0[6].set_ydata(ydata[0]['MA5'])
+		self.lines0[7].set_ydata(ydata[0]['MA10'])
+		self.lines0[8].set_ydata(ydata[0]['MA30'])
+		self.lines0[9].set_ydata(ydata[0]['MA1m'])
+		self.lines0[10].set_ydata(ydata[0]['MA5m'])
+		self.lines0[11].set_ydata(ydata[0]['MA10m'])
+		self.lines0[12].set_ydata(ydata[0]['MA30m'])
+		self.lines0[13].set_ydata(ydata[0]['MA1h'])
+		self.lines0[14].set_ydata(ydata[0]['vol'])
+		
+		repeat same with self.line1-6
+		
+		self.axarr[:].relim()
+		self.axarr[:].autoscale_view()
+		
+		self.figure.canvas.draw()
+	 	self.figure.canvas.flush_events()
+	 	
+		
 ! Thread deinition:
  	thread1: connect and request real-time/same day historical data
 	thread2: connect and request pure historical. (Requested historical data may huge and seperate store from real-time data, so use diff thread with realtime data requester)
  	thread3: plotting
  	thread4: main thread, MQ operation, ForController,Misc.
 
-
+	follow-up: may not need so many thread, we can integrate data recv and plot into on thread
 
 ! Main Data structure definistion:
 	MQ: use dequeue
