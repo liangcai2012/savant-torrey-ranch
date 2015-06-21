@@ -18,9 +18,10 @@ public class RequestListener {
         String hostName = "localhost";
         int port = Integer.parseInt(config.getProperty("FETCHER_PORT"));
         try {
+			Socket socket;
             ServerSocket serverSocket = new ServerSocket(port);
             while (true) {
-                Socket socket = serverSocket.accept();
+                socket = serverSocket.accept();
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 String strRequest = in.readLine();
                 System.out.println("Request received: " + strRequest);
@@ -36,11 +37,18 @@ public class RequestListener {
                 socket.close();
             }
         }
+		//this is to prevent improper configured output dir. socket should be already opened.
+        catch (FileNotFoundException e) {
+            System.out.print(e.getMessage());
+			System.exit(-1);
+        }
         catch (IOException ix) {
             System.out.println(ix.getMessage());
+			System.exit(-1);
         }
         catch (Exception e) {
             System.out.print(e.getMessage());
+			System.exit(-1);
         }
     }
 }

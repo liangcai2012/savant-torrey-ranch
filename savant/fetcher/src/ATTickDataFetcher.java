@@ -7,6 +7,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import java.io.FileNotFoundException;
 
 import at.feedapi.ActiveTickServerAPI;
 import at.feedapi.Helpers;
@@ -71,7 +72,7 @@ public class ATTickDataFetcher {
         logger.info("init status: " + (rc ? "ok" : "failed"));
     }
 
-    public Map processRequest(JSONObject request) throws JSONException {
+    public Map processRequest(JSONObject request) throws JSONException, FileNotFoundException {
         Map<String, String> response = new HashMap<String, String>();
         String cmd = (String)request.get("command");
         String errcode = "0";
@@ -208,6 +209,9 @@ public class ATTickDataFetcher {
         Reader reader = null;
         BufferedReader br = null;
         try {
+			File f = new File(fn);
+			if(!f.exists())
+				return; 
             reader = new FileReader(fn);
             br = new BufferedReader(reader);
             
@@ -218,7 +222,7 @@ public class ATTickDataFetcher {
             }
         } 
         catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         } 
         finally {
             try {
@@ -226,7 +230,7 @@ public class ATTickDataFetcher {
                 br.close();
             } 
             catch (Exception e) {
-                e.printStackTrace();
+               // e.printStackTrace();
             }
         }
     }
@@ -245,19 +249,22 @@ public class ATTickDataFetcher {
                 long totalLength=this.completeFetch();
                 this.reset();
                 logger.log(Level.INFO, "request complete");
-                
+    
+		//Using output.txt is not very necessary, we can use du command as replacement.             
+			//This is only for dumping the total file size to the output.txt file for total size estimation. 
+/*
                 SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
                 time_end = new Date();
                 try{
                     long[] ts={0,0};
-                    readLog(ts,".\\output.txt");
+                    readLog(ts,"./output.txt");
 
-                    File writename = new File(".\\output.txt"); 
+                    File writename = new File("./output.txt"); 
                     writename.createNewFile();
                     BufferedWriter out = new BufferedWriter(new FileWriter(writename));  
                 
                     time_diff=(time_end.getTime()-time_begin.getTime())/1000;
-                
+    				System.out.println(String.valueOf(ts[0]) +":"+String.valueOf(totalLength));            
                     out.write(String.valueOf(ts[0]+totalLength/1024));
                     
                     out.flush();
@@ -265,9 +272,9 @@ public class ATTickDataFetcher {
                 }
                 catch(Exception e)
                 {
-                    e.printStackTrace();
+                   // e.printStackTrace();
                 }
-                
+  */              
             }
         } catch (JSONException e) {
             logger.log(Level.SEVERE,e.getMessage());
@@ -338,6 +345,7 @@ public class ATTickDataFetcher {
         this.timeWindow = window;
     }
 
+    //return file size for estimation purpose
     private long completeFetch() {
         String filepath = this.outputPath + "_markethours.tsv";
         logger.log(Level.INFO, "output file is "+filepath);
@@ -361,6 +369,7 @@ public class ATTickDataFetcher {
         return res;
      }
 
+    //return file size for estimation purpose
     private long compressFile(String filepath) {
         try {
             byte[] data = new byte[BUFFER];
@@ -379,6 +388,7 @@ public class ATTickDataFetcher {
             out.close();
             zipFile.close();
             new File(filepath).delete();
+			System.out.println("file length: " + String.valueOf(new File(zipFilePath).length()));
             return new File(zipFilePath).length();
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Failed to compress data file");
@@ -393,10 +403,19 @@ public class ATTickDataFetcher {
         CANCEL = false;
     }
 
-    private void setRequestOutputPath(String symbol,String date) {
+    private void setRequestOutputPath(String symbol,String date) throws FileNotFoundException{
+		File outHome = new File(DEFAULT_OUTPUT_DEST);
+		if(!outHome.exists()){
+			if(!outHome.mkdir()){
+				throw new FileNotFoundException("cannot create the home dir of the output data, check config file!");
+			}
+		}
         File outDir = new File(DEFAULT_OUTPUT_DEST + "/" + date);
         if (!outDir.exists()) {
-            outDir.mkdir();
+			//this is not supposed to happen given that outHome has been checked. 
+            if(!outDir.mkdir()){
+				throw new FileNotFoundException("cannot create the dest dir of the output data, check config file!");
+			}
         }
         this.outputPath = DEFAULT_OUTPUT_DEST + "/" + date + "/" + symbol;
         String premarketFilePath = this.outputPath + "_premarket.tsv.tmp";
