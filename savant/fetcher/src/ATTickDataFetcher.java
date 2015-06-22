@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.Socket;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.text.DateFormat;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -151,28 +152,37 @@ public class ATTickDataFetcher {
         return apiSession.GetRequestor().SendATTickHistoryDbRequest(atSymbol, true, true, beginDateTime, endDateTime, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
     }
 
+
+    //validate the input date string. Use the solution from http://stackoverflow.com/questions/226910/how-to-sanity-check-a-date-in-java
     public boolean checkDate(String strDate) {
-        boolean cond = true;
-        Date today = new Date();
         if (strDate.length() != 8) {
-            cond = false;
-        } else {
-            try {
-                int year = Integer.parseInt(strDate.substring(0, 3));
-                int month = Integer.parseInt(strDate.substring(4, 5));
-                int day = Integer.parseInt(strDate.substring(6, 7));
-                Calendar cal = Calendar.getInstance();
-                cal.set(year, month, day);
-                if (cal.after(today)) {
-                    logger.log(Level.SEVERE,"You're trying to get data from the future!");
-                    cond = false;
-                }
-            } catch (NumberFormatException nfe) {
-                cond = false;
-            }
+            return false;
+        } 
+        //int year = Integer.parseInt(strDate.substring(0, 4));
+        //int month = Integer.parseInt(strDate.substring(4, 6));
+        //int day = Integer.parseInt(strDate.substring(6, 8));
+        Date date = null;
+        SimpleDateFormat sdf = (SimpleDateFormat)DateFormat.getDateInstance();
+        sdf.applyPattern("yyyymmdd");
+        sdf.setLenient(false);
+        try{
+            date = sdf.parse(strDate);
         }
-        return cond;
-    }
+        catch(ParseException e)
+        {
+            logger.log(Level.SEVERE,"You're providing an invalid date!");
+              return false;
+        }  
+        Date today = new Date();
+        //Calendar cal = Calendar.getInstance();
+        //cal.set(year, month, day);
+        //if (cal.after(today)) {
+        if (date.after(today)){
+            logger.log(Level.SEVERE,"You're trying to get data from the future!");
+            return false;
+        }
+        return true;
+  }
 
     public void onTickHistoryOverload() {
         JSONObject lastRequest = this.getPendingRequest();
