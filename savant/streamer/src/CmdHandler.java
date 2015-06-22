@@ -37,8 +37,6 @@ class CmdHandler implements Runnable{
 	        serverapi.ATInitAPI();
 	}
 
-	}
-
 	//TODO: return values
    	public void run() 
 	{
@@ -59,11 +57,10 @@ class CmdHandler implements Runnable{
                 //is this part of the specification? Streamer is a server shared by multiple clients so it should not be shutdown by one client
 				//			if(jstr.startsWith("quit"))
 				//				break;
-							String returnMessage =	"hi";
 							JSONParser parser = new JSONParser();
 							//Object oObj=JSONValue.parse(jstr);
 							Object oObj;
-							long getTime = System.currentTimeMillis();
+							long getTime = System.currentTimeMillis()/1000;
 							try{
 								oObj = parser.parse(jstr);
 								JSONObject obj = (JSONObject) oObj;
@@ -282,20 +279,21 @@ class CmdHandler implements Runnable{
 	 */
 	public JSONObject processUpdate(String client, int interval,long second, int bar_mask, int ma_mask)
 	{
-	         String ret = null;
+	    String ret = null;
 		 Object obj;
 		 JSONObject jObj = null;
-		 JSONParser parser = new JSONParser();
+       JSONObject resp = null;
+       resp.put("client", client);
+       resp.put("timestamp", );
+		 //JSONParser parser = new JSONParser();
 	     ArrayList<String> symDataList = sr.m_clientSymMap.get(client);
 	     for(String sym : symDataList){
 	    	 SymData sd = sr.m_symDataMap.get(sym);
 	    	  ret = sd.getBar( second, interval, bar_mask);
-	          obj = parser.parse(ret);
-			
+	        obj = parser.parse(ret);
 			  jObj = (JSONObject) obj;
 	     } 
 	    return jObj;
-	//[Liang] This is a common error, you only return the bar data of last symbol in the list. You need to encode them into one json response. 
 	}
 	     
 	     
