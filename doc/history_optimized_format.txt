@@ -1,0 +1,20 @@
+1. Goal
+the current file format is direct dump of the network messages. Many fields are unnecessary. To reduce the file size, we need an optimized file format. The file should be still readable. It will be a comma seperated text file
+
+2. format
+the file contains two types of records: trades and quotes (9 columns)
+t,time, price, size,,,exch,,condition
+q,time, bidprice, bidsie, askprice, asksize, bidexchange, askexchange, condition
+
+
+time: hhmmss	size: 6
+price: [dd]dd.dd	size: 5-7	average: 5
+size: [dddddddd]d	size: 1-10  average: 3
+exchange: dd		size: 2
+cond: dd			size: 2
+
+size of trade record: 8+1+6+5+3+2+2 = 29
+size of quote record: 8+1+6+(5+3+2)*2+2 = 37
+
+3. Size
+ti

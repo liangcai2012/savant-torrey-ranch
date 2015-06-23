@@ -10,8 +10,15 @@ def GetDataFileFullPath(symbol, strDate):
     # todo map (symbol, strDate)==> full path of the data file.
     # at the mean time hardcode to file qqq_trade.txt
     fullpath = GetDataFileDirectory()
-    fullpath += "/qqq_trade.txt"
+    filename = symbol + "_trade_" + strDate.replace("/", "")
+    #filename = "/qqq_trade.txt"
+    fullpath += filename
     return fullpath
+def geterrorDescription(module_name, error_code, error_description):
+    ret = {"module_name":module_name,\
+           "error_code": error_code, \
+           "error_description":error_description}
+    return ret
 if __name__ == "__main__":
     d = GetDataFileDirectory()
     fp = GetDataFileFullPath("qqq", "05/01/2015")
