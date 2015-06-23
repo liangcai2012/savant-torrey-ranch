@@ -2,11 +2,13 @@ import java.io.*;
 import java.net.Socket;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.text.DateFormat;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import java.io.FileNotFoundException;
 
 import at.feedapi.ActiveTickServerAPI;
 import at.feedapi.Helpers;
@@ -40,9 +42,9 @@ public class ATTickDataFetcher {
     public LinkedList<JSONObject> pendingRequests;
     public String beginTime;
     public int timeWindow;
-    //QL
-    public Date time_begin,time_end;
-    public long time_diff;
+
+//    public Date time_begin,time_end;
+//    public long time_diff;
 
     static {
         DEFAULT_OUTPUT_DEST = config.getProperty("OUTPUT_DIR") + "/data";
@@ -71,7 +73,7 @@ public class ATTickDataFetcher {
         logger.info("init status: " + (rc ? "ok" : "failed"));
     }
 
-    public Map processRequest(JSONObject request) throws JSONException {
+    public Map processRequest(JSONObject request) throws JSONException, FileNotFoundException {
         Map<String, String> response = new HashMap<String, String>();
         String cmd = (String)request.get("command");
         String errcode = "0";
@@ -91,7 +93,7 @@ public class ATTickDataFetcher {
                 String symbol = (String)request.get("symbol");
                 String date = (String)request.get("date");
                 
-                time_begin = new Date();
+                //time_begin = new Date();
                                 
                 logger.log(Level.INFO,"SEND request [" + symbol + ":" + date + "]");
                 if (!checkDate(date)) {
@@ -150,28 +152,37 @@ public class ATTickDataFetcher {
         return apiSession.GetRequestor().SendATTickHistoryDbRequest(atSymbol, true, true, beginDateTime, endDateTime, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
     }
 
+
+    //validate the input date string. Use the solution from http://stackoverflow.com/questions/226910/how-to-sanity-check-a-date-in-java
     public boolean checkDate(String strDate) {
-        boolean cond = true;
-        Date today = new Date();
         if (strDate.length() != 8) {
-            cond = false;
-        } else {
-            try {
-                int year = Integer.parseInt(strDate.substring(0, 3));
-                int month = Integer.parseInt(strDate.substring(4, 5));
-                int day = Integer.parseInt(strDate.substring(6, 7));
-                Calendar cal = Calendar.getInstance();
-                cal.set(year, month, day);
-                if (cal.after(today)) {
-                    logger.log(Level.SEVERE,"You're trying to get data from the future!");
-                    cond = false;
-                }
-            } catch (NumberFormatException nfe) {
-                cond = false;
-            }
+            return false;
+        } 
+        //int year = Integer.parseInt(strDate.substring(0, 4));
+        //int month = Integer.parseInt(strDate.substring(4, 6));
+        //int day = Integer.parseInt(strDate.substring(6, 8));
+        Date date = null;
+        SimpleDateFormat sdf = (SimpleDateFormat)DateFormat.getDateInstance();
+        sdf.applyPattern("yyyymmdd");
+        sdf.setLenient(false);
+        try{
+            date = sdf.parse(strDate);
         }
-        return cond;
-    }
+        catch(ParseException e)
+        {
+            logger.log(Level.SEVERE,"You're providing an invalid date!");
+              return false;
+        }  
+        Date today = new Date();
+        //Calendar cal = Calendar.getInstance();
+        //cal.set(year, month, day);
+        //if (cal.after(today)) {
+        if (date.after(today)){
+            logger.log(Level.SEVERE,"You're trying to get data from the future!");
+            return false;
+        }
+        return true;
+  }
 
     public void onTickHistoryOverload() {
         JSONObject lastRequest = this.getPendingRequest();
@@ -208,6 +219,9 @@ public class ATTickDataFetcher {
         Reader reader = null;
         BufferedReader br = null;
         try {
+			File f = new File(fn);
+			if(!f.exists())
+				return; 
             reader = new FileReader(fn);
             br = new BufferedReader(reader);
             
@@ -218,7 +232,7 @@ public class ATTickDataFetcher {
             }
         } 
         catch (IOException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         } 
         finally {
             try {
@@ -226,7 +240,7 @@ public class ATTickDataFetcher {
                 br.close();
             } 
             catch (Exception e) {
-                e.printStackTrace();
+               // e.printStackTrace();
             }
         }
     }
@@ -245,19 +259,22 @@ public class ATTickDataFetcher {
                 long totalLength=this.completeFetch();
                 this.reset();
                 logger.log(Level.INFO, "request complete");
-                
-                SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
-                time_end = new Date();
+    
+		//Using output.txt is not very necessary, we can use du command as replacement.             
+			//This is only for dumping the total file size to the output.txt file for total size estimation. 
+///*
+                //SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+                //time_end = new Date();
                 try{
                     long[] ts={0,0};
-                    readLog(ts,".\\output.txt");
+                    readLog(ts,"./output.txt");
 
-                    File writename = new File(".\\output.txt"); 
+                    File writename = new File("./output.txt"); 
                     writename.createNewFile();
                     BufferedWriter out = new BufferedWriter(new FileWriter(writename));  
                 
-                    time_diff=(time_end.getTime()-time_begin.getTime())/1000;
-                
+                //    time_diff=(time_end.getTime()-time_begin.getTime())/1000;
+    				System.out.println(String.valueOf(ts[0]) +":"+String.valueOf(totalLength));            
                     out.write(String.valueOf(ts[0]+totalLength/1024));
                     
                     out.flush();
@@ -265,9 +282,9 @@ public class ATTickDataFetcher {
                 }
                 catch(Exception e)
                 {
-                    e.printStackTrace();
+                   // e.printStackTrace();
                 }
-                
+  //*/              
             }
         } catch (JSONException e) {
             logger.log(Level.SEVERE,e.getMessage());
@@ -338,6 +355,7 @@ public class ATTickDataFetcher {
         this.timeWindow = window;
     }
 
+    //return file size for estimation purpose
     private long completeFetch() {
         String filepath = this.outputPath + "_markethours.tsv";
         logger.log(Level.INFO, "output file is "+filepath);
@@ -361,6 +379,7 @@ public class ATTickDataFetcher {
         return res;
      }
 
+    //return file size for estimation purpose
     private long compressFile(String filepath) {
         try {
             byte[] data = new byte[BUFFER];
@@ -379,6 +398,7 @@ public class ATTickDataFetcher {
             out.close();
             zipFile.close();
             new File(filepath).delete();
+			System.out.println("file length: " + String.valueOf(new File(zipFilePath).length()));
             return new File(zipFilePath).length();
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Failed to compress data file");
@@ -393,10 +413,19 @@ public class ATTickDataFetcher {
         CANCEL = false;
     }
 
-    private void setRequestOutputPath(String symbol,String date) {
+    private void setRequestOutputPath(String symbol,String date) throws FileNotFoundException{
+		File outHome = new File(DEFAULT_OUTPUT_DEST);
+		if(!outHome.exists()){
+			if(!outHome.mkdir()){
+				throw new FileNotFoundException("cannot create the home dir of the output data, check config file!");
+			}
+		}
         File outDir = new File(DEFAULT_OUTPUT_DEST + "/" + date);
         if (!outDir.exists()) {
-            outDir.mkdir();
+			//this is not supposed to happen given that outHome has been checked. 
+            if(!outDir.mkdir()){
+				throw new FileNotFoundException("cannot create the dest dir of the output data, check config file!");
+			}
         }
         this.outputPath = DEFAULT_OUTPUT_DEST + "/" + date + "/" + symbol;
         String premarketFilePath = this.outputPath + "_premarket.tsv.tmp";
