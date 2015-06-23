@@ -199,7 +199,8 @@ public class SymData {
 
 	public String getMA(int second, int ma_mask){
 		
-		update(second, 0, 0, 1);
+      //there is no need to call update function again as this function is always called after getBar()     
+		//update(second, 0, 0, 1);
 		String retval = "";
 
 		for(int i=0;i<intnum; i++){
