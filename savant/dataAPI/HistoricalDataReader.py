@@ -1,4 +1,5 @@
 import helper
+import errors
 import dataAPI
 import os
 import datetime
@@ -11,6 +12,7 @@ class CBarData:
         self.high = 0;
         self.low= 0
         self.volume=0
+        self.avg =0
     def Process(self, loopCount, lastPrice, lastSize):
             if loopCount == 0:
                 self.open = lastPrice
@@ -34,7 +36,8 @@ class CBarData:
             #self.avg = "%.2f" % self.avg
 
     def toDictionary(self):
-        ret = {"open":self.open, "close":self.close, \
+        ret = {"error":None,\
+            "open":self.open, "close":self.close, \
                "low":self.low, "high":self.high, \
                "volume":self.volume,"avg": self.avg}
 
@@ -48,7 +51,11 @@ class HistoricalDataReader:
         self.startDay = startDay
         self.endDay = endDay
         filepath = helper.GetDataFileFullPath(symbol,startDay)
-        self.dataFile = open(filepath, "r+");
+        try:
+            self.dataFile = open(filepath, "r+");
+        except:
+            self.dataFile = None
+
         self.lastDataLine = None
         self.processedCount = 0;
         self.updateCount = 0
@@ -72,13 +79,8 @@ class HistoricalDataReader:
         else:
             self.bardata.Done(loopCount)
             self.hasMoreData = False
-    # Paramters bar_mask, ma_mask are ignored.
-    # todo support using Paramters bar_mask, ma_mask .
-    def update(self, interval, bar_mask, ma_mask):
-        self.updateCount +=1
+    def read_and_process_data(self):
         loopCount = 0
-        self.interval = interval
-        self.hasMoreData = True
         while True:
 
             if self.lastDataLine == None:
@@ -101,9 +103,24 @@ class HistoricalDataReader:
                 print(self.updateCount, "end of current period")
                 break
             self.lastDataLine = None
-        return self.bardata.toDictionary()
+    # Paramters bar_mask, ma_mask are ignored.
+    # todo support using Paramters bar_mask, ma_mask .
+    def update(self, interval, bar_mask, ma_mask):
+        self.updateCount +=1
+        loopCount = 0
+        self.interval = interval
+        self.hasMoreData = True
+        if self.dataFile == None:
+            ret = self.bardata.toDictionary()
+            ret["error"] = errors.errors[100]
+        else:
+            self.read_and_process_data()
+            ret = self.bardata.toDictionary()
+        return ret
 
 if __name__ == "__main__":
+    o = CBarData()
+    o.toDictionary()
     hdr = HistoricalDataReader("qqq", "05/01/2015", "05/01/2015")
     for i in range(3600 *9):
         try:
