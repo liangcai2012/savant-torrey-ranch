@@ -4,6 +4,7 @@ import json
 import pdb
 import time
 import sqlite3
+import datetime
 
 from savant.config import settings
 from savant.fetcher.fetch_attick import *
@@ -39,10 +40,10 @@ vc=[[1,60,60,24],[1,1024,1024,1024]]
 vf=['SMHD','KMGT']
 
 def queryTable(n):
-    logpath='../fetcher/output.txt'
+    logpath='../output.txt'
     if os.path.exists(logpath)==True:
         os.remove(logpath)
-    conn = sqlite3.connect("../data/savant.db")
+    conn = sqlite3.connect("../../data/savant.db")
     curs=conn.cursor()
     curs.execute("select prev_volume, symbol, date_updated from company order by prev_volume desc")
     ds= curs.fetchall()
@@ -54,7 +55,8 @@ def queryTable(n):
     #print step
     ind=0
     cnt=0
-    time.clock()
+    #time.clock()
+    starttime = datetime.datetime.now()
     for s in ds:
         if ind==int((cnt*step + (cnt+1) * step)/2):
             print 'sample index',ind
@@ -72,7 +74,11 @@ def queryTable(n):
     curs.close()
     conn.close()
     print '\nTime / Space Cost Measurement for '+str(n)+' sampling'
-    ti=long(round(time.clock()))
+    
+    endtime = datetime.datetime.now()
+    difftime=(endtime-starttime).seconds
+    #ti=long(round(time.clock()))
+    ti = difftime
     print detail(ti,vc[0],vf[0])
     file = open(logpath)
     sp=long(file.readline())

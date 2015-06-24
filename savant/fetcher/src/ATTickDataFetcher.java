@@ -42,9 +42,9 @@ public class ATTickDataFetcher {
     public LinkedList<JSONObject> pendingRequests;
     public String beginTime;
     public int timeWindow;
-    //QL
-    public Date time_begin,time_end;
-    public long time_diff;
+
+//    public Date time_begin,time_end;
+//    public long time_diff;
 
     static {
         DEFAULT_OUTPUT_DEST = config.getProperty("OUTPUT_DIR") + "/data";
@@ -93,7 +93,7 @@ public class ATTickDataFetcher {
                 String symbol = (String)request.get("symbol");
                 String date = (String)request.get("date");
                 
-                time_begin = new Date();
+                //time_begin = new Date();
                                 
                 logger.log(Level.INFO,"SEND request [" + symbol + ":" + date + "]");
                 if (!checkDate(date)) {
@@ -262,9 +262,9 @@ public class ATTickDataFetcher {
     
 		//Using output.txt is not very necessary, we can use du command as replacement.             
 			//This is only for dumping the total file size to the output.txt file for total size estimation. 
-/*
-                SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
-                time_end = new Date();
+///*
+                //SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+                //time_end = new Date();
                 try{
                     long[] ts={0,0};
                     readLog(ts,"./output.txt");
@@ -273,7 +273,7 @@ public class ATTickDataFetcher {
                     writename.createNewFile();
                     BufferedWriter out = new BufferedWriter(new FileWriter(writename));  
                 
-                    time_diff=(time_end.getTime()-time_begin.getTime())/1000;
+                //    time_diff=(time_end.getTime()-time_begin.getTime())/1000;
     				System.out.println(String.valueOf(ts[0]) +":"+String.valueOf(totalLength));            
                     out.write(String.valueOf(ts[0]+totalLength/1024));
                     
@@ -284,7 +284,7 @@ public class ATTickDataFetcher {
                 {
                    // e.printStackTrace();
                 }
-  */              
+  //*/              
             }
         } catch (JSONException e) {
             logger.log(Level.SEVERE,e.getMessage());
