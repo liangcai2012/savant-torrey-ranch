@@ -283,7 +283,7 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 			writer.close();
 
 		} catch (IOException e) {
-			System.out.println("Cannot write to file");
+			System.out.println("Cannot write to file: " + e.getMessage() + e.getStackTrace());
 		}
 	}
 
