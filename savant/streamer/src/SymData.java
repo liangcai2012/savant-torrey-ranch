@@ -1,3 +1,5 @@
+package atapi.wrapper;
+
 import java.util.Arrays;
 
 //data structure for each subscribed symbol
@@ -33,6 +35,7 @@ public class SymData {
 	
 	private int intnum;
 	private int winsize;
+	private int timegap;
 
 			
 	public SymData(){
@@ -88,13 +91,30 @@ public class SymData {
 					wv[pos]=vol;
 					wp[pos]=pv;
 				}
+				lastSecond = second;
 				System.out.println("!= 0");
 			//This branch should be impossible, if second smaller than lastSecond, it must be because of an tick data. 
 				return;
 			//}else{
 				//System.out.println(">1");
+			}else if (lastSecond < second+1){ //if second is far more greater than 1
+				System.out.println("more than 1 sec!!");
+				timegap = (int) ((second/10000 - lastSecond/10000)*60 + ((second -second%10000)/100 - (lastSecond -lastSecond%10000)/100)*60 + ((second-(second -second%10000)/100) - (lastSecond - (lastSecond -lastSecond%10000)/100))*60);
+				System.out.println("new timegap is"+ timegap);
+				
+				while(timegap != 0){
+					if(type == 0){
+						
+						//wv[pos-1]+=vol; //array out of bunder
+						wv[++pos]=wv[pos];
+						wp[++pos]=wp[pos];
+						timegap--;
+					}
+				}
+				lastSecond = second;
+				return;
+				
 			}
-	
 			//update the moving average values
 
 			//skip is number of the seconds between last update and this one.
@@ -199,8 +219,7 @@ public class SymData {
 
 	public String getMA(int second, int ma_mask){
 		
-      //there is no need to call update function again as this function is always called after getBar()     
-		//update(second, 0, 0, 1);
+		update(second, 0, 0, 1);
 		String retval = "";
 
 		for(int i=0;i<intnum; i++){
