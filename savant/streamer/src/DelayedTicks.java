@@ -6,7 +6,7 @@ import java.util.Queue;
 
 
 //data structure to store delayed ticks for each subscribed symbol
-// delayed ticks are ticks with delay more than 1 sec. These tick data is sent in the response to the next bar request (note it is only for bar data request, moving average data request does not get delayed ticks) 
+// delayed ticks are ticks with delay more than 1 sec. These tick data is sent in the response to the next bar request. For each 
 
 //The data structure is a table of timestamps (last second of bar data), interval (bar data width) and delayed data list. 
 //  timestamp |  interval  |  delays
@@ -23,70 +23,45 @@ import java.util.Queue;
 // add it to all entries. 
 
 
-//05/06:
-	
-//send this delay data to who? send related interval
-//per symbol datastructure
-
 public class DelayedTicks{
-
+	private class DelayedTicksEntry{
+		String client;
+		int interval;
+		ArrayList<String> delays;
+		public DelayedTicksEntry(long ts, int i){
+			timestamp = ts;
+			interval = i;
+			delays = new ArrayList<String>();
+		}
+	}
 	//these arraylistes should be of same length
-	private ArrayList<Long> timestamps;
-	private ArrayList<Integer> intervals;
-	//private ArrayList<ArrayList<String>> delays;
-	private Queue<SymData> delays;  // maybe use Queue instead
+	private ArrayList<DelayedTicksEntry> entries;
 	
 	public DelayedTicks(){
-		timestamps = new ArrayList<Long>();
-		intervals= new ArrayList<Integer>();
-		//delays = new ArrayList<ArrayList<String>>();
-		delays = new LinkedList<SymData>();
+		entries = new ArrayList<DelayedTicksEntry>();
 	}
 
 //check if there is a delay
 //if Yes, add last data as current one
-//quan ju de biao 
-	//fanhui wanle shandiao 
-	//public void onDelayedTick(long second, long vol, long price){
-	public void onDelayedTick(long preTime, long curTime, long vol, double price){
+	public void onDelayedTick(String time, String strPrice, long vol){
 	synchronized(this){ 
-		System.out.println("ondt");
-		long timeGap = curTime - preTime;
-		long dTime = preTime;
-		SymData lSd = new SymData();
-		
-		
-		if(timeGap > 1 || timeGap < 0){
-			System.out.println("timeGap is" + timeGap);
-			timeGap = Math.abs(timeGap);
-			
-			
-			while((timeGap-1) != 0){
-				
-				lSd.update(dTime+1, vol, price, 0);
-				System.out.println("symData updated");
-				delays.add(lSd);
-				timestamps.add(dTime+1);
-				dTime ++;
-				timeGap--;
-				
-			}
-		}else{
-			System.out.println("No Delay");
-		}
-		
-			
-			
-		}
+		for (DelayedTicksEntry e:entries)
+			e.delays.add(time + "-" + strPrice + "-" + String.valueOf(vol));
 	}
-//? the same as getBar
-//generat append string
-//
+
 //every time when the streamer got request
 //check onBarRequest to see if there is any data
 //if has, then return 
-	public SymData onBarRequest(long second){
+	public String onBarRequest(long timestamp, int interval){
 		synchronized(this){ 
+			entries.add(timestamp, internal)
+			for (Iterator<DelayedTicksEntry> iterator = entries.iterator(); iterator.hasNext();) {
+			    DelayedTicksEntry e = iterator.next();
+			    if (string.isEmpty()) {
+			        // Remove the current element from the iterator and the list.
+			        iterator.remove();
+			    }
+			}
 			SymData ret = new SymData();
 			if(!delays.isEmpty() && timestamps.get((int) second) != null){
 				

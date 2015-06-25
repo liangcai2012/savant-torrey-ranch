@@ -27,47 +27,68 @@ public class Streamer extends ActiveTickStreamListener
 	private long preVol;
 	private double prePri;
 	
-	private DelayedTicks dt = new DelayedTicks();
 	
 	public Streamer(APISession session,  StreamerRun sr)
 	{
 		super(session.GetSession(), false);
 		m_session = session;
 		this.sr = sr;
-		 
-
-		   
 	}
 	
 	public void OnATStreamTradeUpdate(ATServerAPIDefines.ATQUOTESTREAM_TRADE_UPDATE update)
 	{		
-		
-		  
-		String strSymbol = new String(update.symbol.symbol);
+		String symbol = new String(update.symbol.symbol);
 		int plainSymbolIndex = strSymbol.indexOf((byte)0);
-		strSymbol = strSymbol.substring(0, plainSymbolIndex);
-		int timeGap = 0;
-		StringBuffer sb = new StringBuffer();
-		//sb.append("[");
-		if(sr.m_symDataMap.get(strSymbol) == null){
-			sr.m_symDataMap.put(strSymbol,  new SymData());
+		if(plainSymoblIndex >0)
+			symbol = symbol.substring(0, plainSymbolIndex);
+		Double price = update.lastPrice.price 
+		long vol = update.lastSize;
+		
+
+		//calculate adjusted time delta
+		Date now = new Date()
+		int now_ms = now.getTime()%1000l  //assume this is always postive. 	
+		//this delta value reflects the sum of network latency and timer gap. It can be negative.
+		int delta = (now.getHours() - update.lastDateTime.hour) * 3600000 + 
+						(now.getMinutes() - update.lastDateTime.minute) * 60000 + 
+						(now.getSeconds() - update.lastDateTime.second)*1000 + 
+						(now_ms - update.lastDateTime.milliseconds)
+		if (sr.m_atTimeGap == -1){
+			sr.m_atTimeGap = delta;
 		}
-		
+		delta = delta - sr.m_atTimeGap; //this the delta after the adjustment
+		sr.m_atTimeGap += delta/2;  //change the adjusting time gap value
+
+		int delta_cp = delta;
+		int sign = delta >=0? 1:-1;
+		int delta = sign*delta;
+		int hourAdjusted = update.lastDateTime.hour + sign*delta/3600000;
+		delta = delta%3600000;
+		int minAdjusted = update.lastDateTime.minute + sign*delta/60000;
+		delta = delta%60000;
+		int secAdjusted = update.lastDateTime.second + sign*delta/1000;
+		String timestampAdjusted = String.valueOf(hourAdjusted)+":"+
+					String.valueOf(minAdjusted)+":"+ String.valueOf(secAdjusted)
+
+		if (delta_cp > 1000){ //this is a delayed tick. 
+			DelayedTicks dt = sr.m_symDelayMap().get(strSymbol);
+			String strFormat = "%0." + update.lastPrice.precision + "f";
+			String strPrice = new PrintfFormat(strFormat).sprintf(update.lastPrice.price));
+			System.out.println("Found one delated tick for " + strSymbol + " with delay = " + String.valueOf(delta_cp));
+			dt.onDelayedTick(timestampAdjusted, strPrice, vol);
+		}
+
 		SymData sd = sr.m_symDataMap.get(strSymbol);
-		
-		long tTime = update.lastDateTime.hour * 1000 + update.lastDateTime.minute * 100 + update.lastDateTime.second;
-		
-		String strFormat = "%0." + update.lastPrice.precision + "f";
-		String sPrice = new PrintfFormat(strFormat).sprintf(update.lastPrice.price);
-		Double lPrice = Double.parseDouble(sPrice);
-		
-		long size = update.lastSize;
+		if(sd == null){
+			System.out.println("Receiving tick data of unexpected symbol: " + strSymbol);
+			return;
+		}
+
 		//check if there is delay
 		
 		if (sTime == 0){
 			sTime = tTime;
 		}
-		//System.out.println("hehhehe  sTime is" + sTime);
 		if(sTime != tTime) System.out.println("time changed!!! privous is" + sTime + "now is" + tTime);
 		if(sec == 60) sec = update.lastDateTime.second;
 		if(min == 60) min = update.lastDateTime.minute;

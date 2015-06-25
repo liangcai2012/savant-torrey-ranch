@@ -57,7 +57,7 @@ public class StreamerRun
  	//private HashMap<String, SymData> m_map;
 
 	//this is a time gap between Streamer's system clock and timestamp received in tick data. This value is set when first tick data is received and never changed. 
-	private long m_atTimeGap=-1;
+	public long m_atTimeGap=-1;
 
 
 	

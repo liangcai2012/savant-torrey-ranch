@@ -284,6 +284,7 @@ class CmdHandler implements Runnable{
 		 JSONObject jObj = null;
        JSONObject resp = null;
        resp.put("client", client);
+
        resp.put("timestamp", );
 		 //JSONParser parser = new JSONParser();
 	     ArrayList<String> symDataList = sr.m_clientSymMap.get(client);
