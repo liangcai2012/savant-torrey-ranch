@@ -64,8 +64,8 @@ class DataAPI:
         self.price1_l_last=self.price1_l_new
         self.vol_new=random.uniform(self.vol_last*0.95,self.vol_last*1.05)
         self.vol_last=self.vol_new
-#         data=dumps({'client':'viewer_1s','timestamp':matplotlib.dates.date2num(st),'data':[{'symbol':'QQQ','bar':{'h':self.price1_h_new,'l':self.price1_l_new, 'vol':self.vol_new},'ma':[ None,None ,None ,None ,'190:20000','201:21000', None,None ,None ],'delay':'1s'}]})
-        data=dumps({'client':'viewer_1s','timestamp':matplotlib.dates.date2num(st),'data':[{'symbol':'QQQ','bar':{'h':self.price1_h_new,'l':self.price1_l_new, 'vol':self.vol_new},'ma':{'1m':'190:20000','5m':'201:21000'},'delay':'1s'}]})
+        data=dumps({'client':'viewer_1s','timestamp':matplotlib.dates.date2num(st),'data':[{'symbol':'QQQ','bar':{'h':self.price1_h_new,'l':self.price1_l_new, 'vol':self.vol_new},'ma':[ None,None ,None ,None ,'190:20000','201:21000', None,None ,None ],'delay':'1s'}]})
+#         data=dumps({'client':'viewer_1s','timestamp':matplotlib.dates.date2num(st),'data':[{'symbol':'QQQ','bar':{'h':self.price1_h_new,'l':self.price1_l_new, 'vol':self.vol_new},'ma':{'1m':'190:20000','5m':'201:21000'},'delay':'1s'}]})
         return data
 
 #    def setReponseMsg(self, client, symbol, bar, ma, delay, timestamp, interval):

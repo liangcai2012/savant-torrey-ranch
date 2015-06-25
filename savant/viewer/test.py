@@ -17,7 +17,7 @@ def test():
     client.send(command_add1)
     print 'send add1'
     time.sleep(10)
-    client.send(command_add4)
+    client.send(command_add2)
     print 'send add2'
     time.sleep(10)
 #     client.send(command_add3)
@@ -25,13 +25,13 @@ def test():
 #     time.sleep(1)
 #     client.send(command_list)
 #     time.sleep(2)
-    client.send(command_mv)
-    time.sleep(5)
+#     client.send(command_mv)
+#     time.sleep(5)
 #     client.send(command_list)
 #     time.sleep(2)
-    client.send(command_del)
-    time.sleep(5)
-    client.send(command_list)
+#     client.send(command_del)
+#     time.sleep(5)
+#     client.send(command_list)
     
 
 

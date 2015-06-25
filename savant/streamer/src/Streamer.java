@@ -79,11 +79,22 @@ public class Streamer extends ActiveTickStreamListener
 		}
 
 		SymData sd = sr.m_symDataMap.get(strSymbol);
+<<<<<<< HEAD
 		if(sd == null){
 			System.out.println("Receiving tick data of unexpected symbol: " + strSymbol);
 			return;
 		}
 
+=======
+		
+		long tTime = update.lastDateTime.hour * 10000 + update.lastDateTime.minute * 100 + update.lastDateTime.second;
+		
+		String strFormat = "%0." + update.lastPrice.precision + "f";
+		String sPrice = new PrintfFormat(strFormat).sprintf(update.lastPrice.price);
+		Double lPrice = Double.parseDouble(sPrice);
+		
+		long size = update.lastSize;
+>>>>>>> 4b2d46709c161b25b41d7b88dc81f33d7c97c887
 		//check if there is delay
 		
 		if (sTime == 0){

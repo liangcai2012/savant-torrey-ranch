@@ -10,16 +10,23 @@ class DataAPIImp(dataAPI.DataAPI):
         self.serverIP = serverIP
         self.port = port
         self.parameters = parameters
-        symbol = parameters["symbol"]
+        symbols = parameters["symbol"]
         startDay = parameters["startDay"]
         endDay = parameters["endDay"]
-        self.HistoricalDataReader = HistoricalDataReader.HistoricalDataReader(symbol, startDay, endDay)
+        self.symbol2HDR = {}
+        for symbol in symbols:
+            hdr = HistoricalDataReader.HistoricalDataReader(symbol, startDay, endDay)
+            self.symbol2HDR[symbol] = hdr
     def update(self, interval, bar_mask, ma_mask):
-         return  self.HistoricalDataReader.update(interval, bar_mask, ma_mask)
+        ret = {}
+        for k in self.symbol2HDR.keys():
+            ret[k] = self.symbol2HDR[k].update(interval, bar_mask, ma_mask)
+
+        return ret
 
 
 if __name__ == "__main__":
-    parameters = {"symbol": "spy","startDay":"12/20/2014", "endDay":"12/20/2014"}
+    parameters = {"symbol": ["spy", "qqq"],"startDay":"12/01/2014", "endDay":"12/01/2014"}
     data = DataAPIImp("backtest", None, None, parameters)
 
     try:
