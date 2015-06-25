@@ -96,4 +96,4 @@ class TickDataProcessor:
 
 if __name__ == "__main__":
     ticker = TickDataProcessor()
-    ticker.from_file("CLCD", "20150522", "20150522")
+    print ticker.from_file("CLCD", "20150522", "20150522")
