@@ -55,7 +55,7 @@ public class Streamer extends ActiveTickStreamListener
 		
 		SymData sd = sr.m_symDataMap.get(strSymbol);
 		
-		long tTime = update.lastDateTime.hour * 1000 + update.lastDateTime.minute * 100 + update.lastDateTime.second;
+		long tTime = update.lastDateTime.hour * 10000 + update.lastDateTime.minute * 100 + update.lastDateTime.second;
 		
 		String strFormat = "%0." + update.lastPrice.precision + "f";
 		String sPrice = new PrintfFormat(strFormat).sprintf(update.lastPrice.price);
