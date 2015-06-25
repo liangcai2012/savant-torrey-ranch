@@ -380,22 +380,28 @@ class DataPlotter():
         
         gs = gridspec.GridSpec(9,3)
         self.axarr.append(plt.subplot(gs[:4,:-1]))  #subplot1
-        self.axarr.append(plt.subplot(gs[4:6,:-1]))  
+        self.axarr.append(plt.subplot(gs[4:6,:-1])) 
+        plt.setp( self.axarr[1].get_xticklabels(), visible=False)  # invisible vol suplot's x-axes
         
         self.axarr.append(plt.subplot(gs[:2,-1])) #subplot2
         self.axarr.append(plt.subplot(gs[2,-1]))
+        plt.setp( self.axarr[3].get_xticklabels(), visible=False) 
         
         self.axarr.append(plt.subplot(gs[3:5,-1]))  #subplot3
         self.axarr.append(plt.subplot(gs[5,-1]))
+        plt.setp( self.axarr[5].get_xticklabels(), visible=False) 
         
         self.axarr.append(plt.subplot(gs[6:8,0])) #subplot4
         self.axarr.append(plt.subplot(gs[-1,0]))
+        plt.setp( self.axarr[7].get_xticklabels(), visible=False) 
         
         self.axarr.append(plt.subplot(gs[6:8,1])) #subplot5
         self.axarr.append(plt.subplot(gs[-1,1]))
+        plt.setp( self.axarr[9].get_xticklabels(), visible=False) 
         
         self.axarr.append(plt.subplot(gs[6:8,2])) #subplot6
         self.axarr.append(plt.subplot(gs[-1,2]))
+        plt.setp( self.axarr[11].get_xticklabels(), visible=False) 
         
         for i in self.axarr:
             i.grid()      # add grid to all subplots
@@ -482,19 +488,28 @@ class DataPlotter():
         # Update plot data 
         if q[0]['dirty'] == True:  # use 'dirty' to check if there is real data inside, otherwise max() not work when q item just changes but before filled any data
             self.lines11.set_xdata(q[0]['data']["time"])  # to-do: convert string timestamp to plot-able int
-            self.lines11.set_ydata(q[0]['data']['price'])               
+            self.lines11.set_ydata(q[0]['data']['price']) 
+            self.lines11.set_label('price_%s' %q[0]['cmd']["price"])            
             self.lines12.set_xdata(q[0]['data']["time"])
             self.lines12.set_ydata(q[0]['data']['vol'])
+            self.lines12.set_label('vol')
             
-            self.lines13.set_xdata(q[0]['data']["time"])         
+            self.lines13.set_xdata(q[0]['data']["time"])         # to-do: dynamic adjust line number of MA
             self.lines13.set_ydata([i[0].split(':')[0] for i in q[0]['data']["ma"]])  # ma1 value    # issue: it's better change 'ma' in q as dict, so that here we only need grab ma data from q instead of create new list
+            self.lines13.set_label('MA_%s' %q[0]['cmd']["movingave"][0])
+            
             self.lines14.set_xdata(q[0]['data']["time"])
             self.lines14.set_ydata([i[0].split(':')[1] for i in q[0]['data']["ma"]])  # ma1 vol
+            self.lines14.set_label('Vol_MA_%s' %q[0]['cmd']["movingave"][0])
+            
             self.lines15.set_xdata(q[0]['data']["time"])
             self.lines15.set_ydata([i[1].split(':')[0] for i in q[0]['data']["ma"]])  # ma2 value
+            self.lines15.set_label('MA_%s' %q[0]['cmd']["movingave"][1])
+            
             self.lines16.set_xdata(q[0]['data']["time"])
             self.lines16.set_ydata([i[1].split(':')[1] for i in q[0]['data']["ma"]])  # ma2 vol
-
+            self.lines16.set_label('Vol_MA_%s' %q[0]['cmd']["movingave"][1])
+            
             self.axarr[0].set_ylim(0.5 * min(q[0]['data']['price']), 1.5 * max(q[0]['data']['price']))  # dynamic adj the y limi here!
             self.axarr[1].set_ylim(0, 1.5 * max(q[0]['data']['vol']))
                
@@ -504,25 +519,36 @@ class DataPlotter():
         # ## set labels
             self.axarr[0].set_title('id:0, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[0]['cmd']['symbol'], q[0]['cmd']['type'], q[0]['cmd']['interval'], q[0]['data']['price'][-1], q[0]['data']['vol'][-1]))
 #             self.axarr[1,0].set_title('id:0, Stock name: %s, type: %s, interval: %s, vol: %2f'  %(q[0]['cmd']['symbol'],q[0]['cmd']['type'],q[0]['cmd']['interval'],q[0]['data']['vol'][-1]))
-            self.axarr[0].set_ylabel('price type: %s' % q[0]['cmd']["price"], color='b')
-            self.axarr[1].set_ylabel('vol', color='r')  
-         
+#             self.axarr[0].set_ylabel('price type: %s' % q[0]['cmd']["price"], color='b')
+#             self.axarr[1].set_ylabel('vol', color='r')  
+            self.axarr[0].legend()
+            self.axarr[1].legend(fontsize='small')
+            
         # Update 2nd subplot data
         if len(q) > 1 and q[1]['dirty'] == True:  # need check 'dirty' in case there is no real data stored here yet
             self.lines21.set_xdata(q[1]['data']["time"])  # to-do: convert string timestamp to plot-able int
-            self.lines21.set_ydata(q[1]['data']['price'])        
+            self.lines21.set_ydata(q[1]['data']['price'])  
+            self.lines21.set_label('price_%s' %q[1]['cmd']["price"])       
             self.lines22.set_xdata(q[1]['data']["time"])
             self.lines22.set_ydata(q[1]['data']['vol'])
+            self.lines22.set_label('vol')
             
             self.lines23.set_xdata(q[1]['data']["time"])         
             self.lines23.set_ydata([i[0].split(':')[0] for i in q[1]['data']["ma"]])  # ma1 value    # issue: it's better change 'ma' in q as dict, so that here we only need grab ma data from q instead of create new list
+            self.lines23.set_label('MA_%s' %q[1]['cmd']["movingave"][1])
+            
             self.lines24.set_xdata(q[1]['data']["time"])
             self.lines24.set_ydata([i[0].split(':')[1] for i in q[1]['data']["ma"]])  # ma1 vol
+            self.lines24.set_label('MA_%s' %q[1]['cmd']["movingave"][1])
+            
             self.lines25.set_xdata(q[1]['data']["time"])
             self.lines25.set_ydata([i[1].split(':')[0] for i in q[1]['data']["ma"]])  # ma2 value
+            self.lines25.set_label('MA_%s' %q[1]['cmd']["movingave"][1])
+            
             self.lines26.set_xdata(q[1]['data']["time"])
             self.lines26.set_ydata([i[1].split(':')[1] for i in q[1]['data']["ma"]])  # ma2 vol
-
+            self.lines26.set_label('MA_%s' %q[1]['cmd']["movingave"][1])
+            
             self.axarr[2].set_ylim(0.5 * min(q[1]['data']['price']), 1.5 * max(q[1]['data']['price']))
             self.axarr[3].set_ylim(0, 1.5 * max(q[1]['data']['vol']))
             
@@ -530,9 +556,12 @@ class DataPlotter():
                 self.reset_xlim_history(1)
             
             self.axarr[2].set_title('id:1, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[1]['cmd']['symbol'], q[1]['cmd']['type'], q[1]['cmd']['interval'], q[1]['data']['price'][-1], q[1]['data']['vol'][-1])) 
-            self.axarr[2].set_ylabel('price type: %s' % q[1]['cmd']["price"], color='b')
-            self.axarr[3].set_ylabel('vol', color='r')
+#             self.axarr[2].set_ylabel('price type: %s' % q[1]['cmd']["price"], color='b')
+#             self.axarr[3].set_ylabel('vol', color='r')
 #             self.ax22.set_ylabel('vol', color='r')
+            self.axarr[2].legend(fontsize='small')
+            self.axarr[3].legend(fontsize='x-small')
+            
                     
         # auto rescale
         for i in self.axarr:
