@@ -26,11 +26,12 @@ class DataAPIImp(dataAPI.DataAPI):
 
 
 if __name__ == "__main__":
-    parameters = {"symbol": ["spy", "qqq"],"startDay":"12/01/2014", "endDay":"12/01/2014"}
+    parameters = {"symbol": ["spy", "qqq", "yelp"],"startDay":"12/01/2014", "endDay":"12/01/2014"}
     data = DataAPIImp("backtest", None, None, parameters)
 
     try:
-        ret = data.update(1, "", "")
-        print(ret)
+        for i in range(10000):
+            ret = data.update(1, "", "")
+            print(i, ret)
     except dataAPI.DataError, e:
             print(e)
