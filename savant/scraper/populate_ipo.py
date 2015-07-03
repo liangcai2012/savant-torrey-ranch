@@ -8,24 +8,15 @@ from savant.config import settings
 from savant.db import session
 from savant.db.models import IPOInfoUrl, HistoricalIPO, Company, Underwriter, CompanyUnderwriterAssociation
 from savant.scraper import scrape_ipo
+from savant.ticker.processors import TickDataProcessor
+from savant.ticker.analyzers import TradeAnalyzer
 import savant.fetcher.fetch_attick as fetcher
 import savant.logger as logger
 
 log = logger.getLogger("db", level="INFO")
 
-
-# Check if fetcher server is reachable
-fetcher_host = settings.FETCHER_HOST
-fetcher_port = settings.FETCHER_PORT
-try:
-    fetcher.check_status("")
-except socket.error:
-    log.error("Fetcher host unreachable")
-    sys.exit(1)
-
-tickdata_dir = os.path.join(settings.OUTPUT_DIR, "data")
-fetcher_caller = fetcher.FetcherCaller("")
-
+tickdata_dir = settings.DOWNLOAD_DIR
+data_processor = TickDataProcessor()
 ipo_urls = IPOInfoUrl.query.all()
 
 for url in ipo_urls:
@@ -40,30 +31,42 @@ for url in ipo_urls:
     except:
         log.error("Error in IPO date:%s" % url.symbol)
         continue
-        
+
     ipo_data_dir = os.path.join(tickdata_dir, ipo_date)
-    ipo_data_path = os.path.join(ipo_data_dir, "%s_markethours.tsv.zip" % url.symbol)
+    ipo_data_path = os.path.join(ipo_data_dir, "%s_markethours.tsv.gz" % url.symbol)
     if os.path.exists(ipo_data_dir) and os.path.exists(ipo_data_path):
         log.info("IPO data found")
     else:
         request = {"command": "get", "symbol": url.symbol, "date": ipo_date}
-        fetcher_caller.set_request(cjson.encode(request))
-        response = fetcher_caller.send_request()
-
-        """
-        request = {"command": "check"}
-        fetcher_caller.set_request(cjson.encode(request))
-        fetcher_state = ""
-        while fetcher_state != "Idle":
+        try:
+            fetcher_caller = fetcher.FetcherCaller()
+            fetcher_caller.set_request(cjson.encode(request))
             response = fetcher_caller.send_request()
-            fetcher_state = response["state"]
-        """
+        except:
+            log.error("Unable to send fetch request")
+            break
+
         count_down = 60
+        fetched = False
         while count_down > 0:
             if os.path.exists(ipo_data_path):
                 log.info("IPO data fetched: %s" % url.symbol)
+                fetched = True
                 break
             time.sleep(1)
             count_down -= 1
-        
-    raw_input("")
+        if not fetched:
+            log.error("Unable to download data for %s" % url.symbol)
+            #continue
+            break
+
+    ticks = data_processor.from_file(url.symbol, ipo_date, ipo_date)
+    analyzer = TradeAnalyzer(ticks)
+    ipo_data["first_opening_price"] = analyzer.get_opening_price()
+    ipo_data["first_closing_price"] = analyzer.get_closing_price()
+    ipo_data["first_trade_time"] = analyzer.get_first_trade_time()
+    ipo_data["first_day_high"] = analyzer.get_high_price()
+    ipo_data["first_day_low"] = analyzer.get_low_price()
+    ipo_data["first_day_high_percent_change"] = analyzer.get_high_percent_change()
+    ipo_data["first_day_low_percent_change"] = analyzer.get_low_percent_change()
+    ipo_data["first_day_volume"] = analyzer.get_volume()
