@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.text.SimpleDateFormat;
 
 import at.feedapi.ActiveTickServerAPI;
 import at.feedapi.Helpers;
@@ -32,68 +33,69 @@ import at.shared.ATServerAPIDefines.ATSymbolType;
 import at.shared.ATServerAPIDefines.SYSTEMTIME;
 import at.utils.jlib.Errors;
 
-//import org.json.*;
-import org.json.simple.*;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
+import org.json.JSONObject;
+import org.json.JSONException;
 
 
 public class StreamerRun 
 {
-	private static Socket socket;
-	private ExecutorService exService;
 	private final int POOL_SIZE = 10;
-	private ServerSocket serverSocket;
+	private ExecutorService m_exService;
+	private ServerSocket m_serverSocket;
 
 	public static ActiveTickServerAPI serverapi;
 	public static APISession apiSession;
 
-	public	HashMap<String, ArrayList<String>> m_clientSymMap; 
-	public HashMap<String, Integer> m_symRefMap; 
-	public HashMap <String, SymData> m_symDataMap;
-	public HashMap <String, DelayedTicks> m_symDelayMap;
-	//private HashMap<String, ArrayList<String>> m_clientmap;
-	//private ArrayList<String> m_allsymlist;
- 	//private HashMap<String, SymData> m_map;
+	public class Client{
+		int interval;
+		int	maMask;
+		int	barMask;
+		ArrayList<String> symList; 
+		long lastSecond;
+		String delayedTicks;
+		
+		Client(ArrayList<String> symbols){
+			symList = symbols;
+			interval = -1;
+			maMask = 0;
+			barMask = 0;
+			lastSecond = -1;
+			String delayedTicks="";
+		}
+	}
+
+	public HashMap<String, Client> m_clientMgr; //status data per client:w
+	public HashMap <String, SymData> m_symDataMap;//SymData per symbol
 
 	//this is a time gap between Streamer's system clock and timestamp received in tick data. This value is set when first tick data is received and never changed. 
 	public long m_atTimeGap=-1;
 
-
-	
-	//String host = "192.168.1.121";
-	String m_hostIP = "localhost";
-	int m_hostPort = 8091;
-
-	String returnMessage;
-	//	JavaToJson js = new JavaToJson();
-
-
-		
 	public StreamerRun() 
 	{
-	     	serverapi = new ActiveTickServerAPI();
+	   	serverapi = new ActiveTickServerAPI();
 		apiSession = new APISession(serverapi);
 
 		//init data structure
-	 	m_clientSymMap = new HashMap<String, ArrayList<String>>();
-		m_symRefMap = new HashMap<String, Integer>();
+	 	m_clientMgr= new HashMap<String, Client>();
 		m_symDataMap = new HashMap <String, SymData>();
-		m_symDelayMap = new HashMap <String, DelayedTicks>();
-
-//	 	m_allsymlist = new ArrayList<String>();
-//	 	m_map = new HashMap<String, ArrayList<String[]>>() ;
   	}
 
   	public boolean Init() throws IOException, InterruptedException{
 
+        SavantConfig config = SavantConfig.getConfig();
+        //String hostName = "localhost";
+        String hostName = config.getProperty("STREAMER_HOST"); 
+        int port = Integer.parseInt(config.getProperty("STREAMER_PORT"));
+
     	//initialize the api and login to the service
-	      	serverapi.ATInitAPI();
-		String atHostName = "activetick1.activetick.com";
-	      	int atPort = 443;
-	      	String guid = "80af4953bb7f4dcf85523ad332161eff";
-	      	String userId = "liangcai";
-	      	String password = "S@^@nt932456";
+	   	serverapi.ATInitAPI();
+
+        String atHostName = config.getProperty("AT_HOSTNAME");
+        int atPort = Integer.parseInt(config.getProperty("AT_PORT"));
+        String guid = config.getProperty("AT_GUID");
+        String userId = config.getProperty("AT_USER");
+        String password = config.getProperty("AT_PASSWORD");
+
 		ATGUID atguid = (new ATServerAPIDefines()).new ATGUID();
 		atguid.SetGuid(guid);
 
@@ -101,18 +103,19 @@ public class StreamerRun
 		System.out.println("init status: " + (rc ? "ok" : "failed"));
 		if (!rc)
 	       		return false;
-	      	Thread.sleep(5000);
+	    Thread.sleep(2000);
 	        /*	if(!apiSession.m_loginSucceed){
 	        	System.out.println("Login failed!");
 	         	return false;
 	      	}*/
 
      //initialize the server socket
-		InetAddress bindAdd = InetAddress.getByName(m_hostIP);
-		serverSocket = new ServerSocket(m_hostPort, 100, bindAdd);
+		InetAddress bindAdd = InetAddress.getByName(hostName);
+		m_serverSocket = new ServerSocket(port, 100, bindAdd);
 		int totalNum = Runtime.getRuntime().availableProcessors()*POOL_SIZE;
-		exService = Executors.newFixedThreadPool(totalNum);		
-		System.out.println("Server Started and listening to the port 8091");
+		System.out.println("Pool size:" + String.valueOf(totalNum));
+		m_exService = Executors.newFixedThreadPool(totalNum);		
+		System.out.println("Server Started.....");
      		return true;
 	}
 
@@ -120,33 +123,38 @@ public class StreamerRun
 	public void acceptClient()
 	{	
 		while (true){
-        		Socket socket = null;
+        	Socket socket = null;
 			try{
-	         		socket = serverSocket.accept();
-		      		System.out.println("ready for next client");
-	         		exService.execute(new CmdHandler(socket, this));
+	       		socket = m_serverSocket.accept();
+		   		//System.out.println("ready for next client");
+	       		m_exService.execute(new CmdHandler(socket, this));
 			} 
-		        catch (Exception e){
-		      		e.printStackTrace();
+		    catch (Exception e){
+		   		e.printStackTrace();
 		   	}	 		
-     		}		
+     	}		
 	}
+	
+	public String second2ts(long second)
+	{
+  		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMMddHHmm:ss"); 
+  		dateFormat.setTimeZone(TimeZone.getTimeZone("EST5EDT")); 
+  		return dateFormat.format(new Date(second*1000));
 
-
+	}
   	
-  public static void main(String[] args) throws IOException, InterruptedException 
-  {		
-     StreamerRun sr = new StreamerRun();
-     if (sr.Init()){
-        sr.acceptClient();
-		apiSession.UnInit();
-		serverapi.ATShutdownAPI();
-     }
-     else{
-   	  System.out.println("Fail to initialize Streamer. Exiting");
-   	  System.exit(-1);
-     }
-   	  
-  }
+	public static void main(String[] args) throws IOException, InterruptedException 
+  	{		
+     	StreamerRun sr = new StreamerRun();
+     	if (sr.Init()){
+        	sr.acceptClient();
+			apiSession.UnInit();
+			serverapi.ATShutdownAPI();
+     	}
+     	else{
+   	  		System.out.println("Fail to initialize Streamer. Exiting");
+   	  		System.exit(-1);
+     	}
+  	}
 }
 		 

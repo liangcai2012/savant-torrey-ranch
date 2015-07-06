@@ -72,8 +72,8 @@ msg 3: feed bar data and/or moving average data to the caller.
         "command": "update",
         "client": "strategy1",
         "interval": "1s",
-        "bar_mask":  0x111111,
-	"ma_mask": 0x111111111
+        "bar_mask":  "11111",
+		"ma_mask": "111111111"
     }
 }
 
@@ -86,7 +86,7 @@ response:
        	"data": [
 		{
 			"symbol": "QQQ",
-			"bar": "12.21,12.20,12.24,12.00,12.13,200",
+			"bar": "12.20,12.24,12.00,12.13,200",
 			"ma":"aveprice:avevol,aveprice:avevol,aveprice:avevol", //comma separated 
 			"delay": "hhmmss-price-vol;yymmss-price-vol", //comma seperated
 		}
@@ -105,11 +105,11 @@ or
 
 note 1: interval must be a value in ["1s", "5s", "10s", "30s", "1m", "5m", "10m", "30m", "1h"]. It decides the granularity of bar data to be returned.  
 
-note 2: bar_mask is a bitmap of 0 or 1 (only lowest 6 bits are used) representing mask of "average/open/close/high/low/volume". 
+note 2: bar_mask is a bitmap of 0 or 1 (only lowest 5 bits are used) representing mask of "open,high,low,close,volume". 
 
-note 3: ma_mask is a bitmap of 0 or 1 (only lowest 9 bits are used) representing the moving average of intervals (from 1s to 1h)
+note 3: ma_mask is a bitmap of 0 or 1 (only lowest 9 bits are used) representing the moving average of intervals (from 1s to 1h). Moving average interval must be bigger or equal to the interval in the request. 
 
-note 4: interval and bar_mask fields are mandatory when requesting for bar data; ma_mask field is mandatory when requesting moving average data. 
+note 4: interval, bar_mask and ma_mask fields are optional. They are only needed in the first update message or when clients want to change these values. ma_mask is empty by default. bar_mask currently is not being used by streamer (as it returns all bar data anyway). Interval field must be specified in the first update message for each client. 
  
 note 5: client and interval is included in the response to support multiple clients in a caller. 
 
