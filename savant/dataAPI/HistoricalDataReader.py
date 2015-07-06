@@ -6,6 +6,8 @@ import datetime
 import time
 class CBarData:
     def __init__(self):
+        self.reset()
+    def reset(self):
         self.SummaryOfPrice = 0
         self.open = 0;
         self.close = 0
@@ -50,14 +52,19 @@ class HistoricalDataReader:
         self.symbol = symbol
         self.startDay = startDay
         self.endDay = endDay
+        self.lastError=errors.EC_NOT_ERROR
+        self.startTimestamp = None
+
         filepath = helper.GetDataFileFullPath(symbol,startDay)
         try:
             self.dataFile = open(filepath, "r+");
         except:
             self.dataFile = None
+            self.lastError=errors.EC_File_not_exist
 
         self.lastDataLine = None
         self.processedCount = 0;
+         # the number of time update function is called.
         self.updateCount = 0
     def ParseTradeData(self, loopCount, line):
         fields = line.split("\t")
@@ -81,6 +88,9 @@ class HistoricalDataReader:
             self.hasMoreData = False
     def read_and_process_data(self):
         loopCount = 0
+        if(self.dataFile == None):
+            #do nothing if data file object is not available.
+            return
         while True:
 
             if self.lastDataLine == None:
@@ -89,7 +99,10 @@ class HistoricalDataReader:
                 # raise exception only loopCount ==0.
                 # loopCount !=0 means partial data.
                 if(loopCount ==0):
-                     raise dataAPI.DataError([-1,"End of data"])
+                    #raise dataAPI.DataError([-1,"End of data"])
+                    self.dataFile.close()
+                    self.lastError = errors.EC_END_OF_DATA
+                    self.dataFile = None
 
                 print("end of data")
                 break
@@ -100,7 +113,7 @@ class HistoricalDataReader:
             self.processedCount+=1
             loopCount+=1
             if self.hasMoreData == False:
-                print(self.updateCount, "end of current period")
+                #print(self.updateCount, "end of current period")
                 break
             self.lastDataLine = None
     # Paramters bar_mask, ma_mask are ignored.
@@ -111,12 +124,34 @@ class HistoricalDataReader:
         self.interval = interval
         self.hasMoreData = True
         if self.dataFile == None:
+            if(self.startTimestamp != None):
+                self.startTimestamp +=interval
+            self.bardata.reset()
             ret = self.bardata.toDictionary()
-            ret["error"] = errors.errors[100]
+            if self.lastError == 0:
+                ret["error"] = None
+            else:
+                ret["error"] = errors.errors[self.lastError]
         else:
             self.read_and_process_data()
             ret = self.bardata.toDictionary()
+        #self.startTimestamp
+        tstr = self.get_timestamp()
+        ret["time_stamp"] =  tstr
         return ret
+    def get_timestamp(self):
+
+        # data is not available
+        if(self.startTimestamp == None):
+            #just use the date specified in update function.
+           ret = self.startDay
+           #self.updateCount
+        else:
+            adjust_time = 8 *3600; #8 hours
+            t = datetime.datetime.utcfromtimestamp(self.startTimestamp - adjust_time)
+            ret = t.strftime("%Y%m%d %H:%M:%S")
+        return ret
+
 
 if __name__ == "__main__":
     o = CBarData()
@@ -124,8 +159,9 @@ if __name__ == "__main__":
     hdr = HistoricalDataReader("qqq", "05/01/2015", "05/01/2015")
     for i in range(3600 *9):
         try:
-            ret = hdr.update(1,"000000", "000000")
-            print(ret)
+            for i in range(10):
+                ret = hdr.update(1,"000000", "000000")
+                print(ret)
         except dataAPI.DataError, e:
             print("total available number of bar data:", i)
             break
