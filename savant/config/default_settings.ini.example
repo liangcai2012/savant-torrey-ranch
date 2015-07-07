@@ -1,0 +1,20 @@
+[SAVANT]
+DEBUG = False
+
+OUTPUT_DIR = '/home/kaiwen/workspace/trading/out'
+DOWNLOAD_DIR = '/home/kaiwen/workspace/trading/out/data'
+
+DATABASE_URI = postgres:///savant_development
+MONGODB_URI = mongodb:///tmp/mongodb-27017.sock
+MONGODB_NAME = savant_development
+
+#DATABASE_URI = 'sqlite://'
+
+FETCHER_HOST = 'localhost'
+FETCHER_PORT = 8080
+
+AT_HOSTNAME = 'activetick1.activetick.com'
+AT_PORT = 443
+AT_GUID = '80af4953bb7f4dcf85523ad332161eff'
+AT_USER = 'liangcai'
+AT_PASSWORD = 'S@^@nt932456'
