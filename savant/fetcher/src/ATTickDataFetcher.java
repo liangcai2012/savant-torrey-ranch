@@ -218,6 +218,8 @@ public class ATTickDataFetcher {
             }
         } else {
             logger.log(Level.WARNING, "Fetch halted: Unexpected data volume");
+            this.cancelRequest();
+            this.reset();
         }
     }
 

@@ -45,6 +45,8 @@ class SavantConfig(dict, AttributeDictMixin):
             for key, value in configs:
                 if value.startswith("../"):
                     value = os.path.join(self.config_dir, value)
+                elif value.startswith("sqlite:///.."):
+                    value = value[:10] + os.path.join(self.config_dir, value[10:])
                 self[key.upper()] = value.strip("\'")
         except NoSectionError:
             raise NoSectionError("No Section \'SAVANT\' in configuration file")

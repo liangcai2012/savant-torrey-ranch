@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 from savant.config import settings
 from savant.db import session, Base
-from savant.db.models import Company, Exchange, Industry
+from savant.db.models import Company, Exchange, Industry, Sector
 
 
 def get_soup(url, params=None, timeout=5):
@@ -177,7 +177,6 @@ def scrape_nasdaq(symbol):
             data["nasdaq_beta"] = float(tds[1].text.replace(",",""))
     return data
 
-
 def scrape_ipo(url):
     data = {}
     
@@ -196,9 +195,11 @@ def scrape_ipo(url):
         elif key == "Status":
             data["ipo_date"] = row.find_all("td")[1].text.split("(")[1].strip(")")
         elif key == "Shares Offered":
-            data["shares"] = int(row.find_all("td")[1].text.replace(",", ""))
+            value = row.find_all("td")[1].text.replace(",", "")
+            data["shares"] = int(value) if value.isdigit() else "N/A"
         elif key == "Shares Outstanding":
-            data["outstanding"] = int(row.find_all("td")[1].text.replace("," ,""))
+            value = row.find_all("td")[1].text.replace("," ,"")
+            data["outstanding"] = int(value) if value.isdigit() else "N/A"
 
     exp_table = soup.find("div", {"class": "tab3"}).div.table
     rows = exp_table.find_all("tr")
@@ -215,28 +216,55 @@ def scrape_ipo(url):
 
     return data
 
+def get_company_overview(symbol):
+    existing = Company.query.filter_by(symbol=symbol).first()
+    if existing:
+        return existing
 
-"""
-def get_underwriters(row_offset=31):
-    download_url = "https://www.iposcoop.com/images/trackrecord/IPOScoop_Track_Record.xls" 
-    outdir = settings["OUTPUT_DIR"]
-    download_path = os.path.join(outdir, "iposcoop_archive.xls")
-    if not os.path.exists(download_path):
-        try:
-            urllib.urlretrieve(download_url, download_path)
-        except:
-            return None
-    book = xlrd.open_workbook(download_path)
-    data_sheet = book.sheet_by_index(0)
-    nrows = data_sheet.nrows
-    unwr_dict = {}    
-    for row_num in range(row_offset, nrows):
-        values = data_sheet.row_values(row_num)
-        symbol = values[2]
-        unwrs = values[3]
-        unwr_dict[symbol] = unwrs
-    return unwr_dict
-"""
+    data = scrape_nasdaq(symbol)
+    if not data:
+        return None
+    elif len(data.keys()) == 1:
+        data.update(scrape_yahoo(symbol, full=True))
+    else:
+        data.update(scrape_yahoo(symbol))
+
+    if len(data) == 1:
+        return None
+
+    existing = Company.query.filter_by(name=data["name"]).first()
+    if existing:
+        return existing
+
+    if "exchange" in data:
+        exch = Exchange.query.filter_by(name=data["exchange"]).first()
+        if not exch:
+            exch = Exchange(name=data["exchange"])
+            session.add(exch)
+            session.commit()
+        del data["exchange"]
+        data["exchange_id"] = exch.id
+
+    if "industry" in data:
+        indus = Industry.query.filter_by(name=data["industry"]).first()
+        if not indus:
+            indus = Industry(name=data["industry"])
+            session.add(indus)
+            session.commit()
+        del data["industry"]
+        data["industry_id"] = indus.id
+
+    if "sector" in data:
+        sect = Sector.query.filter_by(name=data["sector"]).first()
+        if not sect:
+            sect = Sector(name=data["sector"])
+            session.add(sect)
+            session.commit()
+        del data["sector"]
+        data["sector_id"] = sect.id
+
+    comp = Company(**data)
+    return comp
 
 def get_symbols(market):
     conn = httplib.HTTPConnection("www.eoddata.com")

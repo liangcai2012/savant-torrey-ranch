@@ -13,7 +13,7 @@ base_url = "http://www.nasdaq.com/markets/ipos/activity.aspx?tab=pricings&month=
 
 count = 0
 cur_date = date.today()
-oldest_date = date(2000, 1, 1)
+oldest_date = date(2010, 1, 1)
 
 while cur_date >= oldest_date:
     log.info("Getting IPO urls for", cur_date.strftime("%Y-%m"))

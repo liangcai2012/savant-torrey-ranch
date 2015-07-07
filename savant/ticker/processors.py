@@ -27,11 +27,11 @@ class TickDataProcessor:
             raise ValueError("No such hours: %s" % hours)
         filename = symbol + suffix + ".csv.gz"
 
-        tick_data = pd.DataFrame(columns=["datetime", "price", "size", "exch", "cond"])
+        tick_data = pd.DataFrame(columns=["date", "time", "type", "price", "size", "exch", "cond"])
 
         for date in dates:
             data_path = os.path.join(self.base_dir, date, filename)
-            cur_ticks = pd.read_csv(data_path, compression="gzip")
+            cur_ticks = pd.read_csv(data_path, compression="gzip", names=["date", "time", "type", "price", "size", "exch", "cond"])
             tick_data = tick_data.append(cur_ticks)
 
         return tick_data
@@ -51,4 +51,4 @@ class TickDataProcessor:
 
 if __name__ == "__main__":
     ticker = TickDataProcessor()
-    print ticker.get_ticks("CLCD", "20150522", "20150522")
+    print ticker.get_ticks("PGND", "20150521", "20150521")
