@@ -46,7 +46,6 @@ class CmdHandler implements Runnable{
 	{
 		String jstr="";
 		try{
-			System.out.println("Commands received ---");
 			InputStream is = socket.getInputStream();
 			InputStreamReader isr = new InputStreamReader(is);
 			BufferedReader br1 = new BufferedReader(isr);
@@ -57,24 +56,22 @@ class CmdHandler implements Runnable{
 			JSONObject obj = new JSONObject(jstr);
 			JSONObject req	= obj.getJSONObject("request");
 			String cmd = req.getString("command");
+			String client = req.getString("client");
+			System.out.println("Command (" + cmd + ") received from " + client);
 			if (cmd.equalsIgnoreCase("subscribe"))
 			{
 				JSONArray symlist = req.getJSONArray("symlist");
-				String client = req.getString("client");
 				ArrayList<String> syms = new ArrayList<String>();
 				for(int i=0; i<symlist.length(); i++)
 					syms.add(symlist.getString(i));
 				resp = processSubscribe(client, syms);
-					
 			}
 			else if (cmd.equalsIgnoreCase("unsubscribe"))
 			{
-				String client = req.getString("client");
 				resp = processUnsubscribe(client);   	                            	
 			}
 			else if(cmd.equalsIgnoreCase("update"))
 			{
-				String client = req.getString("client");
 				String interval = ""; 
 				if(req.has("interval"))
 					interval = req.getString("interval");
@@ -86,6 +83,12 @@ class CmdHandler implements Runnable{
 					ma_mask = req.getString("ma_mask");
 				resp= processUpdate(client, interval, seconds, bar_mask, ma_mask);   	                            	
 			}
+			else{
+				resp= new JSONObject();
+				resp.put("errcode", new Integer(-1));
+				resp.put("errMsg", "Invalid command: " + cmd);
+			}
+				
 			JSONObject outer = new JSONObject();
 			outer.put("response", resp);
             BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -100,7 +103,7 @@ class CmdHandler implements Runnable{
 			System.out.println("received json request contains invalid field type: " +jstr);
 		}
 		catch (Exception e) {
-		   	System.out.println("Unknown exception. Program still running. ");
+		   	System.out.println("Unknown exception. Program still running. Error:" + e.getMessage());
 			e.printStackTrace();
 		}
 		finally{
@@ -296,6 +299,7 @@ class CmdHandler implements Runnable{
 				}
 				c.interval = nInterval;
 			}	
+			System.out.println(bar_mask + "---" + ma_mask);
 			if(bar_mask.length() !=0){
 				int nBarMask = maskConvert(bar_mask, 5);
 				if (nBarMask == -1){

@@ -35,13 +35,13 @@ public class Streamer extends ActiveTickStreamListener
 	
 	public void OnATStreamTradeUpdate(ATServerAPIDefines.ATQUOTESTREAM_TRADE_UPDATE update)
 	{		
+		long start = System.currentTimeMillis();
 		String symbol = new String(update.symbol.symbol);
 		int plainSymbolIndex = symbol.indexOf((byte)0);
 		if(plainSymbolIndex >0)
 			symbol = symbol.substring(0, plainSymbolIndex);
 		Double price = update.lastPrice.price; 
 		long vol = update.lastSize;
-
 		SymData sd = m_sr.m_symDataMap.get(symbol);
 		if(sd == null){
 			System.out.println("Receiving tick data of unexpected symbol: " + symbol);
@@ -87,6 +87,8 @@ public class Streamer extends ActiveTickStreamListener
 			}			 
 		}
 		sd.update(second, vol, price, 0);
+	 	long duration = System.currentTimeMillis()-start;
+		System.out.println(symbol + ":" + String.valueOf(price) + "," + String.valueOf(vol)+","+String.valueOf(duration));
 	}	
 }
 

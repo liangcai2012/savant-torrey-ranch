@@ -47,20 +47,20 @@ public class StreamerRun
 	public static APISession apiSession;
 
 	public class Client{
-		int interval;
-		int	maMask;
-		int	barMask;
-		ArrayList<String> symList; 
-		long lastSecond;
-		String delayedTicks;
+		public int interval;
+		public int	maMask;
+		public int	barMask;
+		public ArrayList<String> symList; 
+		public long lastSecond;
+		public String delayedTicks;
 		
-		Client(ArrayList<String> symbols){
+		public Client(ArrayList<String> symbols){
 			symList = symbols;
 			interval = -1;
 			maMask = 0;
 			barMask = 0;
 			lastSecond = -1;
-			String delayedTicks="";
+			delayedTicks="";
 		}
 	}
 
@@ -137,7 +137,7 @@ public class StreamerRun
 	
 	public String second2ts(long second)
 	{
-  		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMMddHHmm:ss"); 
+  		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss"); 
   		dateFormat.setTimeZone(TimeZone.getTimeZone("EST5EDT")); 
   		return dateFormat.format(new Date(second*1000));
 

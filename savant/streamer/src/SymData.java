@@ -56,6 +56,7 @@ public class SymData {
 		//to calculate the moving average of 3600, we need array of 3601 
 		winsize = allowedInterval[intnum-1]+1;
 		
+		clientSet = new HashSet<String>();
 		bw_o = new double[winsize];
 		bw_h = new double[winsize];
 		bw_c = new double[winsize];
@@ -140,14 +141,10 @@ public class SymData {
 					else{ 
 						ms_v[i]+=bw_v[pos];
 						ms_tp[i]+=bw_tp[pos];
-						////ms_v[i]+=bw_v[pos-1];
-						////ms_tp[i]+=bw_tp[pos-1];
 	
 						for(int j=0; j<skip; j++){
-							////tv[i] -= wv[(pos-1-allowedInterval[i]+j)%winsize];
-							////tp[i] -= wp[(pos-1-allowedInterval[i]+j)%winsize];
-							ms_v[i] -= bw_v[(pos-allowedInterval[i]+j)%winsize];
-							ms_tp[i] -= bw_tp[(pos-allowedInterval[i]+j)%winsize];
+							ms_v[i] -= bw_v[wrapIndex(pos-allowedInterval[i]+j)];
+							ms_tp[i] -= bw_tp[wrapIndex(pos-allowedInterval[i]+j)];
 						}
 					}
 					totalMaSeconds[i]+=skip;
@@ -159,7 +156,7 @@ public class SymData {
 
 			//update o/h/l/c and v/tp if needed 
 			for (int i=0; i<skip; i++){ 
-				pos = (pos+1)%winsize;
+				pos = wrapIndex(pos+1);
 				bw_o[pos]=bw_h[pos]=bw_c[pos]=-1;
 				bw_l[pos]=MAXPRICE;
 				bw_v[pos]=0;
@@ -176,14 +173,18 @@ public class SymData {
 
 	public void update(long asecond, long vol, double price, int type){
 		synchronized(this){ 
-			System.out.print("SymDataUpdating");
 			long pv = 0;  
 			
 			long second = asecond;
-			if(type ==1)
+			if(type ==1){
 				second = Math.max(lastSecond, asecond -1);
-			else
-				lastTickSecond = second;
+			}
+			else{
+				if(lastSecond == 0)
+					lastSecond = asecond;
+				//otherwise we will update lastSecond later
+				lastTickSecond = asecond;
+			}
 
 			skipTill(second -1);
 			if(lastSecond < second){//then lastSecond = second-1
@@ -205,7 +206,7 @@ public class SymData {
 				totalSeconds +=1;
 				lastSecond = second;
 				//update the bar window data
-				pos=(pos+1)%winsize;
+				pos=wrapIndex(pos+1);
 				if(type == 0){
 					bw_o[pos] = bw_h[pos] = bw_l[pos] = bw_c[pos] = price;
 					bw_v[pos] = vol;
@@ -242,7 +243,7 @@ public class SymData {
 			else{
 				if(type == 0){
 					//update old bar window
-					int bpos = (int)(pos - (lastSecond - second))%winsize;
+					int bpos = wrapIndex(pos - (int)(lastSecond - second));
 					if(bw_o[bpos] == -1)
 						bw_o[bpos]=price;
 					if (bw_h[bpos] < price)
@@ -269,9 +270,12 @@ public class SymData {
 	}	
 	
 	public String getBar(long second, int interval, int bar_mask){
-		
-		update(second, 0, 0, 1);
+
 		String retval = "";
+		if(lastSecond == 0)
+			//no tick has received yet, return empty string
+			return retval;
+		update(second, 0, 0, 1);
 		//price average
 		long pave;
 		
@@ -279,21 +283,21 @@ public class SymData {
 			return "";
 
 		int ival = allowedInterval[interval];
-		int sPos = (pos-ival)%winsize; 
-		int epos = (pos-1)%winsize;
-		double open = bw_o[(pos-ival)%winsize];
-		double close = bw_c[(pos-1)%winsize];
+		int spos = wrapIndex(pos-ival); 
+		int epos = wrapIndex(pos-1);
+		double open = bw_o[spos];
+		double close = bw_c[epos];
 		double high = -1;
 		double low = MAXPRICE;
 		long vol = 0;
-		int wpos = pos-ival;
+		int wpos = spos;
 		for(int i=0; i< ival; i++){
 			if(high < bw_h[wpos])
 				high = bw_h[wpos];
 			if(low > bw_l[wpos])
 				low = bw_l[wpos];
 			vol += bw_v[wpos];
-			wpos++;
+			wpos=wrapIndex(wpos+1);
 		}
 		
 		retval = String.valueOf(open)+","+String.valueOf(high)+","+String.valueOf(low)+","+String.valueOf(close)+","+String.valueOf(vol);
@@ -348,11 +352,16 @@ public class SymData {
 	public static int getInterval(String strInt){
 		int i;
 		for(i=0; i< allowedInterval.length;i++){
-			if(strInt.equals(allowedInterval[i]))
+			if(strInt.equals(allowedIntervalText[i]))
 				break;
 		}
 		if(i==allowedInterval.length)
 			return -1;
 		return i;
+	}
+
+	public int wrapIndex(int i) {
+    	i = i%winsize;
+    	return i<0 ? i+winsize: i;
 	}
 }
