@@ -2,11 +2,15 @@ import java.io.*;
 import java.net.Socket;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.text.DateFormat;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import java.io.FileNotFoundException;
 
 import at.feedapi.ActiveTickServerAPI;
 import at.feedapi.Helpers;
@@ -41,8 +45,11 @@ public class ATTickDataFetcher {
     public String beginTime;
     public int timeWindow;
 
+//    public Date time_begin,time_end;
+//    public long time_diff;
+
     static {
-        DEFAULT_OUTPUT_DEST = config.getProperty("OUTPUT_DIR") + "/data";
+        DEFAULT_OUTPUT_DEST = config.getProperty("DOWNLOAD_DIR");
     }
 
     public ATTickDataFetcher() {
@@ -68,7 +75,7 @@ public class ATTickDataFetcher {
         logger.info("init status: " + (rc ? "ok" : "failed"));
     }
 
-    public Map processRequest(JSONObject request) throws JSONException {
+    public Map processRequest(JSONObject request) throws JSONException, FileNotFoundException {
         Map<String, String> response = new HashMap<String, String>();
         String cmd = (String)request.get("command");
         String errcode = "0";
@@ -87,6 +94,9 @@ public class ATTickDataFetcher {
 
                 String symbol = (String)request.get("symbol");
                 String date = (String)request.get("date");
+
+                //time_begin = new Date();
+
                 logger.log(Level.INFO,"SEND request [" + symbol + ":" + date + "]");
                 if (!checkDate(date)) {
                     errcode = "-1";
@@ -116,9 +126,11 @@ public class ATTickDataFetcher {
                 }
             } else if (cmd.equals("check")) {
                 if (this.isIdle()) {
-                    errcode = "-1";
-                    errmsg = "Idle";
+                    //errcode = "-1";
+                    //errmsg = "Idle";
+                    response.put("state", "Idle");
                 } else {
+                    response.put("state", "busy");
                     response.put("latest",this.beginTime);
                 }
             } else if (cmd.equals("cancel")) {
@@ -128,6 +140,9 @@ public class ATTickDataFetcher {
                 } else {
                     CANCEL = true;
                 }
+            } else {
+                errcode = "-1";
+                errmsg = "Unknown command";
             }
         }
         response.put("errcode", errcode);
@@ -144,28 +159,37 @@ public class ATTickDataFetcher {
         return apiSession.GetRequestor().SendATTickHistoryDbRequest(atSymbol, true, true, beginDateTime, endDateTime, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
     }
 
+
+    //validate the input date string. Use the solution from http://stackoverflow.com/questions/226910/how-to-sanity-check-a-date-in-java
     public boolean checkDate(String strDate) {
-        boolean cond = true;
-        Date today = new Date();
         if (strDate.length() != 8) {
-            cond = false;
-        } else {
-            try {
-                int year = Integer.parseInt(strDate.substring(0, 3));
-                int month = Integer.parseInt(strDate.substring(4, 5));
-                int day = Integer.parseInt(strDate.substring(6, 7));
-                Calendar cal = Calendar.getInstance();
-                cal.set(year, month, day);
-                if (cal.after(today)) {
-                    logger.log(Level.SEVERE,"You're trying to get data from the future!");
-                    cond = false;
-                }
-            } catch (NumberFormatException nfe) {
-                cond = false;
-            }
+            return false;
         }
-        return cond;
-    }
+        //int year = Integer.parseInt(strDate.substring(0, 4));
+        //int month = Integer.parseInt(strDate.substring(4, 6));
+        //int day = Integer.parseInt(strDate.substring(6, 8));
+        Date date = null;
+        SimpleDateFormat sdf = (SimpleDateFormat)DateFormat.getDateInstance();
+        sdf.applyPattern("yyyymmdd");
+        sdf.setLenient(false);
+        try{
+            date = sdf.parse(strDate);
+        }
+        catch(ParseException e)
+        {
+            logger.log(Level.SEVERE,"You're providing an invalid date!");
+              return false;
+        }
+        Date today = new Date();
+        //Calendar cal = Calendar.getInstance();
+        //cal.set(year, month, day);
+        //if (cal.after(today)) {
+        if (date.after(today)){
+            logger.log(Level.SEVERE,"You're trying to get data from the future!");
+            return false;
+        }
+        return true;
+  }
 
     public void onTickHistoryOverload() {
         JSONObject lastRequest = this.getPendingRequest();
@@ -174,19 +198,17 @@ public class ATTickDataFetcher {
         if (this.timeWindow >= MIN_INTERVAL) {
             try {
                 String symbol = (String)lastRequest.get("symbol");
-                String date = (String)lastRequest.get("date");
                 String beginDateTime = (String)lastRequest.get("beginDateTime");
                 String endDateTime = (String)lastRequest.get("endDateTime");
+                String date = beginDateTime.substring(0, 8);
                 int deltaT = (int)subtractTime(endDateTime.substring(8),beginDateTime.substring(8));
                 if (deltaT != this.timeWindow * 2) {
                     logger.log(Level.INFO,"Reset time window");
                     this.setTimeWindow(deltaT/2);
                 }
-                String midPointDateTime = date + addTime(this.beginTime,this.timeWindow);
-                //logger.log(Level.INFO, "Second half: " + midPointDateTime + " --- " + endDateTime);
-                this.insertPendingRequest(buildRequest(symbol, date, midPointDateTime, endDateTime));
-                //logger.log(Level.INFO,"First half: " + beginDateTime + " --- " + midPointDateTime);
-                this.insertPendingRequest(buildRequest(symbol, date, beginDateTime, midPointDateTime));
+                String midPointTime = addTime(this.beginTime,this.timeWindow);
+                this.insertPendingRequest(buildRequest(symbol, date, midPointTime, endDateTime.substring(8)));
+                this.insertPendingRequest(buildRequest(symbol, date, beginDateTime.substring(8), midPointTime));
                 System.out.println(pendingRequests);
                 this.sendNextRequest();
             } catch (ParseException pe) {
@@ -196,6 +218,39 @@ public class ATTickDataFetcher {
             }
         } else {
             logger.log(Level.WARNING, "Fetch halted: Unexpected data volume");
+            this.cancelRequest();
+            this.reset();
+        }
+    }
+
+    public void readLog(long[] ts,String fn)
+    {
+        Reader reader = null;
+        BufferedReader br = null;
+        try {
+			File f = new File(fn);
+			if(!f.exists())
+				return;
+            reader = new FileReader(fn);
+            br = new BufferedReader(reader);
+
+            String data = null;
+            int cnt=0;
+            while (cnt<1 && (data = br.readLine()) != null) {
+                  ts[cnt++]=Long.parseLong(data);
+            }
+        }
+        catch (IOException e) {
+            //e.printStackTrace();
+        }
+        finally {
+            try {
+                reader.close();
+                br.close();
+            }
+            catch (Exception e) {
+               // e.printStackTrace();
+            }
         }
     }
 
@@ -210,9 +265,35 @@ public class ATTickDataFetcher {
             if (!this.isIdle()) {
                 this.sendNextRequest();
             } else {
-                this.completeFetch();
+                long totalLength=this.completeFetch();
                 this.reset();
                 logger.log(Level.INFO, "request complete");
+
+		//Using output.txt is not very necessary, we can use du command as replacement.
+			//This is only for dumping the total file size to the output.txt file for total size estimation.
+///*
+                //SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+                //time_end = new Date();
+                try{
+                    long[] ts={0,0};
+                    readLog(ts,"./output.txt");
+
+                    File writename = new File("./output.txt");
+                    writename.createNewFile();
+                    BufferedWriter out = new BufferedWriter(new FileWriter(writename));
+
+                //    time_diff=(time_end.getTime()-time_begin.getTime())/1000;
+    				System.out.println(String.valueOf(ts[0]) +":"+String.valueOf(totalLength));
+                    out.write(String.valueOf(ts[0]+totalLength/1024));
+
+                    out.flush();
+                    out.close();
+                }
+                catch(Exception e)
+                {
+                   // e.printStackTrace();
+                }
+  //*/
             }
         } catch (JSONException e) {
             logger.log(Level.SEVERE,e.getMessage());
@@ -283,33 +364,39 @@ public class ATTickDataFetcher {
         this.timeWindow = window;
     }
 
-    private void completeFetch() {
-        String filepath = this.outputPath + "_markethours.tsv";
+    //return file size for estimation purpose
+    private long completeFetch() {
+        String filepath = this.outputPath + "_markethours.csv";
+        logger.log(Level.INFO, "output file is "+filepath);
+
+        long res=0;
+
         if (new File(filepath+".tmp").exists()) {
-            compressFile(filepath);
+            logger.log(Level.INFO, "compress "+filepath+".tmp");
+        	res+=compressFile(filepath);
         }
 
-        filepath = this.outputPath + "_premarket.tsv";
+        filepath = this.outputPath + "_premarket.csv";
         if (new File(filepath+".tmp").exists()) {
-            compressFile(filepath);
+            res+=compressFile(filepath);
         }
 
-        filepath = this.outputPath + "_aftermarket.tsv";
+        filepath = this.outputPath + "_aftermarket.csv";
         if (new File(filepath+".tmp").exists()) {
-            compressFile(filepath);
+            res+=compressFile(filepath);
         }
-    }
+        return res;
+     }
 
-    private void compressFile(String filepath) {
+    //return file size for estimation purpose
+    private long compressFile(String filepath) {
         try {
             byte[] data = new byte[BUFFER];
-            String zipFilePath = filepath + ".zip";
-            filepath = filepath + ".tmp";
+            String zipFilePath = filepath + ".gz";
+            new File(filepath + ".tmp").renameTo(new File(filepath));
             BufferedInputStream in = new BufferedInputStream(new FileInputStream(filepath), BUFFER);
             FileOutputStream zipFile = new FileOutputStream(zipFilePath);
-            ZipOutputStream out = new ZipOutputStream(new BufferedOutputStream(zipFile));
-            ZipEntry entry = new ZipEntry(filepath);
-            out.putNextEntry(entry);
+            GZIPOutputStream out = new GZIPOutputStream(new BufferedOutputStream(zipFile));
             int count;
             while((count = in.read(data, 0, BUFFER)) != -1) {
                 out.write(data, 0, count);
@@ -318,9 +405,12 @@ public class ATTickDataFetcher {
             out.close();
             zipFile.close();
             new File(filepath).delete();
+			System.out.println("file length: " + String.valueOf(new File(zipFilePath).length()));
+            return new File(zipFilePath).length();
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Failed to compress data file");
             logger.log(Level.SEVERE, e.getMessage());
+            return -1;
         }
     }
 
@@ -330,17 +420,26 @@ public class ATTickDataFetcher {
         CANCEL = false;
     }
 
-    private void setRequestOutputPath(String symbol,String date) {
+    private void setRequestOutputPath(String symbol,String date) throws FileNotFoundException{
+		File outHome = new File(DEFAULT_OUTPUT_DEST);
+		if(!outHome.exists()){
+			if(!outHome.mkdir()){
+				throw new FileNotFoundException("cannot create the home dir of the output data, check config file!");
+			}
+		}
         File outDir = new File(DEFAULT_OUTPUT_DEST + "/" + date);
         if (!outDir.exists()) {
-            outDir.mkdir();
+			//this is not supposed to happen given that outHome has been checked.
+            if(!outDir.mkdir()){
+				throw new FileNotFoundException("cannot create the dest dir of the output data, check config file!");
+			}
         }
         this.outputPath = DEFAULT_OUTPUT_DEST + "/" + date + "/" + symbol;
-        String premarketFilePath = this.outputPath + "_premarket.tsv.tmp";
+        String premarketFilePath = this.outputPath + "_premarket.csv.tmp";
         clearExisting(premarketFilePath);
-        String marketFilePath = this.outputPath + "_markethours.tsv.tmp";
+        String marketFilePath = this.outputPath + "_markethours.csv.tmp";
         clearExisting(marketFilePath);
-        String aftermarketFilePath = this.outputPath + "_aftermarket.tsv.tmp";
+        String aftermarketFilePath = this.outputPath + "_aftermarket.csv.tmp";
         clearExisting(aftermarketFilePath);
         apiSession.GetRequestor().setOutputPath(premarketFilePath,marketFilePath,aftermarketFilePath);
     }

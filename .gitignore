@@ -1,0 +1,10 @@
+*.pyc
+*.egg-info
+*.sublime-workspace
+*.sublime-project
+.DS_Store
+*.log
+*.db
+venv
+.metadata
+data

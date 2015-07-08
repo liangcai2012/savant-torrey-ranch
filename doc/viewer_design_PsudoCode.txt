@@ -1,0 +1,96 @@
+Data defined there  
+Defined as global variables
+q = [{cmd, data, dirty}]
+
+    	cmd   is a tuple of {type: realtime or history;  eg: 'r'
+                            symboal: xxx;  eg: 'QQQ'
+				   			display_interval: xx;   eg: '1m'
+				   			start: YYYYMMDD-HHMMSS;
+				   			end: YYYYMMDD-HHMMSS;
+				   			price: open or high ...; eg: 'c';
+				   			volume: yes or no;  eg: 'y'
+				   			movingave: [mv intervals]; eg: [10m, 1h]}
+		dataQueue is  a tuple of {
+								time: [time series]	
+								price: [price series]
+								vol: [vol series]
+								ma: [[ma1 series] [ma2 series]]
+		dirty is a boolean value showing whether data is changed so that we don't
+				have to update the figure every time. 
+              if we need to do incremental plotting, then this data structure might
+              be more complicated 
+
+
+
+
+RTDataReceiver = {} # this is the dictionary mapping interval to a thread of receiver
+
+Code here
+
+# this is the main function, it first starts a plotData thread and then start the cmd handler server. And that is it.  
+
+if __name__ == "__main__":
+#start a plotData thread. 
+	plot = New PlotData()
+	plot.start()
+
+	server = SocketServer.TCPServer(ip, port, ViewerCmdHandler)
+	server.ServerForever()
+
+
+
+# Cmd handler class, only one stance. 
+class ViewerCmdHandler(SocketServer.BaseRequestHandler):
+	def handler(): 
+		id, pos, interval, params = parseCmd()
+		if cmd_type == 'del':
+			delfromQueue(id)
+			RTDataReceiver(interval).unsubscribe(param)
+		elif cmd_type == 'mv':
+			mvInQueue(id, pos)
+		elif cmd_type = 'add':
+			id = addtoQueue(paras)
+            if (charttype == 'h'):
+				#history data
+                histRcver = new DataReceiver(params)
+                histRcver.subscribe(param) 
+				histRcver.start()
+			else:
+				#real time
+				if(RTDataReceiver(interval)) == None:
+					RTDataReceiver(interval) = new DataReceiver(realtime, params)
+					RTDataReceiver(interval).start()
+				else:
+					RTDataReceiver(interval).subscribe(param)
+		else:
+			pass
+
+
+# DataReceiver class, multiple instances
+class DataReceiver(threading.Treads)
+      def __init__(self, params)
+		dataapi= new DataAPI(param)
+
+	  def subscribe(param):
+		dataapi.subscribe(param)
+
+	  def unsubscribe():
+         dataapi.unsubscribe(param)
+
+	  def run():
+			while 1:
+				if time is ready  #always true for history data
+					d = dataapi.update()
+					if d is not empty
+			 			fillDataQueue(q[id][data], d)
+						q[id][dirty] = True
+
+# dataplotter class, single instance
+class DataPlotter(threaing.Threads)
+	def __init__(self)
+		
+	def run():
+		for qi in q:
+			if qi[dirty] = True
+				plot(qi[data])	
+			

@@ -1,6 +1,7 @@
 import java.io.*;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -263,6 +264,7 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 
 	public void writeTickRecord(String filepath, ArrayList<String> records)
 	{
+		ArrayList<String> csvTicks = reformatATTick(records);
 		try {
             /*
 			FileOutputStream dest = new FileOutputStream(filepath);
@@ -276,15 +278,43 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 			}
 			FileWriter fw = new FileWriter(data,true);
 			BufferedWriter writer = new BufferedWriter(fw);
-			for (String record : records) {
+			for (String record : csvTicks) {
 				//writer.write(record.getBytes(), 0, record.length());
                 writer.write(record+"\n");
 			}
 			writer.close();
 
 		} catch (IOException e) {
-			System.out.println("Cannot write to file");
+			System.out.println("Cannot write to file: " + e.getMessage() + e.getStackTrace());
 		}
+	}
+
+	public ArrayList<String> reformatATTick(ArrayList<String> records) {
+		ArrayList<String> new_ticks = new ArrayList<>();
+		for (String record : records) {
+			ArrayList<String> values = new ArrayList<>(Arrays.asList(record.split("\\s+")));
+			if (values.get(3).equals("QUOTE")) {
+				continue;
+			}
+			String[] newValues = new String[7];
+			try {
+				newValues[0] = values.get(1).replace("[", "");
+				newValues[1] = values.get(2).replace("]", "");
+				newValues[2] = values.get(3);
+				for (int i = 4; i < values.size(); i++) {
+					newValues[i - 1] = values.get(i).split(":")[1];
+				}
+			} catch (Exception e) {
+				System.out.println(e.fillInStackTrace());
+			}
+			String new_tick = "";
+			for (String value : newValues) {
+				new_tick += value + ",";
+			}
+			new_tick = new_tick.substring(0, new_tick.length()-1);
+			new_ticks.add(new_tick);
+		}
+		return new_ticks;
 	}
 
 	public void setOutputPath(String premarketFilePath, String marketFilePath, String aftermarketFilePath) {

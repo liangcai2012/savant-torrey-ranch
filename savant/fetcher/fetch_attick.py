@@ -1,26 +1,41 @@
 import os, os.path, sys
 import socket
-import json
+import cjson
 import argparse
 
-class FetcherCaller:
-    HOST = "localhost"
-    PORT = 8080
+from savant.config import settings
 
-    def __init__(self,json_request):
-        self.request = json_request+"\n"
+from savant.logger import getLogger
+
+log = getLogger("fetcher", level="INFO")
+
+
+class FetcherCaller:
+
+    def __init__(self, json_request=None):
+        if json_request != None:
+            self.request = json_request+"\n"
+        else:
+            self.request = None
         self.connect()
-        self.send_request()
 
     def connect(self):
-        self.socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        self.socket.connect((self.HOST,self.PORT))
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setblocking(0)
+        self.socket.settimeout(5.0)
+        self.socket.connect((settings.FETCHER_HOST, int(settings.FETCHER_PORT)))
+
+    def set_request(self, json_request):
+        self.request = json_request+"\n"
 
     def send_request(self):
-        print self.request
+        log.info("Request sent: %s" % self.request)
         self.socket.sendall(self.request)
         resp = self.socket.recv(1024)
-        print "Response:",resp
+        log.info("Fetcher response: %s" % resp)
+        return resp
+
+    def close(self):
         self.socket.close()
 
 def get_data(args):
@@ -28,20 +43,23 @@ def get_data(args):
     symbol = args.symbol
     date = args.date
     request = {"command":cmd,"symbol":symbol,"date":date}
-    json_request = json.dumps(request)
+    json_request = cjson.encode(request)
     caller = FetcherCaller(json_request)    
+    caller.send_request()
 
 def check_status(args):
     cmd = "check"
     request = {"command":cmd}
-    json_request = json.dumps(request)
+    json_request = cjson.encode(request)
     caller = FetcherCaller(json_request)
+    caller.send_request()
 
 def cancel(args):
     cmd = "cancel"
     request = {"command":cmd}
-    json_request = json.dumps(request)
+    json_request = cjson.encode(request)
     caller = FetcherCaller(json_request)
+    caller.send_request()
 
 def main():
     parser = argparse.ArgumentParser()
