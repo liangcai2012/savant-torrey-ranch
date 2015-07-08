@@ -179,7 +179,7 @@ class HistoricalIPO(db.Base):
     first_day_high_percent_change = Column(Float)
     first_day_low = Column(Float)
     first_day_low_percent_change = Column(Float)
-    first_day_volumn = Column(Integer)
+    first_day_volume = Column(Integer)
     
     def __init__(self, **params):
         self.__dict__.update(params)

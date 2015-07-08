@@ -2,7 +2,7 @@ import os, sys
 import logging
 import requests
 from savant.db import session
-from savant.db.models import IPOInfoURL
+from savant.db.models import IPOInfoUrl
 from savant import scraper
 from datetime import date
 
@@ -13,7 +13,7 @@ base_url = "http://www.nasdaq.com/markets/ipos/activity.aspx?tab=pricings&month=
 
 count = 0
 cur_date = date.today()
-oldest_date = date(2000, 1, 1)
+oldest_date = date(2010, 1, 1)
 
 while cur_date >= oldest_date:
     log.info("Getting IPO urls for", cur_date.strftime("%Y-%m"))
@@ -41,10 +41,10 @@ while cur_date >= oldest_date:
         name = tds[0].text
         url = tds[0].a["href"]
         symbol = tds[1].text
-        ipo_url = IPOInfoURL(name, symbol, url)
-        if IPOInfoURL.query.filter_by(name=name).first() is not None:
+        ipo_url = IPOInfoUrl(name, symbol, url)
+        if IPOInfoUrl.query.filter_by(name=name).first() is not None:
             continue
-        if IPOInfoURL.query.filter_by(symbol=symbol).first() is not None:
+        if IPOInfoUrl.query.filter_by(symbol=symbol).first() is not None:
             continue
         session.add(ipo_url)
 
