@@ -127,6 +127,7 @@ public class SymData {
 			if(skip <=0)
 				return;
 
+			System.out.println("")
 			//update the moving averages first
 			if(aveEnabled){
 				for (int i=1; i<intnum; i++){

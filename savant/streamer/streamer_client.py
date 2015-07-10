@@ -1,4 +1,5 @@
 import os, os.path, sys
+import time
 import socket
 import json
 import argparse
@@ -53,10 +54,12 @@ class StreamerCaller:
 if __name__ == "__main__":
 	sc = StreamerCaller()
 	#print sc.subscribe("test1", ["QCOM", "LOCO", "YELP"])
-	print sc.subscribe("test2", ["LC", "YDLE", "YELP"])
+	#print sc.subscribe("test2", ["LC", "YDLE", "YELP"])
 	#print sc.unsubscribe("test1")
 	#print sc.update("test2", "3s")
 	#print sc.update("test1", "5s")
-	print sc.update("test2", "1s")
+	while True:
+		print sc.update("test2", "1s")
+		time.sleep(1)
 
  

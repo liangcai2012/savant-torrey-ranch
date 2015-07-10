@@ -299,7 +299,6 @@ class CmdHandler implements Runnable{
 				}
 				c.interval = nInterval;
 			}	
-			System.out.println(bar_mask + "---" + ma_mask);
 			if(bar_mask.length() !=0){
 				int nBarMask = maskConvert(bar_mask, 5);
 				if (nBarMask == -1){
