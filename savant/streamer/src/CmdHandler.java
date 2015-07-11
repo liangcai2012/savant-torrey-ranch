@@ -57,7 +57,7 @@ class CmdHandler implements Runnable{
 			JSONObject req	= obj.getJSONObject("request");
 			String cmd = req.getString("command");
 			String client = req.getString("client");
-			System.out.println("Command (" + cmd + ") received from " + client);
+			//System.out.println("Command (" + cmd + ") received from " + client);
 			if (cmd.equalsIgnoreCase("subscribe"))
 			{
 				JSONArray symlist = req.getJSONArray("symlist");
@@ -317,11 +317,6 @@ class CmdHandler implements Runnable{
 				if(c.maMask != nMaMask){
 					c.maMask = nMaMask;
 					changeMask = true;
-				
-					//change MA for each symbol
-					for(String sym : c.symList){
-						SymData sd = sr.m_symDataMap.get(sym);
-					}
 				}
 			}
 			try{

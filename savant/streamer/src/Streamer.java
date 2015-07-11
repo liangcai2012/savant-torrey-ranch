@@ -88,7 +88,7 @@ public class Streamer extends ActiveTickStreamListener
 		}
 		sd.update(second, vol, price, 0);
 	 	long duration = System.currentTimeMillis()-start;
-		System.out.println(symbol + ":" + String.valueOf(price) + "," + String.valueOf(vol)+","+String.valueOf(duration));
+		System.out.println(symbol + ":" + String.valueOf(second)+ "," + String.valueOf(price) + "," + String.valueOf(vol)+","+String.valueOf(duration));
 	}	
 }
 
