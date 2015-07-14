@@ -34,6 +34,7 @@ public class ATTickDataFetcher {
     private static boolean CANCEL = false;
     private static final Logger logger = Logger.getLogger(ATTickDataFetcher.class.getName());
     private static final SavantConfig config = SavantConfig.getConfig();
+//	private static final SavantLogger logger = SavantLogger.getLogger("fetcher"); 
     private static final int MIN_INTERVAL = 60;  //minimum allowed time window
     private static final String DEFAULT_BEGIN_TIME = "060000"; //default query start time
     private static final String DEFAULT_END_TIME = "200000"; //default query end time
@@ -104,6 +105,7 @@ public class ATTickDataFetcher {
                     break SENDREQUEST;
                 }
                 this.setRequestOutputPath(symbol, date);
+				
 
                 try {
                     String strCurrBeginTime = this.beginTime;
@@ -156,7 +158,8 @@ public class ATTickDataFetcher {
         ATSYMBOL atSymbol = Helpers.StringToSymbol(symbol);
         SYSTEMTIME beginDateTime = Helpers.StringToATTime(strBeginDateTime);
         SYSTEMTIME endDateTime = Helpers.StringToATTime(strEndDateTime);
-        return apiSession.GetRequestor().SendATTickHistoryDbRequest(atSymbol, true, true, beginDateTime, endDateTime, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
+        //return apiSession.GetRequestor().SendATTickHistoryDbRequest(atSymbol, true, true, beginDateTime, endDateTime, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
+        return apiSession.GetRequestor().SendATTickHistoryDbRequest(atSymbol, true, false, beginDateTime, endDateTime, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
     }
 
 
@@ -441,7 +444,7 @@ public class ATTickDataFetcher {
         clearExisting(marketFilePath);
         String aftermarketFilePath = this.outputPath + "_aftermarket.csv.tmp";
         clearExisting(aftermarketFilePath);
-        apiSession.GetRequestor().setOutputPath(premarketFilePath,marketFilePath,aftermarketFilePath);
+        apiSession.GetRequestor().setOutputPath(symbol, premarketFilePath,marketFilePath,aftermarketFilePath);
     }
 
     private void clearExisting(String filepath) {
