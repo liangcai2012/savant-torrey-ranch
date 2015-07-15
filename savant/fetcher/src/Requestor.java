@@ -103,7 +103,7 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 					StringBuilder sb = new StringBuilder();
 					//date
 					sb.append(atTradeRecord.lastDateTime.month+ "/" + atTradeRecord.lastDateTime.day + "/" + atTradeRecord.lastDateTime.year);   
-					sb.append(",");
+					sb.append(" ");
 					//time
 					sb.append(atTradeRecord.lastDateTime.hour + ":" + atTradeRecord.lastDateTime.minute + ":" + atTradeRecord.lastDateTime.second);
 					sb.append(",");
