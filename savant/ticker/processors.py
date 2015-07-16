@@ -14,7 +14,7 @@ class TickDataProcessor:
     def __init__(self):
         self.base_dir = settings.DOWNLOAD_DIR
 
-    def get_ticks(self, symbol, begin_date, end_date, hours="regular"):
+    def get_ticks(self, symbol, begin_date, end_date, hours="regular", parse_dates=False):
         dates = self.parse_dates(begin_date, end_date)
 
         if hours == "regular":
@@ -27,13 +27,15 @@ class TickDataProcessor:
             raise ValueError("No such hours: %s" % hours)
         filename = symbol + suffix + ".csv.gz"
 
-        tick_data = pd.DataFrame(columns=["date", "time", "type", "price", "size", "exch", "cond"])
+        tick_data = pd.DataFrame(columns=["datetime", "type", "price", "size", "exch", "cond"])
 
         for date in dates:
             data_path = os.path.join(self.base_dir, date, filename)
-            cur_ticks = pd.read_csv(data_path, compression="gzip", names=["date", "time", "type", "price", "size", "exch", "cond"])
+            if parse_dates:
+                cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"], parse_dates=[0])
+            else:
+                cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"])
             tick_data = tick_data.append(cur_ticks)
-
         return tick_data
 
     def parse_dates(self, begin, end):
@@ -51,4 +53,4 @@ class TickDataProcessor:
 
 if __name__ == "__main__":
     ticker = TickDataProcessor()
-    print ticker.get_ticks("PGND", "20150521", "20150521")
+    print ticker.get_ticks("NTRA", "20150702", "20150702")
