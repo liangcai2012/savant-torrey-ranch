@@ -121,6 +121,7 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
                     
                         # if it's new interval  
                         if(RTDataReceiver[interval]) == None:                              
+                            print '\n ######### create new thread for new interval group....'
                             RTDataReceiver[interval] = DataReceiver('Viewer_real_' + interval, params)  
                             RTDataReceiver[interval].subscribeRealtime(params['symbol'])
                             RTDataReceiver[interval].start()  
@@ -279,6 +280,7 @@ class DataReceiver(threading.Thread):
         
     def run(self):
         global q      
+        
         if  self.dataType == 'h':            
             i = 0
             while i < 6200:  # just for debugging
@@ -295,7 +297,8 @@ class DataReceiver(threading.Thread):
             next_call = time.time() 
 #             while not self.stopped.wait(next_call - time.time()):  #timer compensate   
             while not time.sleep(next_call - time.time()):         
-#                 print "##Debug: price type is %s" %self.priceType                
+#                 print "##Debug: price type is %s" %self.priceType
+                t1=time.time()                
                 data = loads(self.dataapi.update(self.interval, self.priceType, self.maType))                
 #                 print data
                 if data is not None:
@@ -305,8 +308,10 @@ class DataReceiver(threading.Thread):
                         data = loads(self.dataapi.update(self.interval, self.priceType, self.maType))
                     
                     self.fillDataQueue(q, data)  # q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[[20:1700, 19.8:1800],[19.8:1600, 19.9:1600],..]}                   
-                    print '\n ##for debug: q now is:', q
+#                     print '\n ##for debug: q now is:', q
                     previousTimeStmp = data['timestamp']
+                t2=time.time()
+#                 print 'recv data colaps time:' ,t2-t1
                 next_call = next_call + ConvertInterval(self.interval)
         else:
             print '\n Not valid data_type or history data ALL received!'
@@ -326,13 +331,13 @@ class DataReceiver(threading.Thread):
                 for q1 in q:  # note: there could be multiple item in q be feed data from current symData, like differnt price/ma type
                     barTyp = q1['cmd']['price']  # get bar type from item in q
                     maTyp = set(q1['cmd']['movingave'])  # get ma type from item in q, maTyp is a set
-                    print 'barTyp and maTyp are:', barTyp, maTyp
+#                     print 'barTyp and maTyp are:', barTyp, maTyp
 #                     print 'loop check to items in q, now is:', q1
                     # print "####### current thread params:",self.interval,sym,bar,ma,self.dataType 
                     if (q1['cmd']['interval'] == self.interval) and  (q1['cmd']['symbol'] == sym) and (barTyp in bar) and (q1['cmd']['type'] == self.dataType) and (maTyp.issubset(ma)):
 #                         print '\n found matched item in q'
                         idx = q.index(q1)
-                        print '###data[time] size is:',len(q[idx]['data']['time'])
+#                         print '###data[time] size is:',len(q[idx]['data']['time'])
                         if q[idx]['cmd']['type'] == 'r' and len(q[idx]['data']['time']) > 100:  # for realtime data, only keep fix length data,when filled, cut first half part
                             print '*******for debug: current item length exceed limit, cut first half then refill.....'
                             del q[idx]['data']['time'][0:50]
@@ -351,7 +356,7 @@ class DataReceiver(threading.Thread):
                         
                         tempMA = []
 #                         tempMA={}
-                        print symData['ma']
+#                         print symData['ma']
                         for i in maTyp:  # in order of ma type in q1
 #                             tempMA.append(symData['ma'][i]) 
                             tempMA.append(symData['ma'][ConvertMA(i, False)])  # return ma value:vol pair, after append,  data looks like:['20:1700', '19.8:1800']                      
@@ -362,11 +367,11 @@ class DataReceiver(threading.Thread):
     
 
 # dataplotter class, single instance
-# class DataPlotter(threading.Thread):
-class DataPlotter():    
-#     def __init__(self):
-#         super(DataPlotter, self).__init__()
-#         self.running = True
+class DataPlotter(threading.Thread):
+# class DataPlotter():    
+    def __init__(self):
+        super(DataPlotter, self).__init__()
+        self.running = True
 
     def launch(self):          
         # Set up of subplots
@@ -629,16 +634,19 @@ class DataPlotter():
             print 'invalid subplot # !!!'        
         
          
-    def go(self):  
+    def run(self):  
         global q
         print '#########init q is: ', q
         next_call = time.time() 
         while not time.sleep(next_call - time.time()):  # somehow need add +0.00001 to remove errno22 exception in Linux env. For Windows, we don't need add this          
 #             print '^^^^^^^^^^^^'
+            t1=time.time()
             if  len(q) != 0  :
 #                 print "\n@@@@@@@@@@@@@@@@@ under plotting q is:", q
                 self.plotData()
-            next_call = next_call + 1  # plot all subplots every 1s
+            t2=time.time()
+            print "plot colaps time:",t2-t1
+            next_call = next_call + 2  # some instable found if set to 1s plotting rate.  for 2s rate, it's ok.
                 
                 
     def plotData(self):
@@ -653,7 +661,10 @@ class DataPlotter():
             self.lines12.set_ydata(q[0]['data']['vol'])
             self.lines12.set_label('vol')
             
-            i=0
+            i=0  # used for trace the MA type in 'data'
+            legend1=[];legend2=[]  #used for dynamic udpate legend
+            legend1.append(self.lines11) 
+            legend2.append(self.lines12) 
             if '1s' in q[0]['cmd']['movingave']:
                 self.lines13.set_xdata(q[0]['data']["time"])       
                 self.lines13.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma1 value    # issue: it's better change 'ma' in q as dict, so that here we only need grab ma data from q instead of create new list(trade off between network bw and local calc)
@@ -661,7 +672,9 @@ class DataPlotter():
                 self.lines14.set_xdata(q[0]['data']["time"])
                 self.lines14.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma1 vol
                 self.lines14.set_label('Vol_MA_1s')
-                i=i+1           
+                i=i+1       
+                legend1.append(self.lines13) 
+                legend2.append(self.lines14)    
             if '5s' in q[0]['cmd']['movingave']:
                 self.lines15.set_xdata(q[0]['data']["time"])
                 self.lines15.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma2 value
@@ -670,6 +683,8 @@ class DataPlotter():
                 self.lines16.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma2 vol
                 self.lines16.set_label('Vol_MA_5s' )
                 i=i+1
+                legend1.append(self.lines15) 
+                legend2.append(self.lines16) 
             if '10s' in q[0]['cmd']['movingave']:
                 self.lines17.set_xdata(q[0]['data']["time"])
                 self.lines17.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma3 value
@@ -678,6 +693,8 @@ class DataPlotter():
                 self.lines18.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma3 vol
                 self.lines18.set_label('Vol_MA_10s')
                 i=i+1
+                legend1.append(self.lines17) 
+                legend2.append(self.lines18)
             if '30s' in q[0]['cmd']['movingave']:
                 self.lines19.set_xdata(q[0]['data']["time"])
                 self.lines19.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma4 value
@@ -686,6 +703,8 @@ class DataPlotter():
                 self.lines1a.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma4 vol
                 self.lines1a.set_label('Vol_MA_30s' )
                 i=i+1
+                legend1.append(self.lines19) 
+                legend2.append(self.lines1a)
             if '1m' in q[0]['cmd']['movingave']:
                 self.lines1b.set_xdata(q[0]['data']["time"])
                 self.lines1b.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma5 value
@@ -694,6 +713,8 @@ class DataPlotter():
                 self.lines1c.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma5 vol
                 self.lines1c.set_label('Vol_MA_1m') 
                 i=i+1
+                legend1.append(self.lines1b) 
+                legend2.append(self.lines1c)
             if '5m' in q[0]['cmd']['movingave']:
                 self.lines1d.set_xdata(q[0]['data']["time"])
                 self.lines1d.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma6 value
@@ -701,7 +722,9 @@ class DataPlotter():
                 self.lines1e.set_xdata(q[0]['data']["time"])
                 self.lines1e.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma6 vol
                 self.lines1e.set_label('Vol_MA_5m' ) 
-                i=i+1           
+                i=i+1  
+                legend1.append(self.lines1d) 
+                legend2.append(self.lines1e)         
             if '10m' in q[0]['cmd']['movingave']:
                 self.lines1f.set_xdata(q[0]['data']["time"])
                 self.lines1f.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma7 value
@@ -710,6 +733,8 @@ class DataPlotter():
                 self.lines1g.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma7 value
                 self.lines1g.set_label('Vol_MA_10m' ) 
                 i=i+1 
+                legend1.append(self.lines1f) 
+                legend2.append(self.lines1g)
             if '30m' in q[0]['cmd']['movingave']:
                 self.lines1h.set_xdata(q[0]['data']["time"])
                 self.lines1h.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma8 value
@@ -717,14 +742,18 @@ class DataPlotter():
                 self.lines1i.set_xdata(q[0]['data']["time"])
                 self.lines1i.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma8 value
                 self.lines1i.set_label('Vol_MA_30m')  
-                i=i+1    
+                i=i+1  
+                legend1.append(self.lines1h) 
+                legend2.append(self.lines1i)  
             if '1h' in q[0]['cmd']['movingave']:
                 self.lines1j.set_xdata(q[0]['data']["time"])
                 self.lines1j.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma9 value
                 self.lines1j.set_label('MA_1h' )
                 self.lines1k.set_xdata(q[0]['data']["time"])
                 self.lines1k.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma9 value
-                self.lines1k.set_label('Vol_MA_1h')   
+                self.lines1k.set_label('Vol_MA_1h') 
+                legend1.append(self.lines1j) 
+                legend2.append(self.lines1k)  
                 
             self.axarr[0].set_ylim(0.5 * min(q[0]['data']['price']), 1.5 * max(q[0]['data']['price']))  # dynamic adj the y limi here!
             self.axarr[1].set_ylim(0, 1.5 * max(q[0]['data']['vol']))
@@ -737,9 +766,9 @@ class DataPlotter():
                 self.axarr[1].set_xticklabels([(matplotlib.dates.num2date(q[0]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[0]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
             
             ## set labels
-            self.axarr[0].set_title('id:1, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[0]['cmd']['symbol'], q[0]['cmd']['type'], q[0]['cmd']['interval'], q[0]['data']['price'][-1], q[0]['data']['vol'][-1]))
-            self.axarr[0].legend()
-            self.axarr[1].legend(fontsize='small')
+            self.axarr[0].set_title('id:1, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[0]['cmd']['symbol'], q[0]['cmd']['type'], q[0]['cmd']['interval'], q[0]['data']['price'][-1], q[0]['data']['vol'][-1]),y=0.8)
+            self.axarr[0].legend(handles=legend1,fontsize='small')  # auto update legend, in case subplot insertion cause legend number change
+            self.axarr[1].legend(handles=legend2,fontsize='x-small')
             
            
            
@@ -752,6 +781,9 @@ class DataPlotter():
             self.lines22.set_ydata(q[1]['data']['vol'])
             self.lines22.set_label('vol')
             i=0
+            legend1=[];legend2=[]
+            legend1.append(self.lines21) 
+            legend2.append(self.lines22) 
             if '1s' in q[1]['cmd']['movingave']:
                 self.lines23.set_xdata(q[1]['data']["time"])      
                 self.lines23.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma1 value    
@@ -759,7 +791,9 @@ class DataPlotter():
                 self.lines24.set_xdata(q[1]['data']["time"])
                 self.lines24.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma1 vol
                 self.lines24.set_label('Vol_MA_1s') 
-                i=i+1     
+                i=i+1   
+                legend1.append(self.lines23) 
+                legend2.append(self.lines24)   
             if '5s' in q[1]['cmd']['movingave']:
                 self.lines25.set_xdata(q[1]['data']["time"])
                 self.lines25.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma2 value
@@ -767,7 +801,9 @@ class DataPlotter():
                 self.lines26.set_xdata(q[1]['data']["time"])
                 self.lines26.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma2 vol
                 self.lines26.set_label('Vol_MA_5s' )
-                i=i+1    
+                i=i+1
+                legend1.append(self.lines25) 
+                legend2.append(self.lines26)     
             if '10s' in q[1]['cmd']['movingave']:
                 self.lines27.set_xdata(q[1]['data']["time"])
                 self.lines27.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma3 value
@@ -776,6 +812,8 @@ class DataPlotter():
                 self.lines28.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma3 vol
                 self.lines28.set_label('Vol_MA_10s')
                 i=i+1
+                legend1.append(self.lines27) 
+                legend2.append(self.lines28) 
             if '30s' in q[1]['cmd']['movingave']:
                 self.lines29.set_xdata(q[1]['data']["time"])
                 self.lines29.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma4 value
@@ -784,6 +822,8 @@ class DataPlotter():
                 self.lines2a.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma4 vol
                 self.lines2a.set_label('Vol_MA_30s' )
                 i=i+1
+                legend1.append(self.lines29) 
+                legend2.append(self.lines2a) 
             if '1m' in q[1]['cmd']['movingave']:
                 self.lines2b.set_xdata(q[1]['data']["time"])
                 self.lines2b.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma5 value
@@ -792,6 +832,8 @@ class DataPlotter():
                 self.lines2c.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma5 vol
                 self.lines2c.set_label('Vol_MA_1m')
                 i=i+1
+                legend1.append(self.lines2b) 
+                legend2.append(self.lines2c) 
             if '5m' in q[1]['cmd']['movingave']:
                 self.lines2d.set_xdata(q[1]['data']["time"])
                 self.lines2d.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma6 value
@@ -800,6 +842,8 @@ class DataPlotter():
                 self.lines2e.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma6 vol
                 self.lines2e.set_label('Vol_MA_5m' )  
                 i=i+1
+                legend1.append(self.lines2d) 
+                legend2.append(self.lines2e) 
             if '10m' in q[1]['cmd']['movingave']:
                 self.lines2f.set_xdata(q[1]['data']["time"])
                 self.lines2f.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma7 value
@@ -807,7 +851,9 @@ class DataPlotter():
                 self.lines2g.set_xdata(q[1]['data']["time"])
                 self.lines2g.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma7 value
                 self.lines2g.set_label('Vol_MA_10m' ) 
-                i=i+1   
+                i=i+1
+                legend1.append(self.lines2f) 
+                legend2.append(self.lines2g)    
             if '30m' in q[1]['cmd']['movingave']:
                 self.lines2h.set_xdata(q[1]['data']["time"])
                 self.lines2h.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma8 value
@@ -815,16 +861,20 @@ class DataPlotter():
                 self.lines2i.set_xdata(q[1]['data']["time"])
                 self.lines2i.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma8 value
                 self.lines2i.set_label('Vol_MA_30m') 
-                i=i+1       
+                i=i+1 
+                legend1.append(self.lines2h) 
+                legend2.append(self.lines2i)       
             if '1h' in q[1]['cmd']['movingave']:
                 self.lines2j.set_xdata(q[1]['data']["time"])
                 self.lines2j.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma9 value
                 self.lines2j.set_label('MA_1h' )
                 self.lines2k.set_xdata(q[1]['data']["time"])
                 self.lines2k.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma9 value
-                self.lines2k.set_label('Vol_MA_1h')   
+                self.lines2k.set_label('Vol_MA_1h') 
+                legend1.append(self.lines2j) 
+                legend2.append(self.lines2k)   
               
-            self.axarr[2].set_ylim(0.5 * min(q[1]['data']['price']), 1.5 * max(q[1]['data']['price']))
+            self.axarr[2].set_ylim(0.5 * min(q[1]['data']['price']), 1.5*max(q[1]['data']['price']))
             self.axarr[3].set_ylim(0, 1.5 * max(q[1]['data']['vol']))
             
             if q[1]['cmd']['type'] == 'h':
@@ -834,9 +884,9 @@ class DataPlotter():
                 self.axarr[3].set_xticks([matplotlib.dates.num2date(q[1]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[1]['cmd']['interval'])) for i in range(10)])                  
                 self.axarr[3].set_xticklabels([(matplotlib.dates.num2date(q[1]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[1]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
             
-            self.axarr[2].set_title('id:2, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[1]['cmd']['symbol'], q[1]['cmd']['type'], q[1]['cmd']['interval'], q[1]['data']['price'][-1], q[1]['data']['vol'][-1])) 
-            self.axarr[2].legend(fontsize='small')
-            self.axarr[3].legend(fontsize='x-small')
+            self.axarr[2].set_title('id:2, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[1]['cmd']['symbol'], q[1]['cmd']['type'], q[1]['cmd']['interval'], q[1]['data']['price'][-1], q[1]['data']['vol'][-1]),y=0.8) 
+            self.axarr[2].legend(handles=legend1,fontsize='x-small')
+            self.axarr[3].legend(handles=legend2,fontsize='xx-small')
             
         # Update 3rd subplot data
         if len(q) > 2 and q[2]['dirty'] == True:  
@@ -847,6 +897,9 @@ class DataPlotter():
             self.lines32.set_ydata(q[2]['data']['vol'])
             self.lines32.set_label('vol')
             i=0
+            legend1=[];legend2=[]
+            legend1.append(self.lines31) 
+            legend2.append(self.lines32)
             if '1s' in q[2]['cmd']['movingave']:
                 self.lines33.set_xdata(q[2]['data']["time"])      
                 self.lines33.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma1 value    
@@ -854,7 +907,9 @@ class DataPlotter():
                 self.lines34.set_xdata(q[2]['data']["time"])
                 self.lines34.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma1 vol
                 self.lines34.set_label('Vol_MA_1s')   
-                i=i+1   
+                i=i+1 
+                legend1.append(self.lines33) 
+                legend2.append(self.lines34)  
             if '5s' in q[2]['cmd']['movingave']:
                 self.lines35.set_xdata(q[2]['data']["time"])
                 self.lines35.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma2 value
@@ -862,7 +917,9 @@ class DataPlotter():
                 self.lines36.set_xdata(q[2]['data']["time"])
                 self.lines36.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma2 vol
                 self.lines36.set_label('Vol_MA_5s' )   
-                i=i+1 
+                i=i+1
+                legend1.append(self.lines35) 
+                legend2.append(self.lines36) 
             if '10s' in q[2]['cmd']['movingave']:
                 self.lines37.set_xdata(q[2]['data']["time"])
                 self.lines37.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma3 value
@@ -871,6 +928,8 @@ class DataPlotter():
                 self.lines38.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma3 vol
                 self.lines38.set_label('Vol_MA_10s')
                 i=i+1
+                legend1.append(self.lines37) 
+                legend2.append(self.lines38)
             if '30s' in q[2]['cmd']['movingave']:
                 self.lines39.set_xdata(q[2]['data']["time"])
                 self.lines39.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma4 value
@@ -879,6 +938,8 @@ class DataPlotter():
                 self.lines3a.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma4 vol
                 self.lines3a.set_label('Vol_MA_30s' )
                 i=i+1
+                legend1.append(self.lines39) 
+                legend2.append(self.lines3a)
             if '1m' in q[2]['cmd']['movingave']:
                 self.lines3b.set_xdata(q[2]['data']["time"])
                 self.lines3b.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma5 value
@@ -887,6 +948,8 @@ class DataPlotter():
                 self.lines3c.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma5 vol
                 self.lines3c.set_label('Vol_MA_1m')
                 i=i+1
+                legend1.append(self.lines3b) 
+                legend2.append(self.lines3c)
             if '5m' in q[2]['cmd']['movingave']:
                 self.lines3d.set_xdata(q[2]['data']["time"])
                 self.lines3d.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma6 value
@@ -894,7 +957,9 @@ class DataPlotter():
                 self.lines3e.set_xdata(q[2]['data']["time"])
                 self.lines3e.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma6 vol
                 self.lines3e.set_label('Vol_MA_5m' )
-                i=i+1  
+                i=i+1 
+                legend1.append(self.lines3d) 
+                legend2.append(self.lines3e) 
             if '10m' in q[2]['cmd']['movingave']:
                 self.lines3f.set_xdata(q[2]['data']["time"])
                 self.lines3f.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma7 value
@@ -903,6 +968,8 @@ class DataPlotter():
                 self.lines3g.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma7 value
                 self.lines3g.set_label('Vol_MA_10m' ) 
                 i=i+1   
+                legend1.append(self.lines3f) 
+                legend2.append(self.lines3g)
             if '30m' in q[2]['cmd']['movingave']:
                 self.lines3h.set_xdata(q[2]['data']["time"])
                 self.lines3h.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma8 value
@@ -910,7 +977,9 @@ class DataPlotter():
                 self.lines3i.set_xdata(q[2]['data']["time"])
                 self.lines3i.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma8 value
                 self.lines3i.set_label('Vol_MA_30m')  
-                i=i+1      
+                i=i+1  
+                legend1.append(self.lines3h) 
+                legend2.append(self.lines3i)    
             if '1h' in q[2]['cmd']['movingave']:
                 self.lines3j.set_xdata(q[2]['data']["time"])
                 self.lines3j.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma9 value
@@ -918,7 +987,9 @@ class DataPlotter():
                 self.lines3k.set_xdata(q[2]['data']["time"])
                 self.lines3k.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma9 value
                 self.lines3k.set_label('Vol_MA_1h')   
-              
+                legend1.append(self.lines3j) 
+                legend2.append(self.lines3k)
+                
             self.axarr[4].set_ylim(0.5 * min(q[2]['data']['price']), 1.5 * max(q[2]['data']['price']))
             self.axarr[5].set_ylim(0, 1.5 * max(q[2]['data']['vol']))
             
@@ -929,9 +1000,9 @@ class DataPlotter():
                 self.axarr[5].set_xticks([matplotlib.dates.num2date(q[2]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[2]['cmd']['interval'])) for i in range(10)])                  
                 self.axarr[5].set_xticklabels([(matplotlib.dates.num2date(q[2]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[2]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
             
-            self.axarr[4].set_title('id:3, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[2]['cmd']['symbol'], q[2]['cmd']['type'], q[2]['cmd']['interval'], q[2]['data']['price'][-1], q[2]['data']['vol'][-1])) 
-            self.axarr[4].legend(fontsize='small')
-            self.axarr[5].legend(fontsize='x-small')
+            self.axarr[4].set_title('id:3, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[2]['cmd']['symbol'], q[2]['cmd']['type'], q[2]['cmd']['interval'], q[2]['data']['price'][-1], q[2]['data']['vol'][-1]),y=0.8) 
+            self.axarr[4].legend(handles=legend1,fontsize='small')
+            self.axarr[5].legend(handles=legend2,fontsize='x-small')
             
         
         # Update 4th subplot data
@@ -943,6 +1014,9 @@ class DataPlotter():
             self.lines42.set_ydata(q[3]['data']['vol'])
             self.lines42.set_label('vol')
             i=0
+            legend1=[];legend2=[]
+            legend1.append(self.lines41) 
+            legend2.append(self.lines42)
             if '1s' in q[3]['cmd']['movingave']:
                 self.lines43.set_xdata(q[3]['data']["time"])      
                 self.lines43.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma1 value    
@@ -950,7 +1024,9 @@ class DataPlotter():
                 self.lines44.set_xdata(q[3]['data']["time"])
                 self.lines44.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma1 vol
                 self.lines44.set_label('Vol_MA_1s')  
-                i=i+1    
+                i=i+1 
+                legend1.append(self.lines43) 
+                legend2.append(self.lines44)   
             if '5s' in q[3]['cmd']['movingave']:
                 self.lines45.set_xdata(q[3]['data']["time"])
                 self.lines45.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma2 value
@@ -958,7 +1034,9 @@ class DataPlotter():
                 self.lines46.set_xdata(q[3]['data']["time"])
                 self.lines46.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma2 vol
                 self.lines46.set_label('Vol_MA_5s' ) 
-                i=i+1   
+                i=i+1  
+                legend1.append(self.lines45) 
+                legend2.append(self.lines46)  
             if '10s' in q[3]['cmd']['movingave']:
                 self.lines47.set_xdata(q[3]['data']["time"])
                 self.lines47.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma3 value
@@ -967,6 +1045,8 @@ class DataPlotter():
                 self.lines48.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma3 vol
                 self.lines48.set_label('Vol_MA_10s')
                 i=i+1
+                legend1.append(self.lines47) 
+                legend2.append(self.lines48) 
             if '30s' in q[3]['cmd']['movingave']:
                 self.lines49.set_xdata(q[3]['data']["time"])
                 self.lines49.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma4 value
@@ -975,6 +1055,8 @@ class DataPlotter():
                 self.lines4a.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma4 vol
                 self.lines4a.set_label('Vol_MA_30s' )
                 i=i+1
+                legend1.append(self.lines49) 
+                legend2.append(self.lines4a) 
             if '1m' in q[3]['cmd']['movingave']:
                 self.lines4b.set_xdata(q[3]['data']["time"])
                 self.lines4b.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma5 value
@@ -983,6 +1065,8 @@ class DataPlotter():
                 self.lines4c.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma5 vol
                 self.lines4c.set_label('Vol_MA_1m')
                 i=i+1
+                legend1.append(self.lines4b) 
+                legend2.append(self.lines4c) 
             if '5m' in q[3]['cmd']['movingave']:
                 self.lines4d.set_xdata(q[3]['data']["time"])
                 self.lines4d.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma6 value
@@ -991,6 +1075,8 @@ class DataPlotter():
                 self.lines4e.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma6 vol
                 self.lines4e.set_label('Vol_MA_5m' ) 
                 i=i+1 
+                legend1.append(self.lines4d) 
+                legend2.append(self.lines4e) 
             if '10m' in q[3]['cmd']['movingave']:
                 self.lines4f.set_xdata(q[3]['data']["time"])
                 self.lines4f.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma7 value
@@ -998,7 +1084,9 @@ class DataPlotter():
                 self.lines4g.set_xdata(q[3]['data']["time"])
                 self.lines4g.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma7 value
                 self.lines4g.set_label('Vol_MA_10m' ) 
-                i=i+1   
+                i=i+1  
+                legend1.append(self.lines4f) 
+                legend2.append(self.lines4g)  
             if '30m' in q[3]['cmd']['movingave']:
                 self.lines4h.set_xdata(q[3]['data']["time"])
                 self.lines4h.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma8 value
@@ -1006,14 +1094,18 @@ class DataPlotter():
                 self.lines4i.set_xdata(q[3]['data']["time"])
                 self.lines4i.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma8 value
                 self.lines4i.set_label('Vol_MA_30m') 
-                i=i+1       
+                i=i+1      
+                legend1.append(self.lines4h) 
+                legend2.append(self.lines4i)  
             if '1h' in q[3]['cmd']['movingave']:
                 self.lines4j.set_xdata(q[3]['data']["time"])
                 self.lines4j.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma9 value
                 self.lines4j.set_label('MA_1h' )
                 self.lines4k.set_xdata(q[3]['data']["time"])
                 self.lines4k.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma9 value
-                self.lines4k.set_label('Vol_MA_1h')   
+                self.lines4k.set_label('Vol_MA_1h') 
+                legend1.append(self.lines4j) 
+                legend2.append(self.lines4k)   
               
             self.axarr[2].set_ylim(0.5 * min(q[3]['data']['price']), 1.5 * max(q[3]['data']['price']))
             self.axarr[3].set_ylim(0, 1.5 * max(q[3]['data']['vol']))
@@ -1025,9 +1117,9 @@ class DataPlotter():
                 self.axarr[7].set_xticks([matplotlib.dates.num2date(q[3]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[3]['cmd']['interval'])) for i in range(10)])                  
                 self.axarr[7].set_xticklabels([(matplotlib.dates.num2date(q[3]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[3]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
             
-            self.axarr[6].set_title('id:4, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[3]['cmd']['symbol'], q[3]['cmd']['type'], q[3]['cmd']['interval'], q[3]['data']['price'][-1], q[3]['data']['vol'][-1])) 
-            self.axarr[6].legend(fontsize='small')
-            self.axarr[7].legend(fontsize='x-small')
+            self.axarr[6].set_title('id:4, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[3]['cmd']['symbol'], q[3]['cmd']['type'], q[3]['cmd']['interval'], q[3]['data']['price'][-1], q[3]['data']['vol'][-1]),y=0.8) 
+            self.axarr[6].legend(handles=legend1,fontsize='small')
+            self.axarr[7].legend(handles=legend2,fontsize='x-small')
             
         
         # Update 5th subplot data
@@ -1039,6 +1131,9 @@ class DataPlotter():
             self.lines52.set_ydata(q[4]['data']['vol'])
             self.lines52.set_label('vol')
             i=0
+            legend1=[];legend2=[]
+            legend1.append(self.lines51) 
+            legend2.append(self.lines52) 
             if '1s' in q[4]['cmd']['movingave']:
                 self.lines53.set_xdata(q[4]['data']["time"])      
                 self.lines53.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma1 value    
@@ -1046,7 +1141,9 @@ class DataPlotter():
                 self.lines54.set_xdata(q[4]['data']["time"])
                 self.lines54.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma1 vol
                 self.lines54.set_label('Vol_MA_1s') 
-                i=i+1     
+                i=i+1
+                legend1.append(self.lines53) 
+                legend2.append(self.lines54)     
             if '5s' in q[4]['cmd']['movingave']:
                 self.lines55.set_xdata(q[4]['data']["time"])
                 self.lines55.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma2 value
@@ -1054,7 +1151,9 @@ class DataPlotter():
                 self.lines56.set_xdata(q[4]['data']["time"])
                 self.lines56.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma2 vol
                 self.lines56.set_label('Vol_MA_5s' ) 
-                i=i+1   
+                i=i+1
+                legend1.append(self.lines55) 
+                legend2.append(self.lines56)   
             if '10s' in q[4]['cmd']['movingave']:
                 self.lines57.set_xdata(q[4]['data']["time"])
                 self.lines57.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma3 value
@@ -1063,6 +1162,8 @@ class DataPlotter():
                 self.lines58.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma3 vol
                 self.lines58.set_label('Vol_MA_10s')
                 i=i+1
+                legend1.append(self.lines57) 
+                legend2.append(self.lines58)
             if '30s' in q[4]['cmd']['movingave']:
                 self.lines59.set_xdata(q[4]['data']["time"])
                 self.lines59.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma4 value
@@ -1071,6 +1172,8 @@ class DataPlotter():
                 self.lines5a.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma4 vol
                 self.lines5a.set_label('Vol_MA_30s' )
                 i=i+1
+                legend1.append(self.lines59) 
+                legend2.append(self.lines5a)
             if '1m' in q[4]['cmd']['movingave']:
                 self.lines5b.set_xdata(q[4]['data']["time"])
                 self.lines5b.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma5 value
@@ -1079,6 +1182,8 @@ class DataPlotter():
                 self.lines5c.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma5 vol
                 self.lines5c.set_label('Vol_MA_1m')
                 i=i+1
+                legend1.append(self.lines5b) 
+                legend2.append(self.lines5c)
             if '5m' in q[4]['cmd']['movingave']:
                 self.lines5d.set_xdata(q[4]['data']["time"])
                 self.lines5d.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma6 value
@@ -1087,6 +1192,8 @@ class DataPlotter():
                 self.lines5e.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma6 vol
                 self.lines5e.set_label('Vol_MA_5m' )  
                 i=i+1
+                legend1.append(self.lines5d) 
+                legend2.append(self.lines5e)
             if '10m' in q[4]['cmd']['movingave']:
                 self.lines5f.set_xdata(q[4]['data']["time"])
                 self.lines5f.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma7 value
@@ -1095,6 +1202,8 @@ class DataPlotter():
                 self.lines5g.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma7 value
                 self.lines5g.set_label('Vol_MA_10m' ) 
                 i=i+1   
+                legend1.append(self.lines5f) 
+                legend2.append(self.lines5g)
             if '30m' in q[4]['cmd']['movingave']:
                 self.lines5h.set_xdata(q[4]['data']["time"])
                 self.lines5h.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma8 value
@@ -1103,6 +1212,8 @@ class DataPlotter():
                 self.lines5i.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma8 value
                 self.lines5i.set_label('Vol_MA_30m')  
                 i=i+1      
+                legend1.append(self.lines5h) 
+                legend2.append(self.lines5i)
             if '1h' in q[4]['cmd']['movingave']:
                 self.lines5j.set_xdata(q[4]['data']["time"])
                 self.lines5j.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma9 value
@@ -1110,7 +1221,8 @@ class DataPlotter():
                 self.lines5k.set_xdata(q[4]['data']["time"])
                 self.lines5k.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma9 value
                 self.lines5k.set_label('Vol_MA_1h')   
-              
+                legend1.append(self.lines5j) 
+                legend2.append(self.lines5k)
             self.axarr[8].set_ylim(0.5 * min(q[4]['data']['price']), 1.5 * max(q[4]['data']['price']))
             self.axarr[9].set_ylim(0, 1.5 * max(q[4]['data']['vol']))
             
@@ -1121,9 +1233,9 @@ class DataPlotter():
                 self.axarr[9].set_xticks([matplotlib.dates.num2date(q[4]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[4]['cmd']['interval'])) for i in range(10)])                  
                 self.axarr[9].set_xticklabels([(matplotlib.dates.num2date(q[4]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[4]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
             
-            self.axarr[8].set_title('id:5, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[4]['cmd']['symbol'], q[4]['cmd']['type'], q[4]['cmd']['interval'], q[4]['data']['price'][-1], q[4]['data']['vol'][-1])) 
-            self.axarr[8].legend(fontsize='small')
-            self.axarr[9].legend(fontsize='x-small')
+            self.axarr[8].set_title('id:5, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[4]['cmd']['symbol'], q[4]['cmd']['type'], q[4]['cmd']['interval'], q[4]['data']['price'][-1], q[4]['data']['vol'][-1]),y=0.8) 
+            self.axarr[8].legend(handles=legend1,fontsize='small')
+            self.axarr[9].legend(handles=legend2,fontsize='x-small')
             
         
         # Update 6th subplot data
@@ -1135,6 +1247,9 @@ class DataPlotter():
             self.lines62.set_ydata(q[5]['data']['vol'])
             self.lines62.set_label('vol')
             i=0
+            legend1=[];legend2=[]
+            legend1.append(self.lines61) 
+            legend2.append(self.lines62)
             if '1s' in q[5]['cmd']['movingave']:
                 self.lines63.set_xdata(q[5]['data']["time"])      
                 self.lines63.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma1 value    
@@ -1142,7 +1257,9 @@ class DataPlotter():
                 self.lines64.set_xdata(q[5]['data']["time"])
                 self.lines64.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma1 vol
                 self.lines64.set_label('Vol_MA_1s') 
-                i=i+1     
+                i=i+1
+                legend1.append(self.lines63) 
+                legend2.append(self.lines64)     
             if '5s' in q[5]['cmd']['movingave']:
                 self.lines65.set_xdata(q[5]['data']["time"])
                 self.lines65.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma2 value
@@ -1150,7 +1267,9 @@ class DataPlotter():
                 self.lines66.set_xdata(q[5]['data']["time"])
                 self.lines66.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma2 vol
                 self.lines66.set_label('Vol_MA_5s' )  
-                i=i+1  
+                i=i+1
+                legend1.append(self.lines65) 
+                legend2.append(self.lines66)  
             if '10s' in q[5]['cmd']['movingave']:
                 self.lines67.set_xdata(q[5]['data']["time"])
                 self.lines67.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma3 value
@@ -1159,6 +1278,8 @@ class DataPlotter():
                 self.lines68.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma3 vol
                 self.lines68.set_label('Vol_MA_10s')
                 i=i+1
+                legend1.append(self.lines67) 
+                legend2.append(self.lines68)
             if '30s' in q[5]['cmd']['movingave']:
                 self.lines69.set_xdata(q[5]['data']["time"])
                 self.lines69.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma4 value
@@ -1167,6 +1288,8 @@ class DataPlotter():
                 self.lines6a.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma4 vol
                 self.lines6a.set_label('Vol_MA_30s' )
                 i=i+1
+                legend1.append(self.lines69) 
+                legend2.append(self.lines6a)
             if '1m' in q[5]['cmd']['movingave']:
                 self.lines6b.set_xdata(q[5]['data']["time"])
                 self.lines6b.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma5 value
@@ -1175,6 +1298,8 @@ class DataPlotter():
                 self.lines6c.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma5 vol
                 self.lines6c.set_label('Vol_MA_1m')
                 i=i+1
+                legend1.append(self.lines6b) 
+                legend2.append(self.lines6c)
             if '5m' in q[5]['cmd']['movingave']:
                 self.lines6d.set_xdata(q[5]['data']["time"])
                 self.lines6d.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma6 value
@@ -1183,6 +1308,8 @@ class DataPlotter():
                 self.lines6e.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma6 vol
                 self.lines6e.set_label('Vol_MA_5m' ) 
                 i=i+1 
+                legend1.append(self.lines6d) 
+                legend2.append(self.lines6e)
             if '10m' in q[5]['cmd']['movingave']:
                 self.lines6f.set_xdata(q[5]['data']["time"])
                 self.lines6f.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma7 value
@@ -1191,6 +1318,8 @@ class DataPlotter():
                 self.lines6g.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma7 value
                 self.lines6g.set_label('Vol_MA_10m' )  
                 i=i+1  
+                legend1.append(self.lines6f) 
+                legend2.append(self.lines6g)
             if '30m' in q[5]['cmd']['movingave']:
                 self.lines6h.set_xdata(q[5]['data']["time"])
                 self.lines6h.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma8 value
@@ -1199,6 +1328,8 @@ class DataPlotter():
                 self.lines6i.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma8 value
                 self.lines6i.set_label('Vol_MA_30m') 
                 i=i+1       
+                legend1.append(self.lines6h) 
+                legend2.append(self.lines6i)
             if '1h' in q[5]['cmd']['movingave']:
                 self.lines6j.set_xdata(q[5]['data']["time"])
                 self.lines6j.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma9 value
@@ -1206,7 +1337,9 @@ class DataPlotter():
                 self.lines6k.set_xdata(q[5]['data']["time"])
                 self.lines6k.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma9 value
                 self.lines6k.set_label('Vol_MA_1h')   
-              
+                legend1.append(self.lines6j) 
+                legend2.append(self.lines6k)
+                
             self.axarr[10].set_ylim(0.5 * min(q[5]['data']['price']), 1.5 * max(q[5]['data']['price']))
             self.axarr[11].set_ylim(0, 1.5 * max(q[5]['data']['vol']))
             
@@ -1217,13 +1350,14 @@ class DataPlotter():
                 self.axarr[11].set_xticks([matplotlib.dates.num2date(q[5]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[5]['cmd']['interval'])) for i in range(10)])                  
                 self.axarr[11].set_xticklabels([(matplotlib.dates.num2date(q[5]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[5]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
             
-            self.axarr[10].set_title('id:6, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[5]['cmd']['symbol'], q[5]['cmd']['type'], q[5]['cmd']['interval'], q[5]['data']['price'][-1], q[5]['data']['vol'][-1])) 
-            self.axarr[10].legend(fontsize='small')
-            self.axarr[11].legend(fontsize='x-small')
+            self.axarr[10].set_title('id:6, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[5]['cmd']['symbol'], q[5]['cmd']['type'], q[5]['cmd']['interval'], q[5]['data']['price'][-1], q[5]['data']['vol'][-1]),y=0.8) 
+            self.axarr[10].legend(handles=legend1,fontsize='small')
+            self.axarr[11].legend(handles=legend2,fontsize='x-small')
             
                  
         # auto rescale
         for i in self.axarr:
+            print self.axarr.index(i)
             i.relim()
             i.autoscale_view()
 
@@ -1246,8 +1380,8 @@ if __name__ == "__main__":
     t = threading.Thread(target=server.serve_forever)
     t.daemon = True  # ctrl+c kill the main thread only. Need put sub-thread in daemon mode so that can be killed by ctrl+c
     t.start()
-
-    plot.go()  # need run in main thread,so replace start()
+    plot.start()
+#     plot.go()  # need run in main thread,so replace start()
 
 
     
