@@ -138,7 +138,11 @@ def scrape_nasdaq(symbol):
     if soup.find("a", {"id": "etfdetaillink"}):
         return None
 
-    header = soup.find("div", {"id": "qwidget_pageheader"}).h1.text
+    pageheader = soup.find("div", {"id": "qwidget_pageheader"})
+    if pageheader==None:
+        return data
+
+    header = pageheader.h1.text
     name = header[:header.rindex("Stock")].strip()
     data["name"] = name
 
@@ -191,7 +195,11 @@ def scrape_ipo(url):
     for row in rows:
         key = row.td.text.strip()
         if key == "Share Price":
-            data["price"] = float(row.find_all("td")[1].text.strip("$"))
+            value = row.find_all("td")[1].text.strip("$")
+            try:
+                data["price"] = float(value) if "-" not in value else sum([float(i) for i in value.split("-")])/2.0
+            except:
+                data["price"] = 0.0
         elif key == "Status":
             data["ipo_date"] = row.find_all("td")[1].text.split("(")[1].strip(")")
         elif key == "Shares Offered":
