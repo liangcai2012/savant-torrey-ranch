@@ -206,7 +206,10 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
 
     def delfromQueue(self, ID):
         global q
-        del q[ID]
+        if len(q)>0:
+            del q[ID]
+        else:
+            print 'q is already empty, can not del anymore!!!'
     
     def mvInQueue(self, ID, pos):       
         global q
@@ -223,9 +226,12 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
     def listQueue(self):
         global q
         i = 1
-        for p in q: 
-            print '\n##', i, p['cmd']['symbol'], p['cmd']['type'], p['cmd']['price'], p['cmd']['movingave'], p['cmd']['interval'],
-            i += 1  
+        if len(q) ==0:
+            print "q is empty now!"
+        else:
+            for p in q: 
+                print '\n##', i, p['cmd']['symbol'], p['cmd']['type'], p['cmd']['price'], p['cmd']['movingave'], p['cmd']['interval'],
+                i += 1  
 
 
 # global func    
