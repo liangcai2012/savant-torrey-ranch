@@ -12,8 +12,11 @@ log = getLogger("fetcher", level="INFO")
 
 class FetcherCaller:
 
-    def __init__(self, json_request):
-        self.request = json_request+"\n"
+    def __init__(self, json_request=None):
+        if json_request != None:
+            self.request = json_request+"\n"
+        else:
+            self.request = None
         self.connect()
 
     def connect(self):

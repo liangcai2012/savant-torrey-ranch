@@ -6,3 +6,5 @@
 *.log
 *.db
 venv
+.metadata
+data

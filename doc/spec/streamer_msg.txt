@@ -1,0 +1,122 @@
+Commands handled by Streamer
+Potential caller:
+1) Viewer
+2) Strategy worker
+
+
+msg 1: subscribe a client
+request:
+
+{
+    "requst": {
+        "command": "subscribe",
+        "client": "strategy1",
+        "symlist": [
+            "QQQ",
+            "SPY"
+        ]
+    }
+}
+
+response:
+{
+    "response":{
+       "errcode":0
+    }
+}
+or
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
+note 1: the value of "client" is a unique name. It is not a one-to-one mapping of the caller. One caller (such as viewer) can have multiple clients for different groups (to get different interval or mask)
+
+note 2: subscription is not incremental. When the streamer receives this message, the previous subscribed symbols (not included in the new list) are all unsubscribed. 
+
+
+note 3: The response does not reflect whether any symbol are actually subscribed to ActiveTick server because ATAPI does not return that information immediately. The caller will find this out through the output of the update message (see msg 3) 
+
+
+msg 2: unsubscribe all symbols belonging to a client
+request:
+{
+    "requst": {
+        "command": "unsubscribe",
+        "client": "strategy1"
+    }
+}
+
+response:
+{
+    "response":{
+       "errcode": 0
+    }
+}
+or
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
+note 1: This message is equivalent to sending a subscribe message with empty symbol list. 
+
+msg 3: feed bar data and/or moving average data to the caller. 
+
+{
+    "requst": {
+        "command": "update",
+        "client": "strategy1",
+        "interval": "1s",
+        "bar_mask":  "11111",
+		"ma_mask": "111111111"
+    }
+}
+
+response:
+{
+    "response":{
+	"client": "strategy1"
+       	"timestamp": "hhmmss",
+	"interval": "1s",
+       	"data": [
+		{
+			"symbol": "QQQ",
+			"bar": "12.20,12.24,12.00,12.13,200",
+			"ma":"aveprice:avevol,aveprice:avevol,aveprice:avevol", //comma separated 
+			"delay": "hhmmss-price-vol;yymmss-price-vol", //comma seperated
+		}
+	]
+    }
+}
+
+or
+
+{
+    "response":{
+       "errcode": "-1",
+       "errmsg": "xxxxx"
+    }
+}
+
+note 1: interval must be a value in ["1s", "5s", "10s", "30s", "1m", "5m", "10m", "30m", "1h"]. It decides the granularity of bar data to be returned.  
+
+note 2: bar_mask is a bitmap of 0 or 1 (only lowest 5 bits are used) representing mask of "open,high,low,close,volume". 
+
+note 3: ma_mask is a bitmap of 0 or 1 (only lowest 9 bits are used) representing the moving average of intervals (from 1s to 1h). Moving average interval must be bigger or equal to the interval in the request. 
+
+note 4: interval, bar_mask and ma_mask fields are optional. They are only needed in the first update message or when clients want to change these values. ma_mask is empty by default. bar_mask currently is not being used by streamer (as it returns all bar data anyway). Interval field must be specified in the first update message for each client. 
+ 
+note 5: client and interval is included in the response to support multiple clients in a caller. 
+
+note 6: returned data is the most recent and "accurate" data that the streamer owns. The timestamp field means the last second of the current "accurate" data (at most 1-2s delay comparing with the actual tick data). The word "accurate" is quoted because it is based on the assumption that ATAPI tick has at most 1s second. If this assumption is not true, all tick data with more than 1s delay will be attached in the "delay" field. 
+
+note 7: returned data be a list of records, each record contains symbol, bar data, moving average data and delayed tick data. "bar", "ma" and "delay" fields might be optional, depending on the request.
+
+note 8: when requesting bar data only, caller should send this message with the same interval as the bar interval. For example, if bar data is 1m long, then the caller should send the request every minute. However, due to clock drift, the caller might get same bar data via two consecutive messages. In this case, the caller need to resend the second message immediately and adjust its timer.  
+note 9: The stream should skip all empty data set. i.e if there is no data from second 2 to second 5, then update should return data of second 6 after data of second 1.A client of the Stream Should check the timestamp in the response data package to know if there are data set skip to correctly to processs the data.
+
