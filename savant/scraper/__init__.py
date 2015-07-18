@@ -138,7 +138,11 @@ def scrape_nasdaq(symbol):
     if soup.find("a", {"id": "etfdetaillink"}):
         return None
 
-    header = soup.find("div", {"id": "qwidget_pageheader"}).h1.text
+    pageheader = soup.find("div", {"id": "qwidget_pageheader"})
+    if pageheader==None:
+        return data
+
+    header = pageheader.h1.text
     name = header[:header.rindex("Stock")].strip()
     data["name"] = name
 
