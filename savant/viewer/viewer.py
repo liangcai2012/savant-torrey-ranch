@@ -301,7 +301,7 @@ class DataReceiver(threading.Thread):
                                        
         elif self.dataType == 'r':
             previousTimeStmp = ''
-            next_call = time.time() 
+            next_call = time.time()+0.00001 
 #             while not self.stopped.wait(next_call - time.time()):  #timer compensate   
             while not time.sleep(next_call - time.time()):         
 #                 print "##Debug: price type is %s" %self.priceType
@@ -315,7 +315,10 @@ class DataReceiver(threading.Thread):
                         data = loads(self.dataapi.update(self.interval, self.priceType, self.maType))
                     
                     self.fillDataQueue(q, data)  # q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[[20:1700, 19.8:1800],[19.8:1600, 19.9:1600],..]}                   
+<<<<<<< HEAD
+=======
 #                     print '\n ##for debug: q now is:', q
+>>>>>>> master
                     previousTimeStmp = data['timestamp']
                 t2=time.time()
 #                 print 'recv data colaps time:' ,t2-t1
@@ -341,6 +344,7 @@ class DataReceiver(threading.Thread):
 #                     print 'barTyp and maTyp are:', barTyp, maTyp
 #                     print 'loop check to items in q, now is:', q1
                     # print "####### current thread params:",self.interval,sym,bar,ma,self.dataType 
+                    print "maType:", maTyp, "ma: ", ma
                     if (q1['cmd']['interval'] == self.interval) and  (q1['cmd']['symbol'] == sym) and (barTyp in bar) and (q1['cmd']['type'] == self.dataType) and (maTyp.issubset(ma)):
 #                         print '\n found matched item in q'
                         idx = q.index(q1)
@@ -656,23 +660,70 @@ class DataPlotter():
             print 'invalid subplot # !!!'        
         
          
+#LC: There was a bug: if plotData takes more than 1 second, next_call +1 - time.time() can be negative. this will cause a except in time.sleep()
     def go(self):  
         global q
         print '#########init q is: ', q
+<<<<<<< HEAD
+        next_call = time.time() + 0.00001 
+        a = next_call - time.time()
+        while not time.sleep(a):  
+=======
         next_call = time.time() 
         while not time.sleep(next_call - time.time()):  # somehow need add +0.00001 to remove errno22 exception in Linux env. For Windows, we don't need add this          
 #             print '^^^^^^^^^^^^'
             t1=time.time()
+>>>>>>> master
             if  len(q) != 0  :
-#                 print "\n@@@@@@@@@@@@@@@@@ under plotting q is:", q
                 self.plotData()
+<<<<<<< HEAD
+            next_call = next_call + 1  # plot all subplots every 1s
+            a = next_call - time.time()
+            if a<0:
+                print "plotData exceeds one second!"
+                a = 0
+
+=======
             t2=time.time()
             print "plot colaps time:",t2-t1
             next_call = next_call + 2  # some instable found if set to 1s plotting rate.  for 2s rate, it's ok.
+>>>>>>> master
                 
                 
     def plotData(self):
         global q  # q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[['20:1700', '19.8:1800'],['19.8:1600', '19.9:1600'],..]}
+<<<<<<< HEAD
+        # Update plot data 
+        print "test dirty:", q[0]['dirty']
+        if q[0]['dirty'] == True:  # use 'dirty' to check if there is real data inside, otherwise max() not work when q item just changes but before filled any data
+            self.lines11.set_xdata(q[0]['data']["time"])  # to-do: convert string timestamp to plot-able int
+            self.lines11.set_ydata(q[0]['data']['price']) 
+            self.lines11.set_label('price_%s' %q[0]['cmd']["price"])            
+            self.lines12.set_xdata(q[0]['data']["time"])
+            self.lines12.set_ydata(q[0]['data']['vol'])
+            self.lines12.set_label('vol')
+            
+            self.lines13.set_xdata(q[0]['data']["time"])         # to-do: dynamic adjust line number of MA
+            self.lines13.set_ydata([i[0].split(':')[0] for i in q[0]['data']["ma"]])  # ma1 value    # issue: it's better change 'ma' in q as dict, so that here we only need grab ma data from q instead of create new list
+            self.lines13.set_label('MA_%s' %q[0]['cmd']["movingave"][0])
+            
+            self.lines14.set_xdata(q[0]['data']["time"])
+            self.lines14.set_ydata([i[0].split(':')[1] for i in q[0]['data']["ma"]])  # ma1 vol
+            self.lines14.set_label('Vol_MA_%s' %q[0]['cmd']["movingave"][0])
+            
+            self.lines15.set_xdata(q[0]['data']["time"])
+            self.lines15.set_ydata([i[1].split(':')[0] for i in q[0]['data']["ma"]])  # ma2 value
+            self.lines15.set_label('MA_%s' %q[0]['cmd']["movingave"][1])
+            
+            self.lines16.set_xdata(q[0]['data']["time"])
+            self.lines16.set_ydata([i[1].split(':')[1] for i in q[0]['data']["ma"]])  # ma2 vol
+            self.lines16.set_label('Vol_MA_%s' %q[0]['cmd']["movingave"][1])
+            
+            print len(q[0]['data']['price'])
+            self.axarr[0].set_ylim(0.5 * min(q[0]['data']['price']), 1.5 * max(q[0]['data']['price']))  # dynamic adj the y limi here!
+            self.axarr[1].set_ylim(0, 1.5 * max(q[0]['data']['vol']))
+               
+=======
         
         # Update 1st subplot data 
         
@@ -681,6 +732,7 @@ class DataPlotter():
             if len(q) > k and q[k]['dirty'] == True:  # use 'dirty' to check if there is real data inside, otherwise max() not work when q item just changes but before filled any data
 #                 print self.lines[k*20]
 #                 print self.lines
+>>>>>>> master
 
                 self.lines[k*20].set_xdata(q[k]['data']["time"]) 
                 self.lines[k*20].set_ydata(q[k]['data']['price']) 
