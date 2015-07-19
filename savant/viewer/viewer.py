@@ -7,14 +7,14 @@ import threading
 import time
 # import sys
 import matplotlib
-matplotlib.use('TKAgg')
+# matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 plt.ion()
 from matplotlib.finance import *
 import matplotlib.dates as md
 from matplotlib import gridspec
 
-import numpy as np
+import numpy
 # import re
 import dataAPI
 import datetime
@@ -52,7 +52,7 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
                     delStopTime = q[ID]['cmd']['end']
                     RTDataReceiver[delInterval].unsubscribeHistory([delSymbol, delStarTime, delStopTime])  # For history data, this api should not have real effect                           
                 else:
-                    print "unvalid symbol type!!"                           
+                    print "unvalid symbol type!!"			               
                 
                 self.delfromQueue(ID)
                 # need reset followed subplots xlim
@@ -117,7 +117,7 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
                         histRcver.start()    
 #                         plot.reset_xlim_history(pos)      # no need set here, will be setup in plot loop                      
                 
-                    elif(params['type'] == 'r'):  # real time data            
+                    elif(params['type'] == 'r'):  # real time data	    	
                     
                         # if it's new interval  
                         if(RTDataReceiver[interval]) == None:                              
@@ -132,10 +132,10 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
                                 price, ma, vol = self.findCommonPriceMA(interval, params['symbol'])
                                 print '\n #####################debug: add a existing symbol, but different price/MA type###########'
 #                                 print '#####################debug: udpated price/MA is:',price,ma
-                                RTDataReceiver[interval].updatePriceMAtype(price, ma, vol)           
-                            else:  # if it's a new symbol             
+                                RTDataReceiver[interval].updatePriceMAtype(price, ma, vol)   	    
+                            else:  # if it's a new symbol		     
                                 price, ma, vol = self.findCommonPriceMA(interval, params['symbol'])
-                                RTDataReceiver[interval].subscribeRealtime(params['symbol'])                     
+                                RTDataReceiver[interval].subscribeRealtime(params['symbol'])			         
                             # reset xlim of new added plot    
                         plot.reset_xlim_real(pos, True)  # NOTE:need reset the xlim, unless there will be 'blank' in previous x 
                     else:
@@ -173,7 +173,7 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
     def parseCmd(self, cmd):
         params = {'type':None, 'symbol':None, 'interval':None, 'start':None, 'end':None, 'price':None, 'volume':None, 'movingave':None}
         # cmd={}
-#         cmd=loads(self.request.recv(10*1024).strip())     # self.request is the TCP socket connected to the client        
+#         cmd=loads(self.request.recv(10*1024).strip())     # self.request is the TCP socket connected to the client	    
 #         self.request.close()
         print '\n #####################debug:parseCmd started..'
         print cmd  
@@ -252,7 +252,7 @@ class DataReceiver(threading.Thread):
         super(DataReceiver, self).__init__()
         self.running = True
         
-        self.dataapi = dataAPI.DataAPI(client)     
+        self.dataapi = dataAPI.DataAPI(client)	 
         self.interval = params['interval']
         self.dataType = params['type']
         self.priceType = params['price']
@@ -292,7 +292,7 @@ class DataReceiver(threading.Thread):
                                        
         elif self.dataType == 'r':
             previousTimeStmp = ''
-            next_call = time.time()+0.00001 
+            next_call = time.time() 
 #             while not self.stopped.wait(next_call - time.time()):  #timer compensate   
             while not time.sleep(next_call - time.time()):         
 #                 print "##Debug: price type is %s" %self.priceType                
@@ -305,6 +305,7 @@ class DataReceiver(threading.Thread):
                         data = loads(self.dataapi.update(self.interval, self.priceType, self.maType))
                     
                     self.fillDataQueue(q, data)  # q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[[20:1700, 19.8:1800],[19.8:1600, 19.9:1600],..]}                   
+#                     print '\n ##for debug: q now is:', q
                     previousTimeStmp = data['timestamp']
                 next_call = next_call + ConvertInterval(self.interval)
         else:
@@ -328,11 +329,9 @@ class DataReceiver(threading.Thread):
                     print 'barTyp and maTyp are:', barTyp, maTyp
 #                     print 'loop check to items in q, now is:', q1
                     # print "####### current thread params:",self.interval,sym,bar,ma,self.dataType 
-                    print "maType:", maTyp, "ma: ", ma
                     if (q1['cmd']['interval'] == self.interval) and  (q1['cmd']['symbol'] == sym) and (barTyp in bar) and (q1['cmd']['type'] == self.dataType) and (maTyp.issubset(ma)):
 #                         print '\n found matched item in q'
                         idx = q.index(q1)
-                        print '###data[time] size is:',len(q[idx]['data']['time'])
                         if q[idx]['cmd']['type'] == 'r' and len(q[idx]['data']['time']) > 100:  # for realtime data, only keep fix length data,when filled, cut first half part
                             print '*******for debug: current item length exceed limit, cut first half then refill.....'
                             del q[idx]['data']['time'][0:50]
@@ -340,10 +339,10 @@ class DataReceiver(threading.Thread):
                             del q[idx]['data']['vol'][0:50]
                             del q[idx]['data']['ma'][0:50]
                             # reset the xlim after 'cut'
-#                             if idx == 0:
-                            plot.reset_xlim_real(idx, False)
-#                             if idx == 1:
-#                                 plot.reset_xlim_real(1, False)
+                            if idx == 0:
+                                plot.reset_xlim_real(0, False)
+                            if idx == 1:
+                                plot.reset_xlim_real(1, False)
                         
                         q[idx]['data']['time'].append(xdata)
                         q[idx]['data']['price'].append(symData['bar'][barTyp])
@@ -382,29 +381,28 @@ class DataPlotter():
         gs = gridspec.GridSpec(9,3)
         self.axarr.append(plt.subplot(gs[:4,:-1]))  #subplot1
         self.axarr.append(plt.subplot(gs[4:6,:-1])) 
-        plt.setp( self.axarr[0].get_xticklabels(), visible=False)  # invisible vol suplot's x-axes
+        plt.setp( self.axarr[1].get_xticklabels(), visible=False)  # invisible vol suplot's x-axes
         
         self.axarr.append(plt.subplot(gs[:2,-1])) #subplot2
         self.axarr.append(plt.subplot(gs[2,-1]))
-        plt.setp( self.axarr[2].get_xticklabels(), visible=False) 
+        plt.setp( self.axarr[3].get_xticklabels(), visible=False) 
         
         self.axarr.append(plt.subplot(gs[3:5,-1]))  #subplot3
         self.axarr.append(plt.subplot(gs[5,-1]))
-        plt.setp( self.axarr[4].get_xticklabels(), visible=False) 
+        plt.setp( self.axarr[5].get_xticklabels(), visible=False) 
         
         self.axarr.append(plt.subplot(gs[6:8,0])) #subplot4
         self.axarr.append(plt.subplot(gs[-1,0]))
-        plt.setp( self.axarr[6].get_xticklabels(), visible=False) 
+        plt.setp( self.axarr[7].get_xticklabels(), visible=False) 
         
         self.axarr.append(plt.subplot(gs[6:8,1])) #subplot5
         self.axarr.append(plt.subplot(gs[-1,1]))
-        plt.setp( self.axarr[8].get_xticklabels(), visible=False) 
+        plt.setp( self.axarr[9].get_xticklabels(), visible=False) 
         
         self.axarr.append(plt.subplot(gs[6:8,2])) #subplot6
         self.axarr.append(plt.subplot(gs[-1,2]))
-        plt.setp( self.axarr[10].get_xticklabels(), visible=False) 
+        plt.setp( self.axarr[11].get_xticklabels(), visible=False) 
         
-     
         for i in self.axarr:
             i.grid()      # add grid to all subplots
         
@@ -433,7 +431,6 @@ class DataPlotter():
         self.axarr[4].set_xlim(matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time()))), matplotlib.dates.date2num(datetime.datetime.fromtimestamp((time.time()))) + 100)  # we need set xlim here! unless may not see plot cureve because incorrect x-scale
 
 #         plt.tight_layout()
-        
 
     def reset_xlim_real(self, subplot, new=True):  # to deal such case: when subplot change stock, reset this subplot's xlim
         if subplot == 0:  # always keep fix points ploting, not fix 'time', so we need mutiple by interval
@@ -474,27 +471,21 @@ class DataPlotter():
             print 'to implement'        
         
          
-#LC: There was a bug: if plotData takes more than 1 second, next_call +1 - time.time() can be negative. this will cause a except in time.sleep()
     def go(self):  
         global q
         print '#########init q is: ', q
-        next_call = time.time() + 0.00001 
-        a = next_call - time.time()
-        while not time.sleep(a):  
+        next_call = time.time() 
+        while not time.sleep(next_call - time.time()):  # somehow need add +0.00001 to remove errno22 exception in Linux env. For Windows, we don't need add this          
+#             print '^^^^^^^^^^^^'
             if  len(q) != 0  :
+#                 print "\n@@@@@@@@@@@@@@@@@ under plotting q is:", q
                 self.plotData()
             next_call = next_call + 1  # plot all subplots every 1s
-            a = next_call - time.time()
-            if a<0:
-                print "plotData exceeds one second!"
-                a = 0
-
                 
                 
     def plotData(self):
         global q  # q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[['20:1700', '19.8:1800'],['19.8:1600', '19.9:1600'],..]}
         # Update plot data 
-        print "test dirty:", q[0]['dirty']
         if q[0]['dirty'] == True:  # use 'dirty' to check if there is real data inside, otherwise max() not work when q item just changes but before filled any data
             self.lines11.set_xdata(q[0]['data']["time"])  # to-do: convert string timestamp to plot-able int
             self.lines11.set_ydata(q[0]['data']['price']) 
@@ -519,18 +510,12 @@ class DataPlotter():
             self.lines16.set_ydata([i[1].split(':')[1] for i in q[0]['data']["ma"]])  # ma2 vol
             self.lines16.set_label('Vol_MA_%s' %q[0]['cmd']["movingave"][1])
             
-            print len(q[0]['data']['price'])
             self.axarr[0].set_ylim(0.5 * min(q[0]['data']['price']), 1.5 * max(q[0]['data']['price']))  # dynamic adj the y limi here!
             self.axarr[1].set_ylim(0, 1.5 * max(q[0]['data']['vol']))
                
 
             if q[0]['cmd']['type'] == 'h':  # realtime xlim will be set in other block
                 self.reset_xlim_history(0)
-            else:
-                self.axarr[0].set_xticks([matplotlib.dates.num2date(q[0]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[0]['cmd']['interval'])) for i in range(10)])  
-                self.axarr[1].set_xticks([matplotlib.dates.num2date(q[0]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[0]['cmd']['interval'])) for i in range(10)])                  
-                self.axarr[1].set_xticklabels([(matplotlib.dates.num2date(q[0]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[0]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
-            
         # ## set labels
             self.axarr[0].set_title('id:0, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[0]['cmd']['symbol'], q[0]['cmd']['type'], q[0]['cmd']['interval'], q[0]['data']['price'][-1], q[0]['data']['vol'][-1]))
 #             self.axarr[1,0].set_title('id:0, Stock name: %s, type: %s, interval: %s, vol: %2f'  %(q[0]['cmd']['symbol'],q[0]['cmd']['type'],q[0]['cmd']['interval'],q[0]['data']['vol'][-1]))
@@ -539,7 +524,6 @@ class DataPlotter():
             self.axarr[0].legend()
             self.axarr[1].legend(fontsize='small')
             
-           
         # Update 2nd subplot data
         if len(q) > 1 and q[1]['dirty'] == True:  # need check 'dirty' in case there is no real data stored here yet
             self.lines21.set_xdata(q[1]['data']["time"])  # to-do: convert string timestamp to plot-able int
@@ -570,11 +554,6 @@ class DataPlotter():
             
             if q[1]['cmd']['type'] == 'h':
                 self.reset_xlim_history(1)
-            else:
-                self.axarr[2].set_xticks([matplotlib.dates.num2date(q[1]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[1]['cmd']['interval'])) for i in range(10)])  
-                self.axarr[3].set_xticks([matplotlib.dates.num2date(q[1]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[1]['cmd']['interval'])) for i in range(10)])                  
-                self.axarr[3].set_xticklabels([(matplotlib.dates.num2date(q[1]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[1]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
-            
             
             self.axarr[2].set_title('id:1, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[1]['cmd']['symbol'], q[1]['cmd']['type'], q[1]['cmd']['interval'], q[1]['data']['price'][-1], q[1]['data']['vol'][-1])) 
 #             self.axarr[2].set_ylabel('price type: %s' % q[1]['cmd']["price"], color='b')
