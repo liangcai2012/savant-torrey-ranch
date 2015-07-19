@@ -79,7 +79,7 @@ class TradeAnalyzer:
 if __name__ == "__main__":
     from savant.ticker.processors import TickDataProcessor
     ticker = TickDataProcessor()
-    data = ticker.get_ticks("NTRA", "20150702", "20150702", parse_dates=False)
+    data = ticker.get_ticks_by_date("NTRA", "20150702", "20150702", parse_dates=False)
     analyzer = TradeAnalyzer(data)
     print analyzer.get_opening_price()
     print analyzer.get_closing_price()

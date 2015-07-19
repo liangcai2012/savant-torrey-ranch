@@ -1,6 +1,5 @@
-import os, os.path
+import os
 from ConfigParser import ConfigParser, NoSectionError
-
 
 class AttributeDictMixin(object):
     """

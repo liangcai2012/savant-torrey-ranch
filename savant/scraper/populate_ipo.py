@@ -84,7 +84,7 @@ for url in ipo_urls:
             log.error("Unable to download data for %s" % url.symbol)
 
     if exist or fetched:
-        ticks = data_processor.get_ticks(url.symbol, ipo_date, ipo_date)
+        ticks = data_processor.get_ticks_by_date(url.symbol, ipo_date, ipo_date)
         analyzer = TradeAnalyzer(ticks)
         ipo_data["first_opening_price"] = analyzer.get_opening_price()
         ipo_data["first_closing_price"] = analyzer.get_closing_price()
