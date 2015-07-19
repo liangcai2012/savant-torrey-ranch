@@ -1,4 +1,7 @@
 import sqlite3
+import numpy as np
+import matplotlib.pyplot as plt
+
 
 def filter_openPrice(times, year):
 	conn = sqlite3.connect('../../../out/savant.db')
@@ -12,24 +15,25 @@ def filter_openPrice(times, year):
 	return symbollist 
 	
 if __name__ == "__main__":
-	steps = [0, 5, 10, 20, 30, 50, 100]
+	steps = [0, 5, 10, 20, 30, 50, 100, 1000]
+	dist = []
 	print 'year, total ipo, ',
 	for s in steps:
 		print '<'+str(1+s/100.0)+',',
 	print ''
 	years = range(2010, 2016)
 	for y in years:
+		d = []
 		totalnum = len(filter_openPrice(0.1, str(y)))
+		d.append(totalnum)
 		print str(y),
 		print totalnum, 
-
+		hnum = totalnum
 		for s in steps:
 			num = len(filter_openPrice(1+s/100.0, str(y)))
-			print totalnum - num,
-			totalnum = num
+			r = (hnum-num)*1.0/totalnum
+			d.append(r)
+			print "{:.2f}".format(r), 
+			hnum = num
 		print ''
-	#print len(filter_openPrice(1))
-	#for i in range(100): 
-	#	print i/100.0, 
-	#	print len(filter_openPrice(1+i/100.0))
-
+		dist.append(d)
