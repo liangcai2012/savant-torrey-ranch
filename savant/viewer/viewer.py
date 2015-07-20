@@ -18,6 +18,7 @@ import numpy as np
 # import re
 import dataAPI
 import datetime
+import itertools
 
 q = []  # q[{'cmd': {'type':'r','symbol':'QQQ',...}, 'data':{'time':[],'price':[],'vol':[],'ma':[[],[],..]}, 'dirty': True } , {}, ...]
 RTDataReceiver = {}  # this is the dictionary mapping interval to a thread of receiver
@@ -206,7 +207,10 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
 
     def delfromQueue(self, ID):
         global q
-        del q[ID]
+        if len(q)>0:
+            del q[ID]
+        else:
+            print 'q is already empty, can not del anymore!!!'
     
     def mvInQueue(self, ID, pos):       
         global q
@@ -223,9 +227,12 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
     def listQueue(self):
         global q
         i = 1
-        for p in q: 
-            print '\n##', i, p['cmd']['symbol'], p['cmd']['type'], p['cmd']['price'], p['cmd']['movingave'], p['cmd']['interval'],
-            i += 1  
+        if len(q) ==0:
+            print "q is empty now!"
+        else:
+            for p in q: 
+                print '\n##', i, p['cmd']['symbol'], p['cmd']['type'], p['cmd']['price'], p['cmd']['movingave'], p['cmd']['interval'],
+                i += 1  
 
 
 # global func    
@@ -294,7 +301,7 @@ class DataReceiver(threading.Thread):
                                        
         elif self.dataType == 'r':
             previousTimeStmp = ''
-            next_call = time.time() 
+            next_call = time.time()+0.00001 
 #             while not self.stopped.wait(next_call - time.time()):  #timer compensate   
             while not time.sleep(next_call - time.time()):         
 #                 print "##Debug: price type is %s" %self.priceType
@@ -308,7 +315,10 @@ class DataReceiver(threading.Thread):
                         data = loads(self.dataapi.update(self.interval, self.priceType, self.maType))
                     
                     self.fillDataQueue(q, data)  # q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[[20:1700, 19.8:1800],[19.8:1600, 19.9:1600],..]}                   
+<<<<<<< HEAD
+=======
 #                     print '\n ##for debug: q now is:', q
+>>>>>>> master
                     previousTimeStmp = data['timestamp']
                 t2=time.time()
 #                 print 'recv data colaps time:' ,t2-t1
@@ -334,6 +344,7 @@ class DataReceiver(threading.Thread):
 #                     print 'barTyp and maTyp are:', barTyp, maTyp
 #                     print 'loop check to items in q, now is:', q1
                     # print "####### current thread params:",self.interval,sym,bar,ma,self.dataType 
+                    print "maType:", maTyp, "ma: ", ma
                     if (q1['cmd']['interval'] == self.interval) and  (q1['cmd']['symbol'] == sym) and (barTyp in bar) and (q1['cmd']['type'] == self.dataType) and (maTyp.issubset(ma)):
 #                         print '\n found matched item in q'
                         idx = q.index(q1)
@@ -367,11 +378,11 @@ class DataReceiver(threading.Thread):
     
 
 # dataplotter class, single instance
-class DataPlotter(threading.Thread):
-# class DataPlotter():    
-    def __init__(self):
-        super(DataPlotter, self).__init__()
-        self.running = True
+# class DataPlotter(threading.Thread):
+class DataPlotter():    
+#     def __init__(self):
+#         super(DataPlotter, self).__init__()
+#         self.running = True
 
     def launch(self):          
         # Set up of subplots
@@ -413,140 +424,155 @@ class DataPlotter(threading.Thread):
         for i in self.axarr:
             i.grid()      # add grid to all subplots
         
-        # Set up 1st plot
-        self.lines11, = self.axarr[0].plot([], [], 'b-')  # price        
-#         self.ax12=self.axarr[0].twinx()
-        self.lines12, = self.axarr[1].plot([], [], 'r-')  # vol
-        self.lines13, = self.axarr[0].plot([], [], 'g-')  # ma1
-        self.lines14, = self.axarr[1].plot([], [], 'g-')  # ma1_vol
-        self.lines15, = self.axarr[0].plot([], [], 'c-')  # ma2
-        self.lines16, = self.axarr[1].plot([], [], 'c-')  # ma2_vol     
-        self.lines17, = self.axarr[0].plot([], [], 'm-')  # ma3
-        self.lines18, = self.axarr[1].plot([], [], 'm-')  # ma3_vol     
-        self.lines19, = self.axarr[0].plot([], [], 'y-')  # ma4
-        self.lines1a, = self.axarr[1].plot([], [], 'y-')  # ma4_vol     
-        self.lines1b, = self.axarr[0].plot([], [], 'k-')  # ma5
-        self.lines1c, = self.axarr[1].plot([], [], 'k-')  # ma5_vol     
-        self.lines1d, = self.axarr[0].plot([], [], 'co')  # ma6
-        self.lines1e, = self.axarr[1].plot([], [], 'co')  # ma6_vol
-        self.lines1f, = self.axarr[0].plot([], [], 'mo')  # ma7
-        self.lines1g, = self.axarr[1].plot([], [], 'mo')  # ma7_vol
-        self.lines1h, = self.axarr[0].plot([], [], 'yo')  # ma8
-        self.lines1i, = self.axarr[1].plot([], [], 'yo')  # ma8_vol
-        self.lines1j, = self.axarr[0].plot([], [], 'ko')  # ma9
-        self.lines1k, = self.axarr[1].plot([], [], 'ko')  # ma9_vol
-
-#         self.axarr[0,0].set_autoscaley_on(True)    # auto-scale on y
-
-        # Set up 2nd plot 
-        self.lines21, = self.axarr[2].plot([], [], 'b-')  # price
-        self.lines22, = self.axarr[3].plot([], [], 'r-')  # vol
-        self.lines23, = self.axarr[2].plot([], [], 'g-')  # ma1
-        self.lines24, = self.axarr[3].plot([], [], 'g-')  # ma1_vol
-        self.lines25, = self.axarr[2].plot([], [], 'c-')  # ma2
-        self.lines26, = self.axarr[3].plot([], [], 'c-')  # ma2_vol
-        self.lines27, = self.axarr[2].plot([], [], 'm-')  # ma3
-        self.lines28, = self.axarr[3].plot([], [], 'm-')  # ma3_vol
-        self.lines29, = self.axarr[2].plot([], [], 'y-')  # ma4
-        self.lines2a, = self.axarr[3].plot([], [], 'y-')  # ma4_vol
-        self.lines2b, = self.axarr[2].plot([], [], 'k-')  # ma5
-        self.lines2c, = self.axarr[3].plot([], [], 'k-')  # ma5_vol
-        self.lines2d, = self.axarr[2].plot([], [], 'co')  # ma6
-        self.lines2e, = self.axarr[3].plot([], [], 'co')  # ma6_vol
-        self.lines2f, = self.axarr[2].plot([], [], 'mo')  # ma7
-        self.lines2g, = self.axarr[3].plot([], [], 'mo')  # ma7_vol
-        self.lines2h, = self.axarr[2].plot([], [], 'yo')  # ma8
-        self.lines2i, = self.axarr[3].plot([], [], 'yo')  # ma8_vol
-        self.lines2j, = self.axarr[2].plot([], [], 'ko')  # ma9
-        self.lines2k, = self.axarr[3].plot([], [], 'ko')  # ma9_vol
+        # Set up all 6 subplot's line
+        self.lines=[]
+        last_idx=0
+        j=0
+        marker = itertools.cycle(('b-', 'g-', 'c-', 'm-','y-','k-','co','mo','yo','ko')) 
+        for i in range(10*6):
+            if i/10>last_idx:    # for every 6 loops, axarr[] idx increase, for exampe: axarr[0],axarr[1] -> axarr[2],axarr[3] 
+                print i,i/10+j+1,i/10+j+2
+                self.lines.append(self.axarr[i/10+j+1].plot([], [], marker.next())[0])
+                self.lines.append(self.axarr[i/10+j+2].plot([], [], marker.next())[0])
+                j=j+1
+            else:
+                print i,i/10+j,i/10+j+1
+                self.lines.append(self.axarr[i/10+j].plot([], [], marker.next())[0])
+                self.lines.append(self.axarr[i/10+j+1].plot([], [], marker.next())[0])
+            last_idx=i/10
         
-        # Set up 3rd plot 
-        self.lines31, = self.axarr[4].plot([], [], 'b-')  # price
-        self.lines32, = self.axarr[5].plot([], [], 'r-')  # vol
-        self.lines33, = self.axarr[4].plot([], [], 'g-')  # ma1
-        self.lines34, = self.axarr[5].plot([], [], 'g-')  # ma1_vol
-        self.lines35, = self.axarr[4].plot([], [], 'c-')  # ma2
-        self.lines36, = self.axarr[5].plot([], [], 'c-')  # ma2_vol
-        self.lines37, = self.axarr[4].plot([], [], 'm-')  # ma3
-        self.lines38, = self.axarr[5].plot([], [], 'm-')  # ma3_vol
-        self.lines39, = self.axarr[4].plot([], [], 'y-')  # ma4
-        self.lines3a, = self.axarr[5].plot([], [], 'y-')  # ma4_vol
-        self.lines3b, = self.axarr[4].plot([], [], 'k-')  # ma5
-        self.lines3c, = self.axarr[5].plot([], [], 'k-')  # ma5_vol
-        self.lines3d, = self.axarr[4].plot([], [], 'co')  # ma6
-        self.lines3e, = self.axarr[5].plot([], [], 'co')  # ma6_vol
-        self.lines3f, = self.axarr[4].plot([], [], 'mo')  # ma7
-        self.lines3g, = self.axarr[5].plot([], [], 'mo')  # ma7_vol
-        self.lines3h, = self.axarr[4].plot([], [], 'yo')  # ma8
-        self.lines3i, = self.axarr[5].plot([], [], 'yo')  # ma8_vol
-        self.lines3j, = self.axarr[4].plot([], [], 'ko')  # ma9
-        self.lines3k, = self.axarr[5].plot([], [], 'ko')  # ma9_vol
-        
-        # Set up 4th plot 
-        self.lines41, = self.axarr[6].plot([], [], 'b-')  # price
-        self.lines42, = self.axarr[7].plot([], [], 'r-')  # vol
-        self.lines43, = self.axarr[6].plot([], [], 'g-')  # ma1
-        self.lines44, = self.axarr[7].plot([], [], 'g-')  # ma1_vol
-        self.lines45, = self.axarr[6].plot([], [], 'c-')  # ma2
-        self.lines46, = self.axarr[7].plot([], [], 'c-')  # ma2_vol
-        self.lines47, = self.axarr[6].plot([], [], 'm-')  # ma3
-        self.lines48, = self.axarr[7].plot([], [], 'm-')  # ma3_vol
-        self.lines49, = self.axarr[6].plot([], [], 'y-')  # ma4
-        self.lines4a, = self.axarr[7].plot([], [], 'y-')  # ma4_vol
-        self.lines4b, = self.axarr[6].plot([], [], 'k-')  # ma5
-        self.lines4c, = self.axarr[7].plot([], [], 'k-')  # ma5_vol
-        self.lines4d, = self.axarr[6].plot([], [], 'co')  # ma6
-        self.lines4e, = self.axarr[7].plot([], [], 'co')  # ma6_vol
-        self.lines4f, = self.axarr[6].plot([], [], 'mo')  # ma7
-        self.lines4g, = self.axarr[7].plot([], [], 'mo')  # ma7_vol
-        self.lines4h, = self.axarr[6].plot([], [], 'yo')  # ma8
-        self.lines4i, = self.axarr[7].plot([], [], 'yo')  # ma8_vol
-        self.lines4j, = self.axarr[6].plot([], [], 'ko')  # ma9
-        self.lines4k, = self.axarr[7].plot([], [], 'ko')  # ma9_vol
-        
-        # Set up 5th plot 
-        self.lines51, = self.axarr[8].plot([], [], 'b-')  # price
-        self.lines52, = self.axarr[9].plot([], [], 'r-')  # vol
-        self.lines53, = self.axarr[8].plot([], [], 'g-')  # ma1
-        self.lines54, = self.axarr[9].plot([], [], 'g-')  # ma1_vol
-        self.lines55, = self.axarr[8].plot([], [], 'c-')  # ma2
-        self.lines56, = self.axarr[9].plot([], [], 'c-')  # ma2_vol
-        self.lines57, = self.axarr[8].plot([], [], 'm-')  # ma3
-        self.lines58, = self.axarr[9].plot([], [], 'm-')  # ma3_vol
-        self.lines59, = self.axarr[8].plot([], [], 'y-')  # ma4
-        self.lines5a, = self.axarr[9].plot([], [], 'y-')  # ma4_vol
-        self.lines5b, = self.axarr[8].plot([], [], 'k-')  # ma5
-        self.lines5c, = self.axarr[9].plot([], [], 'k-')  # ma5_vol
-        self.lines5d, = self.axarr[8].plot([], [], 'co')  # ma6
-        self.lines5e, = self.axarr[9].plot([], [], 'co')  # ma6_vol
-        self.lines5f, = self.axarr[8].plot([], [], 'mo')  # ma7
-        self.lines5g, = self.axarr[9].plot([], [], 'mo')  # ma7_vol
-        self.lines5h, = self.axarr[8].plot([], [], 'yo')  # ma8
-        self.lines5i, = self.axarr[9].plot([], [], 'yo')  # ma8_vol
-        self.lines5j, = self.axarr[8].plot([], [], 'ko')  # ma9
-        self.lines5k, = self.axarr[9].plot([], [], 'ko')  # ma9_vol
-        
-        # Set up 6th plot 
-        self.lines61, = self.axarr[10].plot([], [], 'b-')  # price
-        self.lines62, = self.axarr[11].plot([], [], 'r-')  # vol
-        self.lines63, = self.axarr[10].plot([], [], 'g-')  # ma1
-        self.lines64, = self.axarr[11].plot([], [], 'g-')  # ma1_vol
-        self.lines65, = self.axarr[10].plot([], [], 'c-')  # ma2
-        self.lines66, = self.axarr[11].plot([], [], 'c-')  # ma2_vol
-        self.lines67, = self.axarr[10].plot([], [], 'm-')  # ma3
-        self.lines68, = self.axarr[11].plot([], [], 'm-')  # ma3_vol
-        self.lines69, = self.axarr[10].plot([], [], 'y-')  # ma4
-        self.lines6a, = self.axarr[11].plot([], [], 'y-')  # ma4_vol
-        self.lines6b, = self.axarr[10].plot([], [], 'k-')  # ma5
-        self.lines6c, = self.axarr[11].plot([], [], 'k-')  # ma5_vol
-        self.lines6d, = self.axarr[10].plot([], [], 'co')  # ma6
-        self.lines6e, = self.axarr[11].plot([], [], 'co')  # ma6_vol
-        self.lines6f, = self.axarr[10].plot([], [], 'mo')  # ma7
-        self.lines6g, = self.axarr[11].plot([], [], 'mo')  # ma7_vol
-        self.lines6h, = self.axarr[10].plot([], [], 'yo')  # ma8
-        self.lines6i, = self.axarr[11].plot([], [], 'yo')  # ma8_vol
-        self.lines6j, = self.axarr[10].plot([], [], 'ko')  # ma9
-        self.lines6k, = self.axarr[11].plot([], [], 'ko')  # ma9_vol
+#         self.lines11, = self.axarr[0].plot([], [], 'b-')  # price      
+#         self.lines12, = self.axarr[1].plot([], [], 'r-')  # vol
+#         self.lines13, = self.axarr[0].plot([], [], 'g-')  # ma1
+#         self.lines14, = self.axarr[1].plot([], [], 'g-')  # ma1_vol
+#         self.lines15, = self.axarr[0].plot([], [], 'c-')  # ma2
+#         self.lines16, = self.axarr[1].plot([], [], 'c-')  # ma2_vol     
+#         self.lines17, = self.axarr[0].plot([], [], 'm-')  # ma3
+#         self.lines18, = self.axarr[1].plot([], [], 'm-')  # ma3_vol     
+#         self.lines19, = self.axarr[0].plot([], [], 'y-')  # ma4
+#         self.lines1a, = self.axarr[1].plot([], [], 'y-')  # ma4_vol     
+#         self.lines1b, = self.axarr[0].plot([], [], 'k-')  # ma5
+#         self.lines1c, = self.axarr[1].plot([], [], 'k-')  # ma5_vol     
+#         self.lines1d, = self.axarr[0].plot([], [], 'co')  # ma6
+#         self.lines1e, = self.axarr[1].plot([], [], 'co')  # ma6_vol
+#         self.lines1f, = self.axarr[0].plot([], [], 'mo')  # ma7
+#         self.lines1g, = self.axarr[1].plot([], [], 'mo')  # ma7_vol
+#         self.lines1h, = self.axarr[0].plot([], [], 'yo')  # ma8
+#         self.lines1i, = self.axarr[1].plot([], [], 'yo')  # ma8_vol
+#         self.lines1j, = self.axarr[0].plot([], [], 'ko')  # ma9
+#         self.lines1k, = self.axarr[1].plot([], [], 'ko')  # ma9_vol
+# 
+# #         self.axarr[0,0].set_autoscaley_on(True)    # auto-scale on y
+# 
+#         # Set up 2nd plot 
+#         self.lines21, = self.axarr[2].plot([], [], 'b-')  # price
+#         self.lines22, = self.axarr[3].plot([], [], 'r-')  # vol
+#         self.lines23, = self.axarr[2].plot([], [], 'g-')  # ma1
+#         self.lines24, = self.axarr[3].plot([], [], 'g-')  # ma1_vol
+#         self.lines25, = self.axarr[2].plot([], [], 'c-')  # ma2
+#         self.lines26, = self.axarr[3].plot([], [], 'c-')  # ma2_vol
+#         self.lines27, = self.axarr[2].plot([], [], 'm-')  # ma3
+#         self.lines28, = self.axarr[3].plot([], [], 'm-')  # ma3_vol
+#         self.lines29, = self.axarr[2].plot([], [], 'y-')  # ma4
+#         self.lines2a, = self.axarr[3].plot([], [], 'y-')  # ma4_vol
+#         self.lines2b, = self.axarr[2].plot([], [], 'k-')  # ma5
+#         self.lines2c, = self.axarr[3].plot([], [], 'k-')  # ma5_vol
+#         self.lines2d, = self.axarr[2].plot([], [], 'co')  # ma6
+#         self.lines2e, = self.axarr[3].plot([], [], 'co')  # ma6_vol
+#         self.lines2f, = self.axarr[2].plot([], [], 'mo')  # ma7
+#         self.lines2g, = self.axarr[3].plot([], [], 'mo')  # ma7_vol
+#         self.lines2h, = self.axarr[2].plot([], [], 'yo')  # ma8
+#         self.lines2i, = self.axarr[3].plot([], [], 'yo')  # ma8_vol
+#         self.lines2j, = self.axarr[2].plot([], [], 'ko')  # ma9
+#         self.lines2k, = self.axarr[3].plot([], [], 'ko')  # ma9_vol
+#         
+#         # Set up 3rd plot 
+#         self.lines31, = self.axarr[4].plot([], [], 'b-')  # price
+#         self.lines32, = self.axarr[5].plot([], [], 'r-')  # vol
+#         self.lines33, = self.axarr[4].plot([], [], 'g-')  # ma1
+#         self.lines34, = self.axarr[5].plot([], [], 'g-')  # ma1_vol
+#         self.lines35, = self.axarr[4].plot([], [], 'c-')  # ma2
+#         self.lines36, = self.axarr[5].plot([], [], 'c-')  # ma2_vol
+#         self.lines37, = self.axarr[4].plot([], [], 'm-')  # ma3
+#         self.lines38, = self.axarr[5].plot([], [], 'm-')  # ma3_vol
+#         self.lines39, = self.axarr[4].plot([], [], 'y-')  # ma4
+#         self.lines3a, = self.axarr[5].plot([], [], 'y-')  # ma4_vol
+#         self.lines3b, = self.axarr[4].plot([], [], 'k-')  # ma5
+#         self.lines3c, = self.axarr[5].plot([], [], 'k-')  # ma5_vol
+#         self.lines3d, = self.axarr[4].plot([], [], 'co')  # ma6
+#         self.lines3e, = self.axarr[5].plot([], [], 'co')  # ma6_vol
+#         self.lines3f, = self.axarr[4].plot([], [], 'mo')  # ma7
+#         self.lines3g, = self.axarr[5].plot([], [], 'mo')  # ma7_vol
+#         self.lines3h, = self.axarr[4].plot([], [], 'yo')  # ma8
+#         self.lines3i, = self.axarr[5].plot([], [], 'yo')  # ma8_vol
+#         self.lines3j, = self.axarr[4].plot([], [], 'ko')  # ma9
+#         self.lines3k, = self.axarr[5].plot([], [], 'ko')  # ma9_vol
+#         
+#         # Set up 4th plot 
+#         self.lines41, = self.axarr[6].plot([], [], 'b-')  # price
+#         self.lines42, = self.axarr[7].plot([], [], 'r-')  # vol
+#         self.lines43, = self.axarr[6].plot([], [], 'g-')  # ma1
+#         self.lines44, = self.axarr[7].plot([], [], 'g-')  # ma1_vol
+#         self.lines45, = self.axarr[6].plot([], [], 'c-')  # ma2
+#         self.lines46, = self.axarr[7].plot([], [], 'c-')  # ma2_vol
+#         self.lines47, = self.axarr[6].plot([], [], 'm-')  # ma3
+#         self.lines48, = self.axarr[7].plot([], [], 'm-')  # ma3_vol
+#         self.lines49, = self.axarr[6].plot([], [], 'y-')  # ma4
+#         self.lines4a, = self.axarr[7].plot([], [], 'y-')  # ma4_vol
+#         self.lines4b, = self.axarr[6].plot([], [], 'k-')  # ma5
+#         self.lines4c, = self.axarr[7].plot([], [], 'k-')  # ma5_vol
+#         self.lines4d, = self.axarr[6].plot([], [], 'co')  # ma6
+#         self.lines4e, = self.axarr[7].plot([], [], 'co')  # ma6_vol
+#         self.lines4f, = self.axarr[6].plot([], [], 'mo')  # ma7
+#         self.lines4g, = self.axarr[7].plot([], [], 'mo')  # ma7_vol
+#         self.lines4h, = self.axarr[6].plot([], [], 'yo')  # ma8
+#         self.lines4i, = self.axarr[7].plot([], [], 'yo')  # ma8_vol
+#         self.lines4j, = self.axarr[6].plot([], [], 'ko')  # ma9
+#         self.lines4k, = self.axarr[7].plot([], [], 'ko')  # ma9_vol
+#         
+#         # Set up 5th plot 
+#         self.lines51, = self.axarr[8].plot([], [], 'b-')  # price
+#         self.lines52, = self.axarr[9].plot([], [], 'r-')  # vol
+#         self.lines53, = self.axarr[8].plot([], [], 'g-')  # ma1
+#         self.lines54, = self.axarr[9].plot([], [], 'g-')  # ma1_vol
+#         self.lines55, = self.axarr[8].plot([], [], 'c-')  # ma2
+#         self.lines56, = self.axarr[9].plot([], [], 'c-')  # ma2_vol
+#         self.lines57, = self.axarr[8].plot([], [], 'm-')  # ma3
+#         self.lines58, = self.axarr[9].plot([], [], 'm-')  # ma3_vol
+#         self.lines59, = self.axarr[8].plot([], [], 'y-')  # ma4
+#         self.lines5a, = self.axarr[9].plot([], [], 'y-')  # ma4_vol
+#         self.lines5b, = self.axarr[8].plot([], [], 'k-')  # ma5
+#         self.lines5c, = self.axarr[9].plot([], [], 'k-')  # ma5_vol
+#         self.lines5d, = self.axarr[8].plot([], [], 'co')  # ma6
+#         self.lines5e, = self.axarr[9].plot([], [], 'co')  # ma6_vol
+#         self.lines5f, = self.axarr[8].plot([], [], 'mo')  # ma7
+#         self.lines5g, = self.axarr[9].plot([], [], 'mo')  # ma7_vol
+#         self.lines5h, = self.axarr[8].plot([], [], 'yo')  # ma8
+#         self.lines5i, = self.axarr[9].plot([], [], 'yo')  # ma8_vol
+#         self.lines5j, = self.axarr[8].plot([], [], 'ko')  # ma9
+#         self.lines5k, = self.axarr[9].plot([], [], 'ko')  # ma9_vol
+#         
+#         # Set up 6th plot 
+#         self.lines61, = self.axarr[10].plot([], [], 'b-')  # price
+#         self.lines62, = self.axarr[11].plot([], [], 'r-')  # vol
+#         self.lines63, = self.axarr[10].plot([], [], 'g-')  # ma1
+#         self.lines64, = self.axarr[11].plot([], [], 'g-')  # ma1_vol
+#         self.lines65, = self.axarr[10].plot([], [], 'c-')  # ma2
+#         self.lines66, = self.axarr[11].plot([], [], 'c-')  # ma2_vol
+#         self.lines67, = self.axarr[10].plot([], [], 'm-')  # ma3
+#         self.lines68, = self.axarr[11].plot([], [], 'm-')  # ma3_vol
+#         self.lines69, = self.axarr[10].plot([], [], 'y-')  # ma4
+#         self.lines6a, = self.axarr[11].plot([], [], 'y-')  # ma4_vol
+#         self.lines6b, = self.axarr[10].plot([], [], 'k-')  # ma5
+#         self.lines6c, = self.axarr[11].plot([], [], 'k-')  # ma5_vol
+#         self.lines6d, = self.axarr[10].plot([], [], 'co')  # ma6
+#         self.lines6e, = self.axarr[11].plot([], [], 'co')  # ma6_vol
+#         self.lines6f, = self.axarr[10].plot([], [], 'mo')  # ma7
+#         self.lines6g, = self.axarr[11].plot([], [], 'mo')  # ma7_vol
+#         self.lines6h, = self.axarr[10].plot([], [], 'yo')  # ma8
+#         self.lines6i, = self.axarr[11].plot([], [], 'yo')  # ma8_vol
+#         self.lines6j, = self.axarr[10].plot([], [], 'ko')  # ma9
+#         self.lines6k, = self.axarr[11].plot([], [], 'ko')  # ma9_vol
         
 #         self.axarr[0,1].set_autoscaley_on(True)  
         for i in self.axarr:
@@ -634,732 +660,785 @@ class DataPlotter(threading.Thread):
             print 'invalid subplot # !!!'        
         
          
-    def run(self):  
+#LC: There was a bug: if plotData takes more than 1 second, next_call +1 - time.time() can be negative. this will cause a except in time.sleep()
+    def go(self):  
         global q
         print '#########init q is: ', q
+<<<<<<< HEAD
+        next_call = time.time() + 0.00001 
+        a = next_call - time.time()
+        while not time.sleep(a):  
+=======
         next_call = time.time() 
         while not time.sleep(next_call - time.time()):  # somehow need add +0.00001 to remove errno22 exception in Linux env. For Windows, we don't need add this          
 #             print '^^^^^^^^^^^^'
             t1=time.time()
+>>>>>>> master
             if  len(q) != 0  :
-#                 print "\n@@@@@@@@@@@@@@@@@ under plotting q is:", q
                 self.plotData()
+<<<<<<< HEAD
+            next_call = next_call + 1  # plot all subplots every 1s
+            a = next_call - time.time()
+            if a<0:
+                print "plotData exceeds one second!"
+                a = 0
+
+=======
             t2=time.time()
             print "plot colaps time:",t2-t1
             next_call = next_call + 2  # some instable found if set to 1s plotting rate.  for 2s rate, it's ok.
+>>>>>>> master
                 
                 
     def plotData(self):
         global q  # q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[['20:1700', '19.8:1800'],['19.8:1600', '19.9:1600'],..]}
-        
-        # Update 1st subplot data 
+<<<<<<< HEAD
+        # Update plot data 
+        print "test dirty:", q[0]['dirty']
         if q[0]['dirty'] == True:  # use 'dirty' to check if there is real data inside, otherwise max() not work when q item just changes but before filled any data
-            self.lines11.set_xdata(q[0]['data']["time"]) 
+            self.lines11.set_xdata(q[0]['data']["time"])  # to-do: convert string timestamp to plot-able int
             self.lines11.set_ydata(q[0]['data']['price']) 
             self.lines11.set_label('price_%s' %q[0]['cmd']["price"])            
             self.lines12.set_xdata(q[0]['data']["time"])
             self.lines12.set_ydata(q[0]['data']['vol'])
             self.lines12.set_label('vol')
             
-            i=0  # used for trace the MA type in 'data'
-            legend1=[];legend2=[]  #used for dynamic udpate legend
-            legend1.append(self.lines11) 
-            legend2.append(self.lines12) 
-            if '1s' in q[0]['cmd']['movingave']:
-                self.lines13.set_xdata(q[0]['data']["time"])       
-                self.lines13.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma1 value    # issue: it's better change 'ma' in q as dict, so that here we only need grab ma data from q instead of create new list(trade off between network bw and local calc)
-                self.lines13.set_label('MA_1s')
-                self.lines14.set_xdata(q[0]['data']["time"])
-                self.lines14.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma1 vol
-                self.lines14.set_label('Vol_MA_1s')
-                i=i+1       
-                legend1.append(self.lines13) 
-                legend2.append(self.lines14)    
-            if '5s' in q[0]['cmd']['movingave']:
-                self.lines15.set_xdata(q[0]['data']["time"])
-                self.lines15.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma2 value
-                self.lines15.set_label('MA_5s')
-                self.lines16.set_xdata(q[0]['data']["time"])
-                self.lines16.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma2 vol
-                self.lines16.set_label('Vol_MA_5s' )
-                i=i+1
-                legend1.append(self.lines15) 
-                legend2.append(self.lines16) 
-            if '10s' in q[0]['cmd']['movingave']:
-                self.lines17.set_xdata(q[0]['data']["time"])
-                self.lines17.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma3 value
-                self.lines17.set_label('MA_10s' )
-                self.lines18.set_xdata(q[0]['data']["time"])
-                self.lines18.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma3 vol
-                self.lines18.set_label('Vol_MA_10s')
-                i=i+1
-                legend1.append(self.lines17) 
-                legend2.append(self.lines18)
-            if '30s' in q[0]['cmd']['movingave']:
-                self.lines19.set_xdata(q[0]['data']["time"])
-                self.lines19.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma4 value
-                self.lines19.set_label('MA_30s' )
-                self.lines1a.set_xdata(q[0]['data']["time"])
-                self.lines1a.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma4 vol
-                self.lines1a.set_label('Vol_MA_30s' )
-                i=i+1
-                legend1.append(self.lines19) 
-                legend2.append(self.lines1a)
-            if '1m' in q[0]['cmd']['movingave']:
-                self.lines1b.set_xdata(q[0]['data']["time"])
-                self.lines1b.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma5 value
-                self.lines1b.set_label('MA_1m' )
-                self.lines1c.set_xdata(q[0]['data']["time"])
-                self.lines1c.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma5 vol
-                self.lines1c.set_label('Vol_MA_1m') 
-                i=i+1
-                legend1.append(self.lines1b) 
-                legend2.append(self.lines1c)
-            if '5m' in q[0]['cmd']['movingave']:
-                self.lines1d.set_xdata(q[0]['data']["time"])
-                self.lines1d.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma6 value
-                self.lines1d.set_label('MA_5m')
-                self.lines1e.set_xdata(q[0]['data']["time"])
-                self.lines1e.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma6 vol
-                self.lines1e.set_label('Vol_MA_5m' ) 
-                i=i+1  
-                legend1.append(self.lines1d) 
-                legend2.append(self.lines1e)         
-            if '10m' in q[0]['cmd']['movingave']:
-                self.lines1f.set_xdata(q[0]['data']["time"])
-                self.lines1f.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma7 value
-                self.lines1f.set_label('MA_10m' )
-                self.lines1g.set_xdata(q[0]['data']["time"])
-                self.lines1g.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma7 value
-                self.lines1g.set_label('Vol_MA_10m' ) 
-                i=i+1 
-                legend1.append(self.lines1f) 
-                legend2.append(self.lines1g)
-            if '30m' in q[0]['cmd']['movingave']:
-                self.lines1h.set_xdata(q[0]['data']["time"])
-                self.lines1h.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma8 value
-                self.lines1h.set_label('MA_30m' )
-                self.lines1i.set_xdata(q[0]['data']["time"])
-                self.lines1i.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma8 value
-                self.lines1i.set_label('Vol_MA_30m')  
-                i=i+1  
-                legend1.append(self.lines1h) 
-                legend2.append(self.lines1i)  
-            if '1h' in q[0]['cmd']['movingave']:
-                self.lines1j.set_xdata(q[0]['data']["time"])
-                self.lines1j.set_ydata([j[i].split(':')[0] for j in q[0]['data']["ma"]])  # ma9 value
-                self.lines1j.set_label('MA_1h' )
-                self.lines1k.set_xdata(q[0]['data']["time"])
-                self.lines1k.set_ydata([j[i].split(':')[1] for j in q[0]['data']["ma"]])  # ma9 value
-                self.lines1k.set_label('Vol_MA_1h') 
-                legend1.append(self.lines1j) 
-                legend2.append(self.lines1k)  
-                
+            self.lines13.set_xdata(q[0]['data']["time"])         # to-do: dynamic adjust line number of MA
+            self.lines13.set_ydata([i[0].split(':')[0] for i in q[0]['data']["ma"]])  # ma1 value    # issue: it's better change 'ma' in q as dict, so that here we only need grab ma data from q instead of create new list
+            self.lines13.set_label('MA_%s' %q[0]['cmd']["movingave"][0])
+            
+            self.lines14.set_xdata(q[0]['data']["time"])
+            self.lines14.set_ydata([i[0].split(':')[1] for i in q[0]['data']["ma"]])  # ma1 vol
+            self.lines14.set_label('Vol_MA_%s' %q[0]['cmd']["movingave"][0])
+            
+            self.lines15.set_xdata(q[0]['data']["time"])
+            self.lines15.set_ydata([i[1].split(':')[0] for i in q[0]['data']["ma"]])  # ma2 value
+            self.lines15.set_label('MA_%s' %q[0]['cmd']["movingave"][1])
+            
+            self.lines16.set_xdata(q[0]['data']["time"])
+            self.lines16.set_ydata([i[1].split(':')[1] for i in q[0]['data']["ma"]])  # ma2 vol
+            self.lines16.set_label('Vol_MA_%s' %q[0]['cmd']["movingave"][1])
+            
+            print len(q[0]['data']['price'])
             self.axarr[0].set_ylim(0.5 * min(q[0]['data']['price']), 1.5 * max(q[0]['data']['price']))  # dynamic adj the y limi here!
             self.axarr[1].set_ylim(0, 1.5 * max(q[0]['data']['vol']))
+               
+=======
+        
+        # Update 1st subplot data 
+        
+        for k in range(6):
+            
+            if len(q) > k and q[k]['dirty'] == True:  # use 'dirty' to check if there is real data inside, otherwise max() not work when q item just changes but before filled any data
+#                 print self.lines[k*20]
+#                 print self.lines
+>>>>>>> master
 
-            if q[0]['cmd']['type'] == 'h':  # realtime xlim will be set in other block
-                self.reset_xlim_history(0)
-            else:
-                self.axarr[0].set_xticks([matplotlib.dates.num2date(q[0]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[0]['cmd']['interval'])) for i in range(10)])  
-                self.axarr[1].set_xticks([matplotlib.dates.num2date(q[0]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[0]['cmd']['interval'])) for i in range(10)])                  
-                self.axarr[1].set_xticklabels([(matplotlib.dates.num2date(q[0]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[0]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
-            
-            ## set labels
-            self.axarr[0].set_title('id:1, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[0]['cmd']['symbol'], q[0]['cmd']['type'], q[0]['cmd']['interval'], q[0]['data']['price'][-1], q[0]['data']['vol'][-1]),y=0.8)
-            self.axarr[0].legend(handles=legend1,fontsize='small')  # auto update legend, in case subplot insertion cause legend number change
-            self.axarr[1].legend(handles=legend2,fontsize='x-small')
-            
-           
-           
-        # Update 2nd subplot data
-        if len(q) > 1 and q[1]['dirty'] == True:  
-            self.lines21.set_xdata(q[1]['data']["time"])  
-            self.lines21.set_ydata(q[1]['data']['price'])  
-            self.lines21.set_label('price_%s' %q[1]['cmd']["price"])       
-            self.lines22.set_xdata(q[1]['data']["time"])
-            self.lines22.set_ydata(q[1]['data']['vol'])
-            self.lines22.set_label('vol')
-            i=0
-            legend1=[];legend2=[]
-            legend1.append(self.lines21) 
-            legend2.append(self.lines22) 
-            if '1s' in q[1]['cmd']['movingave']:
-                self.lines23.set_xdata(q[1]['data']["time"])      
-                self.lines23.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma1 value    
-                self.lines23.set_label('MA_1s')
-                self.lines24.set_xdata(q[1]['data']["time"])
-                self.lines24.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma1 vol
-                self.lines24.set_label('Vol_MA_1s') 
-                i=i+1   
-                legend1.append(self.lines23) 
-                legend2.append(self.lines24)   
-            if '5s' in q[1]['cmd']['movingave']:
-                self.lines25.set_xdata(q[1]['data']["time"])
-                self.lines25.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma2 value
-                self.lines25.set_label('MA_5s')
-                self.lines26.set_xdata(q[1]['data']["time"])
-                self.lines26.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma2 vol
-                self.lines26.set_label('Vol_MA_5s' )
-                i=i+1
-                legend1.append(self.lines25) 
-                legend2.append(self.lines26)     
-            if '10s' in q[1]['cmd']['movingave']:
-                self.lines27.set_xdata(q[1]['data']["time"])
-                self.lines27.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma3 value
-                self.lines27.set_label('MA_10s' )
-                self.lines28.set_xdata(q[1]['data']["time"])
-                self.lines28.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma3 vol
-                self.lines28.set_label('Vol_MA_10s')
-                i=i+1
-                legend1.append(self.lines27) 
-                legend2.append(self.lines28) 
-            if '30s' in q[1]['cmd']['movingave']:
-                self.lines29.set_xdata(q[1]['data']["time"])
-                self.lines29.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma4 value
-                self.lines29.set_label('MA_30s' )
-                self.lines2a.set_xdata(q[1]['data']["time"])
-                self.lines2a.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma4 vol
-                self.lines2a.set_label('Vol_MA_30s' )
-                i=i+1
-                legend1.append(self.lines29) 
-                legend2.append(self.lines2a) 
-            if '1m' in q[1]['cmd']['movingave']:
-                self.lines2b.set_xdata(q[1]['data']["time"])
-                self.lines2b.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma5 value
-                self.lines2b.set_label('MA_1m' )
-                self.lines2c.set_xdata(q[1]['data']["time"])
-                self.lines2c.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma5 vol
-                self.lines2c.set_label('Vol_MA_1m')
-                i=i+1
-                legend1.append(self.lines2b) 
-                legend2.append(self.lines2c) 
-            if '5m' in q[1]['cmd']['movingave']:
-                self.lines2d.set_xdata(q[1]['data']["time"])
-                self.lines2d.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma6 value
-                self.lines2d.set_label('MA_5m')
-                self.lines2e.set_xdata(q[1]['data']["time"])
-                self.lines2e.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma6 vol
-                self.lines2e.set_label('Vol_MA_5m' )  
-                i=i+1
-                legend1.append(self.lines2d) 
-                legend2.append(self.lines2e) 
-            if '10m' in q[1]['cmd']['movingave']:
-                self.lines2f.set_xdata(q[1]['data']["time"])
-                self.lines2f.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma7 value
-                self.lines2f.set_label('MA_10m' )
-                self.lines2g.set_xdata(q[1]['data']["time"])
-                self.lines2g.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma7 value
-                self.lines2g.set_label('Vol_MA_10m' ) 
-                i=i+1
-                legend1.append(self.lines2f) 
-                legend2.append(self.lines2g)    
-            if '30m' in q[1]['cmd']['movingave']:
-                self.lines2h.set_xdata(q[1]['data']["time"])
-                self.lines2h.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma8 value
-                self.lines2h.set_label('MA_30m' )
-                self.lines2i.set_xdata(q[1]['data']["time"])
-                self.lines2i.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma8 value
-                self.lines2i.set_label('Vol_MA_30m') 
-                i=i+1 
-                legend1.append(self.lines2h) 
-                legend2.append(self.lines2i)       
-            if '1h' in q[1]['cmd']['movingave']:
-                self.lines2j.set_xdata(q[1]['data']["time"])
-                self.lines2j.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma9 value
-                self.lines2j.set_label('MA_1h' )
-                self.lines2k.set_xdata(q[1]['data']["time"])
-                self.lines2k.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma9 value
-                self.lines2k.set_label('Vol_MA_1h') 
-                legend1.append(self.lines2j) 
-                legend2.append(self.lines2k)   
-              
-            self.axarr[2].set_ylim(0.5 * min(q[1]['data']['price']), 1.5*max(q[1]['data']['price']))
-            self.axarr[3].set_ylim(0, 1.5 * max(q[1]['data']['vol']))
-            
-            if q[1]['cmd']['type'] == 'h':
-                self.reset_xlim_history(1)
-            else:
-                self.axarr[2].set_xticks([matplotlib.dates.num2date(q[1]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[1]['cmd']['interval'])) for i in range(10)])  
-                self.axarr[3].set_xticks([matplotlib.dates.num2date(q[1]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[1]['cmd']['interval'])) for i in range(10)])                  
-                self.axarr[3].set_xticklabels([(matplotlib.dates.num2date(q[1]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[1]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
-            
-            self.axarr[2].set_title('id:2, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[1]['cmd']['symbol'], q[1]['cmd']['type'], q[1]['cmd']['interval'], q[1]['data']['price'][-1], q[1]['data']['vol'][-1]),y=0.8) 
-            self.axarr[2].legend(handles=legend1,fontsize='x-small')
-            self.axarr[3].legend(handles=legend2,fontsize='xx-small')
-            
-        # Update 3rd subplot data
-        if len(q) > 2 and q[2]['dirty'] == True:  
-            self.lines31.set_xdata(q[2]['data']["time"])  
-            self.lines31.set_ydata(q[2]['data']['price'])  
-            self.lines31.set_label('price_%s' %q[2]['cmd']["price"])       
-            self.lines32.set_xdata(q[2]['data']["time"])
-            self.lines32.set_ydata(q[2]['data']['vol'])
-            self.lines32.set_label('vol')
-            i=0
-            legend1=[];legend2=[]
-            legend1.append(self.lines31) 
-            legend2.append(self.lines32)
-            if '1s' in q[2]['cmd']['movingave']:
-                self.lines33.set_xdata(q[2]['data']["time"])      
-                self.lines33.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma1 value    
-                self.lines33.set_label('MA_1s')
-                self.lines34.set_xdata(q[2]['data']["time"])
-                self.lines34.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma1 vol
-                self.lines34.set_label('Vol_MA_1s')   
-                i=i+1 
-                legend1.append(self.lines33) 
-                legend2.append(self.lines34)  
-            if '5s' in q[2]['cmd']['movingave']:
-                self.lines35.set_xdata(q[2]['data']["time"])
-                self.lines35.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma2 value
-                self.lines35.set_label('MA_5s')
-                self.lines36.set_xdata(q[2]['data']["time"])
-                self.lines36.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma2 vol
-                self.lines36.set_label('Vol_MA_5s' )   
-                i=i+1
-                legend1.append(self.lines35) 
-                legend2.append(self.lines36) 
-            if '10s' in q[2]['cmd']['movingave']:
-                self.lines37.set_xdata(q[2]['data']["time"])
-                self.lines37.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma3 value
-                self.lines37.set_label('MA_10s' )
-                self.lines38.set_xdata(q[2]['data']["time"])
-                self.lines38.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma3 vol
-                self.lines38.set_label('Vol_MA_10s')
-                i=i+1
-                legend1.append(self.lines37) 
-                legend2.append(self.lines38)
-            if '30s' in q[2]['cmd']['movingave']:
-                self.lines39.set_xdata(q[2]['data']["time"])
-                self.lines39.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma4 value
-                self.lines39.set_label('MA_30s' )
-                self.lines3a.set_xdata(q[2]['data']["time"])
-                self.lines3a.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma4 vol
-                self.lines3a.set_label('Vol_MA_30s' )
-                i=i+1
-                legend1.append(self.lines39) 
-                legend2.append(self.lines3a)
-            if '1m' in q[2]['cmd']['movingave']:
-                self.lines3b.set_xdata(q[2]['data']["time"])
-                self.lines3b.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma5 value
-                self.lines3b.set_label('MA_1m' )
-                self.lines3c.set_xdata(q[2]['data']["time"])
-                self.lines3c.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma5 vol
-                self.lines3c.set_label('Vol_MA_1m')
-                i=i+1
-                legend1.append(self.lines3b) 
-                legend2.append(self.lines3c)
-            if '5m' in q[2]['cmd']['movingave']:
-                self.lines3d.set_xdata(q[2]['data']["time"])
-                self.lines3d.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma6 value
-                self.lines3d.set_label('MA_5m')
-                self.lines3e.set_xdata(q[2]['data']["time"])
-                self.lines3e.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma6 vol
-                self.lines3e.set_label('Vol_MA_5m' )
-                i=i+1 
-                legend1.append(self.lines3d) 
-                legend2.append(self.lines3e) 
-            if '10m' in q[2]['cmd']['movingave']:
-                self.lines3f.set_xdata(q[2]['data']["time"])
-                self.lines3f.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma7 value
-                self.lines3f.set_label('MA_10m' )
-                self.lines3g.set_xdata(q[2]['data']["time"])
-                self.lines3g.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma7 value
-                self.lines3g.set_label('Vol_MA_10m' ) 
-                i=i+1   
-                legend1.append(self.lines3f) 
-                legend2.append(self.lines3g)
-            if '30m' in q[2]['cmd']['movingave']:
-                self.lines3h.set_xdata(q[2]['data']["time"])
-                self.lines3h.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma8 value
-                self.lines3h.set_label('MA_30m' )
-                self.lines3i.set_xdata(q[2]['data']["time"])
-                self.lines3i.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma8 value
-                self.lines3i.set_label('Vol_MA_30m')  
-                i=i+1  
-                legend1.append(self.lines3h) 
-                legend2.append(self.lines3i)    
-            if '1h' in q[2]['cmd']['movingave']:
-                self.lines3j.set_xdata(q[2]['data']["time"])
-                self.lines3j.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma9 value
-                self.lines3j.set_label('MA_1h' )
-                self.lines3k.set_xdata(q[2]['data']["time"])
-                self.lines3k.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma9 value
-                self.lines3k.set_label('Vol_MA_1h')   
-                legend1.append(self.lines3j) 
-                legend2.append(self.lines3k)
+                self.lines[k*20].set_xdata(q[k]['data']["time"]) 
+                self.lines[k*20].set_ydata(q[k]['data']['price']) 
+                self.lines[k*20].set_label('price_%s' %q[k]['cmd']["price"])            
+                self.lines[k*20+1].set_xdata(q[k]['data']["time"])
+                self.lines[k*20+1].set_ydata(q[k]['data']['vol'])
+                self.lines[k*20+1].set_label('vol')
                 
-            self.axarr[4].set_ylim(0.5 * min(q[2]['data']['price']), 1.5 * max(q[2]['data']['price']))
-            self.axarr[5].set_ylim(0, 1.5 * max(q[2]['data']['vol']))
-            
-            if q[2]['cmd']['type'] == 'h':
-                self.reset_xlim_history(2)
-            else:
-                self.axarr[4].set_xticks([matplotlib.dates.num2date(q[2]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[2]['cmd']['interval'])) for i in range(10)])  
-                self.axarr[5].set_xticks([matplotlib.dates.num2date(q[2]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[2]['cmd']['interval'])) for i in range(10)])                  
-                self.axarr[5].set_xticklabels([(matplotlib.dates.num2date(q[2]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[2]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
-            
-            self.axarr[4].set_title('id:3, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[2]['cmd']['symbol'], q[2]['cmd']['type'], q[2]['cmd']['interval'], q[2]['data']['price'][-1], q[2]['data']['vol'][-1]),y=0.8) 
-            self.axarr[4].legend(handles=legend1,fontsize='small')
-            self.axarr[5].legend(handles=legend2,fontsize='x-small')
-            
-        
-        # Update 4th subplot data
-        if len(q) > 3 and q[3]['dirty'] == True:  
-            self.lines41.set_xdata(q[3]['data']["time"])  
-            self.lines41.set_ydata(q[3]['data']['price'])  
-            self.lines41.set_label('price_%s' %q[3]['cmd']["price"])       
-            self.lines42.set_xdata(q[3]['data']["time"])
-            self.lines42.set_ydata(q[3]['data']['vol'])
-            self.lines42.set_label('vol')
-            i=0
-            legend1=[];legend2=[]
-            legend1.append(self.lines41) 
-            legend2.append(self.lines42)
-            if '1s' in q[3]['cmd']['movingave']:
-                self.lines43.set_xdata(q[3]['data']["time"])      
-                self.lines43.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma1 value    
-                self.lines43.set_label('MA_1s')
-                self.lines44.set_xdata(q[3]['data']["time"])
-                self.lines44.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma1 vol
-                self.lines44.set_label('Vol_MA_1s')  
-                i=i+1 
-                legend1.append(self.lines43) 
-                legend2.append(self.lines44)   
-            if '5s' in q[3]['cmd']['movingave']:
-                self.lines45.set_xdata(q[3]['data']["time"])
-                self.lines45.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma2 value
-                self.lines45.set_label('MA_5s')
-                self.lines46.set_xdata(q[3]['data']["time"])
-                self.lines46.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma2 vol
-                self.lines46.set_label('Vol_MA_5s' ) 
-                i=i+1  
-                legend1.append(self.lines45) 
-                legend2.append(self.lines46)  
-            if '10s' in q[3]['cmd']['movingave']:
-                self.lines47.set_xdata(q[3]['data']["time"])
-                self.lines47.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma3 value
-                self.lines47.set_label('MA_10s' )
-                self.lines48.set_xdata(q[3]['data']["time"])
-                self.lines48.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma3 vol
-                self.lines48.set_label('Vol_MA_10s')
-                i=i+1
-                legend1.append(self.lines47) 
-                legend2.append(self.lines48) 
-            if '30s' in q[3]['cmd']['movingave']:
-                self.lines49.set_xdata(q[3]['data']["time"])
-                self.lines49.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma4 value
-                self.lines49.set_label('MA_30s' )
-                self.lines4a.set_xdata(q[3]['data']["time"])
-                self.lines4a.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma4 vol
-                self.lines4a.set_label('Vol_MA_30s' )
-                i=i+1
-                legend1.append(self.lines49) 
-                legend2.append(self.lines4a) 
-            if '1m' in q[3]['cmd']['movingave']:
-                self.lines4b.set_xdata(q[3]['data']["time"])
-                self.lines4b.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma5 value
-                self.lines4b.set_label('MA_1m' )
-                self.lines4c.set_xdata(q[3]['data']["time"])
-                self.lines4c.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma5 vol
-                self.lines4c.set_label('Vol_MA_1m')
-                i=i+1
-                legend1.append(self.lines4b) 
-                legend2.append(self.lines4c) 
-            if '5m' in q[3]['cmd']['movingave']:
-                self.lines4d.set_xdata(q[3]['data']["time"])
-                self.lines4d.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma6 value
-                self.lines4d.set_label('MA_5m')
-                self.lines4e.set_xdata(q[3]['data']["time"])
-                self.lines4e.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma6 vol
-                self.lines4e.set_label('Vol_MA_5m' ) 
-                i=i+1 
-                legend1.append(self.lines4d) 
-                legend2.append(self.lines4e) 
-            if '10m' in q[3]['cmd']['movingave']:
-                self.lines4f.set_xdata(q[3]['data']["time"])
-                self.lines4f.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma7 value
-                self.lines4f.set_label('MA_10m' )
-                self.lines4g.set_xdata(q[3]['data']["time"])
-                self.lines4g.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma7 value
-                self.lines4g.set_label('Vol_MA_10m' ) 
-                i=i+1  
-                legend1.append(self.lines4f) 
-                legend2.append(self.lines4g)  
-            if '30m' in q[3]['cmd']['movingave']:
-                self.lines4h.set_xdata(q[3]['data']["time"])
-                self.lines4h.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma8 value
-                self.lines4h.set_label('MA_30m' )
-                self.lines4i.set_xdata(q[3]['data']["time"])
-                self.lines4i.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma8 value
-                self.lines4i.set_label('Vol_MA_30m') 
-                i=i+1      
-                legend1.append(self.lines4h) 
-                legend2.append(self.lines4i)  
-            if '1h' in q[3]['cmd']['movingave']:
-                self.lines4j.set_xdata(q[3]['data']["time"])
-                self.lines4j.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma9 value
-                self.lines4j.set_label('MA_1h' )
-                self.lines4k.set_xdata(q[3]['data']["time"])
-                self.lines4k.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma9 value
-                self.lines4k.set_label('Vol_MA_1h') 
-                legend1.append(self.lines4j) 
-                legend2.append(self.lines4k)   
-              
-            self.axarr[2].set_ylim(0.5 * min(q[3]['data']['price']), 1.5 * max(q[3]['data']['price']))
-            self.axarr[3].set_ylim(0, 1.5 * max(q[3]['data']['vol']))
-            
-            if q[3]['cmd']['type'] == 'h':
-                self.reset_xlim_history(3)
-            else:
-                self.axarr[6].set_xticks([matplotlib.dates.num2date(q[3]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[3]['cmd']['interval'])) for i in range(10)])  
-                self.axarr[7].set_xticks([matplotlib.dates.num2date(q[3]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[3]['cmd']['interval'])) for i in range(10)])                  
-                self.axarr[7].set_xticklabels([(matplotlib.dates.num2date(q[3]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[3]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
-            
-            self.axarr[6].set_title('id:4, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[3]['cmd']['symbol'], q[3]['cmd']['type'], q[3]['cmd']['interval'], q[3]['data']['price'][-1], q[3]['data']['vol'][-1]),y=0.8) 
-            self.axarr[6].legend(handles=legend1,fontsize='small')
-            self.axarr[7].legend(handles=legend2,fontsize='x-small')
-            
-        
-        # Update 5th subplot data
-        if len(q) > 4 and q[4]['dirty'] == True:  
-            self.lines51.set_xdata(q[4]['data']["time"])  
-            self.lines51.set_ydata(q[4]['data']['price'])  
-            self.lines51.set_label('price_%s' %q[4]['cmd']["price"])       
-            self.lines52.set_xdata(q[4]['data']["time"])
-            self.lines52.set_ydata(q[4]['data']['vol'])
-            self.lines52.set_label('vol')
-            i=0
-            legend1=[];legend2=[]
-            legend1.append(self.lines51) 
-            legend2.append(self.lines52) 
-            if '1s' in q[4]['cmd']['movingave']:
-                self.lines53.set_xdata(q[4]['data']["time"])      
-                self.lines53.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma1 value    
-                self.lines53.set_label('MA_1s')
-                self.lines54.set_xdata(q[4]['data']["time"])
-                self.lines54.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma1 vol
-                self.lines54.set_label('Vol_MA_1s') 
-                i=i+1
-                legend1.append(self.lines53) 
-                legend2.append(self.lines54)     
-            if '5s' in q[4]['cmd']['movingave']:
-                self.lines55.set_xdata(q[4]['data']["time"])
-                self.lines55.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma2 value
-                self.lines55.set_label('MA_5s')
-                self.lines56.set_xdata(q[4]['data']["time"])
-                self.lines56.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma2 vol
-                self.lines56.set_label('Vol_MA_5s' ) 
-                i=i+1
-                legend1.append(self.lines55) 
-                legend2.append(self.lines56)   
-            if '10s' in q[4]['cmd']['movingave']:
-                self.lines57.set_xdata(q[4]['data']["time"])
-                self.lines57.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma3 value
-                self.lines57.set_label('MA_10s' )
-                self.lines58.set_xdata(q[4]['data']["time"])
-                self.lines58.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma3 vol
-                self.lines58.set_label('Vol_MA_10s')
-                i=i+1
-                legend1.append(self.lines57) 
-                legend2.append(self.lines58)
-            if '30s' in q[4]['cmd']['movingave']:
-                self.lines59.set_xdata(q[4]['data']["time"])
-                self.lines59.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma4 value
-                self.lines59.set_label('MA_30s' )
-                self.lines5a.set_xdata(q[4]['data']["time"])
-                self.lines5a.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma4 vol
-                self.lines5a.set_label('Vol_MA_30s' )
-                i=i+1
-                legend1.append(self.lines59) 
-                legend2.append(self.lines5a)
-            if '1m' in q[4]['cmd']['movingave']:
-                self.lines5b.set_xdata(q[4]['data']["time"])
-                self.lines5b.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma5 value
-                self.lines5b.set_label('MA_1m' )
-                self.lines5c.set_xdata(q[4]['data']["time"])
-                self.lines5c.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma5 vol
-                self.lines5c.set_label('Vol_MA_1m')
-                i=i+1
-                legend1.append(self.lines5b) 
-                legend2.append(self.lines5c)
-            if '5m' in q[4]['cmd']['movingave']:
-                self.lines5d.set_xdata(q[4]['data']["time"])
-                self.lines5d.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma6 value
-                self.lines5d.set_label('MA_5m')
-                self.lines5e.set_xdata(q[4]['data']["time"])
-                self.lines5e.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma6 vol
-                self.lines5e.set_label('Vol_MA_5m' )  
-                i=i+1
-                legend1.append(self.lines5d) 
-                legend2.append(self.lines5e)
-            if '10m' in q[4]['cmd']['movingave']:
-                self.lines5f.set_xdata(q[4]['data']["time"])
-                self.lines5f.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma7 value
-                self.lines5f.set_label('MA_10m' )
-                self.lines5g.set_xdata(q[4]['data']["time"])
-                self.lines5g.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma7 value
-                self.lines5g.set_label('Vol_MA_10m' ) 
-                i=i+1   
-                legend1.append(self.lines5f) 
-                legend2.append(self.lines5g)
-            if '30m' in q[4]['cmd']['movingave']:
-                self.lines5h.set_xdata(q[4]['data']["time"])
-                self.lines5h.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma8 value
-                self.lines5h.set_label('MA_30m' )
-                self.lines5i.set_xdata(q[4]['data']["time"])
-                self.lines5i.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma8 value
-                self.lines5i.set_label('Vol_MA_30m')  
-                i=i+1      
-                legend1.append(self.lines5h) 
-                legend2.append(self.lines5i)
-            if '1h' in q[4]['cmd']['movingave']:
-                self.lines5j.set_xdata(q[4]['data']["time"])
-                self.lines5j.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma9 value
-                self.lines5j.set_label('MA_1h' )
-                self.lines5k.set_xdata(q[4]['data']["time"])
-                self.lines5k.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma9 value
-                self.lines5k.set_label('Vol_MA_1h')   
-                legend1.append(self.lines5j) 
-                legend2.append(self.lines5k)
-            self.axarr[8].set_ylim(0.5 * min(q[4]['data']['price']), 1.5 * max(q[4]['data']['price']))
-            self.axarr[9].set_ylim(0, 1.5 * max(q[4]['data']['vol']))
-            
-            if q[4]['cmd']['type'] == 'h':
-                self.reset_xlim_history(5)
-            else:
-                self.axarr[8].set_xticks([matplotlib.dates.num2date(q[4]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[4]['cmd']['interval'])) for i in range(10)])  
-                self.axarr[9].set_xticks([matplotlib.dates.num2date(q[4]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[4]['cmd']['interval'])) for i in range(10)])                  
-                self.axarr[9].set_xticklabels([(matplotlib.dates.num2date(q[4]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[4]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
-            
-            self.axarr[8].set_title('id:5, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[4]['cmd']['symbol'], q[4]['cmd']['type'], q[4]['cmd']['interval'], q[4]['data']['price'][-1], q[4]['data']['vol'][-1]),y=0.8) 
-            self.axarr[8].legend(handles=legend1,fontsize='small')
-            self.axarr[9].legend(handles=legend2,fontsize='x-small')
-            
-        
-        # Update 6th subplot data
-        if len(q) > 5 and q[5]['dirty'] == True:  
-            self.lines61.set_xdata(q[5]['data']["time"])  
-            self.lines61.set_ydata(q[5]['data']['price'])  
-            self.lines61.set_label('price_%s' %q[5]['cmd']["price"])       
-            self.lines62.set_xdata(q[5]['data']["time"])
-            self.lines62.set_ydata(q[5]['data']['vol'])
-            self.lines62.set_label('vol')
-            i=0
-            legend1=[];legend2=[]
-            legend1.append(self.lines61) 
-            legend2.append(self.lines62)
-            if '1s' in q[5]['cmd']['movingave']:
-                self.lines63.set_xdata(q[5]['data']["time"])      
-                self.lines63.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma1 value    
-                self.lines63.set_label('MA_1s')
-                self.lines64.set_xdata(q[5]['data']["time"])
-                self.lines64.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma1 vol
-                self.lines64.set_label('Vol_MA_1s') 
-                i=i+1
-                legend1.append(self.lines63) 
-                legend2.append(self.lines64)     
-            if '5s' in q[5]['cmd']['movingave']:
-                self.lines65.set_xdata(q[5]['data']["time"])
-                self.lines65.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma2 value
-                self.lines65.set_label('MA_5s')
-                self.lines66.set_xdata(q[5]['data']["time"])
-                self.lines66.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma2 vol
-                self.lines66.set_label('Vol_MA_5s' )  
-                i=i+1
-                legend1.append(self.lines65) 
-                legend2.append(self.lines66)  
-            if '10s' in q[5]['cmd']['movingave']:
-                self.lines67.set_xdata(q[5]['data']["time"])
-                self.lines67.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma3 value
-                self.lines67.set_label('MA_10s' )
-                self.lines68.set_xdata(q[5]['data']["time"])
-                self.lines68.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma3 vol
-                self.lines68.set_label('Vol_MA_10s')
-                i=i+1
-                legend1.append(self.lines67) 
-                legend2.append(self.lines68)
-            if '30s' in q[5]['cmd']['movingave']:
-                self.lines69.set_xdata(q[5]['data']["time"])
-                self.lines69.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma4 value
-                self.lines69.set_label('MA_30s' )
-                self.lines6a.set_xdata(q[5]['data']["time"])
-                self.lines6a.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma4 vol
-                self.lines6a.set_label('Vol_MA_30s' )
-                i=i+1
-                legend1.append(self.lines69) 
-                legend2.append(self.lines6a)
-            if '1m' in q[5]['cmd']['movingave']:
-                self.lines6b.set_xdata(q[5]['data']["time"])
-                self.lines6b.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma5 value
-                self.lines6b.set_label('MA_1m' )
-                self.lines6c.set_xdata(q[5]['data']["time"])
-                self.lines6c.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma5 vol
-                self.lines6c.set_label('Vol_MA_1m')
-                i=i+1
-                legend1.append(self.lines6b) 
-                legend2.append(self.lines6c)
-            if '5m' in q[5]['cmd']['movingave']:
-                self.lines6d.set_xdata(q[5]['data']["time"])
-                self.lines6d.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma6 value
-                self.lines6d.set_label('MA_5m')
-                self.lines6e.set_xdata(q[5]['data']["time"])
-                self.lines6e.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma6 vol
-                self.lines6e.set_label('Vol_MA_5m' ) 
-                i=i+1 
-                legend1.append(self.lines6d) 
-                legend2.append(self.lines6e)
-            if '10m' in q[5]['cmd']['movingave']:
-                self.lines6f.set_xdata(q[5]['data']["time"])
-                self.lines6f.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma7 value
-                self.lines6f.set_label('MA_10m' )
-                self.lines6g.set_xdata(q[5]['data']["time"])
-                self.lines6g.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma7 value
-                self.lines6g.set_label('Vol_MA_10m' )  
-                i=i+1  
-                legend1.append(self.lines6f) 
-                legend2.append(self.lines6g)
-            if '30m' in q[5]['cmd']['movingave']:
-                self.lines6h.set_xdata(q[5]['data']["time"])
-                self.lines6h.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma8 value
-                self.lines6h.set_label('MA_30m' )
-                self.lines6i.set_xdata(q[5]['data']["time"])
-                self.lines6i.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma8 value
-                self.lines6i.set_label('Vol_MA_30m') 
-                i=i+1       
-                legend1.append(self.lines6h) 
-                legend2.append(self.lines6i)
-            if '1h' in q[5]['cmd']['movingave']:
-                self.lines6j.set_xdata(q[5]['data']["time"])
-                self.lines6j.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma9 value
-                self.lines6j.set_label('MA_1h' )
-                self.lines6k.set_xdata(q[5]['data']["time"])
-                self.lines6k.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma9 value
-                self.lines6k.set_label('Vol_MA_1h')   
-                legend1.append(self.lines6j) 
-                legend2.append(self.lines6k)
-                
-            self.axarr[10].set_ylim(0.5 * min(q[5]['data']['price']), 1.5 * max(q[5]['data']['price']))
-            self.axarr[11].set_ylim(0, 1.5 * max(q[5]['data']['vol']))
-            
-            if q[5]['cmd']['type'] == 'h':
-                self.reset_xlim_history(5)
-            else:
-                self.axarr[10].set_xticks([matplotlib.dates.num2date(q[5]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[5]['cmd']['interval'])) for i in range(10)])  
-                self.axarr[11].set_xticks([matplotlib.dates.num2date(q[5]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[5]['cmd']['interval'])) for i in range(10)])                  
-                self.axarr[11].set_xticklabels([(matplotlib.dates.num2date(q[5]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[5]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
-            
-            self.axarr[10].set_title('id:6, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[5]['cmd']['symbol'], q[5]['cmd']['type'], q[5]['cmd']['interval'], q[5]['data']['price'][-1], q[5]['data']['vol'][-1]),y=0.8) 
-            self.axarr[10].legend(handles=legend1,fontsize='small')
-            self.axarr[11].legend(handles=legend2,fontsize='x-small')
+                i=0  # used for trace the MA type in 'data'
+                legend1=[];legend2=[]  #used for dynamic udpate legend
+                legend1.append(self.lines[k*20].get_label()) 
+                legend2.append(self.lines[k*20+1].get_label()) 
+                if '1s' in q[k]['cmd']['movingave']:
+                    self.lines[k*20+2].set_xdata(q[k]['data']["time"])       
+                    self.lines[k*20+2].set_ydata([j[i].split(':')[0] for j in q[k]['data']["ma"]])  # ma1 value    # issue: it's better change 'ma' in q as dict, so that here we only need grab ma data from q instead of create new list(trade off between network bw and local calc)
+                    self.lines[k*20+2].set_label('MA_1s')
+                    self.lines[k*20+3].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+3].set_ydata([j[i].split(':')[1] for j in q[k]['data']["ma"]])  # ma1 vol
+                    self.lines[k*20+3].set_label('Vol_MA_1s')
+                    i=i+1       
+                    legend1.append(self.lines[k*20+2].get_label()) 
+                    legend2.append(self.lines[k*20+3].get_label())    
+                if '5s' in q[k]['cmd']['movingave']:
+                    self.lines[k*20+4].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+4].set_ydata([j[i].split(':')[0] for j in q[k]['data']["ma"]])  # ma2 value
+                    self.lines[k*20+4].set_label('MA_5s')
+                    self.lines[k*20+5].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+5].set_ydata([j[i].split(':')[1] for j in q[k]['data']["ma"]])  # ma2 vol
+                    self.lines[k*20+5].set_label('Vol_MA_5s' )
+                    i=i+1
+                    legend1.append(self.lines[k*20+4].get_label()) 
+                    legend2.append(self.lines[k*20+5].get_label()) 
+                if '10s' in q[k]['cmd']['movingave']:
+                    self.lines[k*20+6].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+6].set_ydata([j[i].split(':')[0] for j in q[k]['data']["ma"]])  # ma3 value
+                    self.lines[k*20+6].set_label('MA_10s' )
+                    self.lines[k*20+7].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+7].set_ydata([j[i].split(':')[1] for j in q[k]['data']["ma"]])  # ma3 vol
+                    self.lines[k*20+7].set_label('Vol_MA_10s')
+                    i=i+1
+                    legend1.append(self.lines[k*20+7].get_label()) 
+                    legend2.append(self.lines[k*20+7].get_label())
+                if '30s' in q[k]['cmd']['movingave']:
+                    self.lines[k*20+8].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+8].set_ydata([j[i].split(':')[0] for j in q[k]['data']["ma"]])  # ma4 value
+                    self.lines[k*20+8].set_label('MA_30s' )
+                    self.lines[k*20+9].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+9].set_ydata([j[i].split(':')[1] for j in q[k]['data']["ma"]])  # ma4 vol
+                    self.lines[k*20+9].set_label('Vol_MA_30s' )
+                    i=i+1
+                    legend1.append(self.lines[k*20+8].get_label()) 
+                    legend2.append(self.lines[k*20+9].get_label())
+                if '1m' in q[k]['cmd']['movingave']:
+                    self.lines[k*20+10].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+10].set_ydata([j[i].split(':')[0] for j in q[k]['data']["ma"]])  # ma5 value
+                    self.lines[k*20+10].set_label('MA_1m' )
+                    self.lines[k*20+11].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+11].set_ydata([j[i].split(':')[1] for j in q[k]['data']["ma"]])  # ma5 vol
+                    self.lines[k*20+11].set_label('Vol_MA_1m') 
+                    i=i+1
+                    legend1.append(self.lines[k*20+10].get_label()) 
+                    legend2.append(self.lines[k*20+11].get_label())
+                if '5m' in q[k]['cmd']['movingave']:
+                    self.lines[k*20+12].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+12].set_ydata([j[i].split(':')[0] for j in q[k]['data']["ma"]])  # ma6 value
+                    self.lines[k*20+12].set_label('MA_5m')
+                    self.lines[k*20+13].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+13].set_ydata([j[i].split(':')[1] for j in q[k]['data']["ma"]])  # ma6 vol
+                    self.lines[k*20+13].set_label('Vol_MA_5m' ) 
+                    i=i+1  
+                    legend1.append(self.lines[k*20+12].get_label()) 
+                    legend2.append(self.lines[k*20+13].get_label())         
+                if '10m' in q[k]['cmd']['movingave']:
+                    self.lines[k*20+14].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+14].set_ydata([j[i].split(':')[0] for j in q[k]['data']["ma"]])  # ma7 value
+                    self.lines[k*20+14].set_label('MA_10m' )
+                    self.lines[k*20+15].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+15].set_ydata([j[i].split(':')[1] for j in q[k]['data']["ma"]])  # ma7 value
+                    self.lines[k*20+15].set_label('Vol_MA_10m' ) 
+                    i=i+1 
+                    legend1.append(self.lines[k*20+14].get_label()) 
+                    legend2.append(self.lines[k*20+15].get_label())
+                if '30m' in q[k]['cmd']['movingave']:
+                    self.lines[k*20+16].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+16].set_ydata([j[i].split(':')[0] for j in q[k]['data']["ma"]])  # ma8 value
+                    self.lines[k*20+16].set_label('MA_30m' )
+                    self.lines[k*20+17].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+17].set_ydata([j[i].split(':')[1] for j in q[k]['data']["ma"]])  # ma8 value
+                    self.lines[k*20+17].set_label('Vol_MA_30m')  
+                    i=i+1  
+                    legend1.append(self.lines[k*20+16].get_label()) 
+                    legend2.append(self.lines[k*20+17].get_label())  
+                if '1h' in q[k]['cmd']['movingave']:
+                    self.lines[k*20+18].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+18].set_ydata([j[i].split(':')[0] for j in q[k]['data']["ma"]])  # ma9 value
+                    self.lines[k*20+18].set_label('MA_1h' )
+                    self.lines[k*20+19].set_xdata(q[k]['data']["time"])
+                    self.lines[k*20+19].set_ydata([j[i].split(':')[1] for j in q[k]['data']["ma"]])  # ma9 value
+                    self.lines[k*20+19].set_label('Vol_MA_1h') 
+                    legend1.append(self.lines[k*20+18].get_label()) 
+                    legend2.append(self.lines[k*20+19].get_label())  
+                     
+                self.axarr[k*2].set_ylim(0.5 * min(q[k]['data']['price']), 1.5 * max(q[k]['data']['price']))  # dynamic adj the y limi here!
+                self.axarr[k*2+1].set_ylim(0, 1.5 * max(q[k]['data']['vol']))
+     
+                if q[k]['cmd']['type'] == 'h':  # realtime xlim will be set in other block
+                    self.reset_xlim_history(k)
+                else:
+                    self.axarr[k*2].set_xticks([matplotlib.dates.num2date(q[k]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[k]['cmd']['interval'])) for i in range(10)])  
+                    self.axarr[k*2+1].set_xticks([matplotlib.dates.num2date(q[k]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[k]['cmd']['interval'])) for i in range(10)])                  
+                    self.axarr[k*2+1].set_xticklabels([(matplotlib.dates.num2date(q[k]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[k]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
+                 
+                ## set labels
+                self.axarr[k*2].set_title('id:%s, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (k,q[k]['cmd']['symbol'], q[k]['cmd']['type'], q[k]['cmd']['interval'], q[k]['data']['price'][-1], q[k]['data']['vol'][-1]),y=0.9)
+                self.axarr[k*2].legend(legend1, fontsize='small')  # auto update legend, in case subplot insertion cause legend number change
+                self.axarr[k*2+1].legend(legend2, fontsize='x-small')  # in some matplotlib version, we need remove 'handles' name inside legend()
+#                 
+#                
+           
+#         # Update 2nd subplot data
+#         if len(q) > 1 and q[1]['dirty'] == True:  
+#             self.lines21.set_xdata(q[1]['data']["time"])  
+#             self.lines21.set_ydata(q[1]['data']['price'])  
+#             self.lines21.set_label('price_%s' %q[1]['cmd']["price"])       
+#             self.lines22.set_xdata(q[1]['data']["time"])
+#             self.lines22.set_ydata(q[1]['data']['vol'])
+#             self.lines22.set_label('vol')
+#             i=0
+#             legend1=[];legend2=[]
+#             legend1.append(self.lines21.get_label()) 
+#             legend2.append(self.lines22.get_label()) 
+#             if '1s' in q[1]['cmd']['movingave']:
+#                 self.lines23.set_xdata(q[1]['data']["time"])      
+#                 self.lines23.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma1 value    
+#                 self.lines23.set_label('MA_1s')
+#                 self.lines24.set_xdata(q[1]['data']["time"])
+#                 self.lines24.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma1 vol
+#                 self.lines24.set_label('Vol_MA_1s') 
+#                 i=i+1   
+#                 legend1.append(self.lines23.get_label()) 
+#                 legend2.append(self.lines24.get_label())   
+#             if '5s' in q[1]['cmd']['movingave']:
+#                 self.lines25.set_xdata(q[1]['data']["time"])
+#                 self.lines25.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma2 value
+#                 self.lines25.set_label('MA_5s')
+#                 self.lines26.set_xdata(q[1]['data']["time"])
+#                 self.lines26.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma2 vol
+#                 self.lines26.set_label('Vol_MA_5s' )
+#                 i=i+1
+#                 legend1.append(self.lines25.get_label()) 
+#                 legend2.append(self.lines26.get_label())     
+#             if '10s' in q[1]['cmd']['movingave']:
+#                 self.lines27.set_xdata(q[1]['data']["time"])
+#                 self.lines27.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma3 value
+#                 self.lines27.set_label('MA_10s' )
+#                 self.lines28.set_xdata(q[1]['data']["time"])
+#                 self.lines28.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma3 vol
+#                 self.lines28.set_label('Vol_MA_10s')
+#                 i=i+1
+#                 legend1.append(self.lines27.get_label()) 
+#                 legend2.append(self.lines28.get_label()) 
+#             if '30s' in q[1]['cmd']['movingave']:
+#                 self.lines29.set_xdata(q[1]['data']["time"])
+#                 self.lines29.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma4 value
+#                 self.lines29.set_label('MA_30s' )
+#                 self.lines2a.set_xdata(q[1]['data']["time"])
+#                 self.lines2a.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma4 vol
+#                 self.lines2a.set_label('Vol_MA_30s' )
+#                 i=i+1
+#                 legend1.append(self.lines29.get_label()) 
+#                 legend2.append(self.lines2a.get_label()) 
+#             if '1m' in q[1]['cmd']['movingave']:
+#                 self.lines2b.set_xdata(q[1]['data']["time"])
+#                 self.lines2b.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma5 value
+#                 self.lines2b.set_label('MA_1m' )
+#                 self.lines2c.set_xdata(q[1]['data']["time"])
+#                 self.lines2c.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma5 vol
+#                 self.lines2c.set_label('Vol_MA_1m')
+#                 i=i+1
+#                 legend1.append(self.lines2b.get_label()) 
+#                 legend2.append(self.lines2c.get_label()) 
+#             if '5m' in q[1]['cmd']['movingave']:
+#                 self.lines2d.set_xdata(q[1]['data']["time"])
+#                 self.lines2d.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma6 value
+#                 self.lines2d.set_label('MA_5m')
+#                 self.lines2e.set_xdata(q[1]['data']["time"])
+#                 self.lines2e.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma6 vol
+#                 self.lines2e.set_label('Vol_MA_5m' )  
+#                 i=i+1
+#                 legend1.append(self.lines2d.get_label()) 
+#                 legend2.append(self.lines2e.get_label()) 
+#             if '10m' in q[1]['cmd']['movingave']:
+#                 self.lines2f.set_xdata(q[1]['data']["time"])
+#                 self.lines2f.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma7 value
+#                 self.lines2f.set_label('MA_10m' )
+#                 self.lines2g.set_xdata(q[1]['data']["time"])
+#                 self.lines2g.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma7 value
+#                 self.lines2g.set_label('Vol_MA_10m' ) 
+#                 i=i+1
+#                 legend1.append(self.lines2f.get_label()) 
+#                 legend2.append(self.lines2g.get_label())    
+#             if '30m' in q[1]['cmd']['movingave']:
+#                 self.lines2h.set_xdata(q[1]['data']["time"])
+#                 self.lines2h.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma8 value
+#                 self.lines2h.set_label('MA_30m' )
+#                 self.lines2i.set_xdata(q[1]['data']["time"])
+#                 self.lines2i.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma8 value
+#                 self.lines2i.set_label('Vol_MA_30m') 
+#                 i=i+1 
+#                 legend1.append(self.lines2h.get_label()) 
+#                 legend2.append(self.lines2i.get_label())       
+#             if '1h' in q[1]['cmd']['movingave']:
+#                 self.lines2j.set_xdata(q[1]['data']["time"])
+#                 self.lines2j.set_ydata([j[i].split(':')[0] for j in q[1]['data']["ma"]])  # ma9 value
+#                 self.lines2j.set_label('MA_1h' )
+#                 self.lines2k.set_xdata(q[1]['data']["time"])
+#                 self.lines2k.set_ydata([j[i].split(':')[1] for j in q[1]['data']["ma"]])  # ma9 value
+#                 self.lines2k.set_label('Vol_MA_1h') 
+#                 legend1.append(self.lines2j.get_label()) 
+#                 legend2.append(self.lines2k.get_label())   
+#               
+#             self.axarr[2].set_ylim(0.5 * min(q[1]['data']['price']), 1.5 * max(q[1]['data']['price']))
+#             self.axarr[3].set_ylim(0, 1.5 * max(q[1]['data']['vol']))
+#             
+#             if q[1]['cmd']['type'] == 'h':
+#                 self.reset_xlim_history(1)
+#             else:
+#                 self.axarr[2].set_xticks([matplotlib.dates.num2date(q[1]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[1]['cmd']['interval'])) for i in range(10)])  
+#                 self.axarr[3].set_xticks([matplotlib.dates.num2date(q[1]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[1]['cmd']['interval'])) for i in range(10)])                  
+#                 self.axarr[3].set_xticklabels([(matplotlib.dates.num2date(q[1]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[1]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
+#             
+#             self.axarr[2].set_title('id:2, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[1]['cmd']['symbol'], q[1]['cmd']['type'], q[1]['cmd']['interval'], q[1]['data']['price'][-1], q[1]['data']['vol'][-1]),y=0.85,fontsize='medium') 
+#             self.axarr[2].legend(legend1,fontsize='x-small')
+#             self.axarr[3].legend(legend2,fontsize='xx-small')
+#             
+#         # Update 3rd subplot data
+#         if len(q) > 2 and q[2]['dirty'] == True:  
+#             self.lines31.set_xdata(q[2]['data']["time"])  
+#             self.lines31.set_ydata(q[2]['data']['price'])  
+#             self.lines31.set_label('price_%s' %q[2]['cmd']["price"])       
+#             self.lines32.set_xdata(q[2]['data']["time"])
+#             self.lines32.set_ydata(q[2]['data']['vol'])
+#             self.lines32.set_label('vol')
+#             i=0
+#             legend1=[];legend2=[]
+#             legend1.append(self.lines31.get_label()) 
+#             legend2.append(self.lines32.get_label())
+#             if '1s' in q[2]['cmd']['movingave']:
+#                 self.lines33.set_xdata(q[2]['data']["time"])      
+#                 self.lines33.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma1 value    
+#                 self.lines33.set_label('MA_1s')
+#                 self.lines34.set_xdata(q[2]['data']["time"])
+#                 self.lines34.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma1 vol
+#                 self.lines34.set_label('Vol_MA_1s')   
+#                 i=i+1 
+#                 legend1.append(self.lines33.get_label()) 
+#                 legend2.append(self.lines34.get_label())  
+#             if '5s' in q[2]['cmd']['movingave']:
+#                 self.lines35.set_xdata(q[2]['data']["time"])
+#                 self.lines35.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma2 value
+#                 self.lines35.set_label('MA_5s')
+#                 self.lines36.set_xdata(q[2]['data']["time"])
+#                 self.lines36.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma2 vol
+#                 self.lines36.set_label('Vol_MA_5s' )   
+#                 i=i+1
+#                 legend1.append(self.lines35.get_label()) 
+#                 legend2.append(self.lines36.get_label()) 
+#             if '10s' in q[2]['cmd']['movingave']:
+#                 self.lines37.set_xdata(q[2]['data']["time"])
+#                 self.lines37.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma3 value
+#                 self.lines37.set_label('MA_10s' )
+#                 self.lines38.set_xdata(q[2]['data']["time"])
+#                 self.lines38.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma3 vol
+#                 self.lines38.set_label('Vol_MA_10s')
+#                 i=i+1
+#                 legend1.append(self.lines37.get_label()) 
+#                 legend2.append(self.lines38.get_label())
+#             if '30s' in q[2]['cmd']['movingave']:
+#                 self.lines39.set_xdata(q[2]['data']["time"])
+#                 self.lines39.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma4 value
+#                 self.lines39.set_label('MA_30s' )
+#                 self.lines3a.set_xdata(q[2]['data']["time"])
+#                 self.lines3a.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma4 vol
+#                 self.lines3a.set_label('Vol_MA_30s' )
+#                 i=i+1
+#                 legend1.append(self.lines39.get_label()) 
+#                 legend2.append(self.lines3a.get_label())
+#             if '1m' in q[2]['cmd']['movingave']:
+#                 self.lines3b.set_xdata(q[2]['data']["time"])
+#                 self.lines3b.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma5 value
+#                 self.lines3b.set_label('MA_1m' )
+#                 self.lines3c.set_xdata(q[2]['data']["time"])
+#                 self.lines3c.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma5 vol
+#                 self.lines3c.set_label('Vol_MA_1m')
+#                 i=i+1
+#                 legend1.append(self.lines3b.get_label()) 
+#                 legend2.append(self.lines3c.get_label())
+#             if '5m' in q[2]['cmd']['movingave']:
+#                 self.lines3d.set_xdata(q[2]['data']["time"])
+#                 self.lines3d.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma6 value
+#                 self.lines3d.set_label('MA_5m')
+#                 self.lines3e.set_xdata(q[2]['data']["time"])
+#                 self.lines3e.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma6 vol
+#                 self.lines3e.set_label('Vol_MA_5m' )
+#                 i=i+1 
+#                 legend1.append(self.lines3d.get_label()) 
+#                 legend2.append(self.lines3e.get_label()) 
+#             if '10m' in q[2]['cmd']['movingave']:
+#                 self.lines3f.set_xdata(q[2]['data']["time"])
+#                 self.lines3f.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma7 value
+#                 self.lines3f.set_label('MA_10m' )
+#                 self.lines3g.set_xdata(q[2]['data']["time"])
+#                 self.lines3g.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma7 value
+#                 self.lines3g.set_label('Vol_MA_10m' ) 
+#                 i=i+1   
+#                 legend1.append(self.lines3f.get_label()) 
+#                 legend2.append(self.lines3g.get_label())
+#             if '30m' in q[2]['cmd']['movingave']:
+#                 self.lines3h.set_xdata(q[2]['data']["time"])
+#                 self.lines3h.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma8 value
+#                 self.lines3h.set_label('MA_30m' )
+#                 self.lines3i.set_xdata(q[2]['data']["time"])
+#                 self.lines3i.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma8 value
+#                 self.lines3i.set_label('Vol_MA_30m')  
+#                 i=i+1  
+#                 legend1.append(self.lines3h.get_label()) 
+#                 legend2.append(self.lines3i.get_label())    
+#             if '1h' in q[2]['cmd']['movingave']:
+#                 self.lines3j.set_xdata(q[2]['data']["time"])
+#                 self.lines3j.set_ydata([j[i].split(':')[0] for j in q[2]['data']["ma"]])  # ma9 value
+#                 self.lines3j.set_label('MA_1h' )
+#                 self.lines3k.set_xdata(q[2]['data']["time"])
+#                 self.lines3k.set_ydata([j[i].split(':')[1] for j in q[2]['data']["ma"]])  # ma9 value
+#                 self.lines3k.set_label('Vol_MA_1h')   
+#                 legend1.append(self.lines3j.get_label()) 
+#                 legend2.append(self.lines3k.get_label())
+#                 
+#             self.axarr[4].set_ylim(0.5 * min(q[2]['data']['price']), 1.5 * max(q[2]['data']['price']))
+#             self.axarr[5].set_ylim(0, 1.5 * max(q[2]['data']['vol']))
+#             
+#             if q[2]['cmd']['type'] == 'h':
+#                 self.reset_xlim_history(2)
+#             else:
+#                 self.axarr[4].set_xticks([matplotlib.dates.num2date(q[2]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[2]['cmd']['interval'])) for i in range(10)])  
+#                 self.axarr[5].set_xticks([matplotlib.dates.num2date(q[2]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[2]['cmd']['interval'])) for i in range(10)])                  
+#                 self.axarr[5].set_xticklabels([(matplotlib.dates.num2date(q[2]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[2]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
+#             
+#             self.axarr[4].set_title('id:3, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[2]['cmd']['symbol'], q[2]['cmd']['type'], q[2]['cmd']['interval'], q[2]['data']['price'][-1], q[2]['data']['vol'][-1]),y=0.85,fontsize='medium') 
+#             self.axarr[4].legend(legend1,fontsize='x-small')
+#             self.axarr[5].legend(legend2,fontsize='xx-small')
+#             
+#         
+#         # Update 4th subplot data
+#         if len(q) > 3 and q[3]['dirty'] == True:  
+#             self.lines41.set_xdata(q[3]['data']["time"])  
+#             self.lines41.set_ydata(q[3]['data']['price'])  
+#             self.lines41.set_label('price_%s' %q[3]['cmd']["price"])       
+#             self.lines42.set_xdata(q[3]['data']["time"])
+#             self.lines42.set_ydata(q[3]['data']['vol'])
+#             self.lines42.set_label('vol')
+#             i=0
+#             legend1=[];legend2=[]
+#             legend1.append(self.lines41.get_label()) 
+#             legend2.append(self.lines42.get_label())
+#             if '1s' in q[3]['cmd']['movingave']:
+#                 self.lines43.set_xdata(q[3]['data']["time"])      
+#                 self.lines43.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma1 value    
+#                 self.lines43.set_label('MA_1s')
+#                 self.lines44.set_xdata(q[3]['data']["time"])
+#                 self.lines44.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma1 vol
+#                 self.lines44.set_label('Vol_MA_1s')  
+#                 i=i+1 
+#                 legend1.append(self.lines43.get_label()) 
+#                 legend2.append(self.lines44.get_label())   
+#             if '5s' in q[3]['cmd']['movingave']:
+#                 self.lines45.set_xdata(q[3]['data']["time"])
+#                 self.lines45.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma2 value
+#                 self.lines45.set_label('MA_5s')
+#                 self.lines46.set_xdata(q[3]['data']["time"])
+#                 self.lines46.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma2 vol
+#                 self.lines46.set_label('Vol_MA_5s' ) 
+#                 i=i+1  
+#                 legend1.append(self.lines45.get_label()) 
+#                 legend2.append(self.lines46.get_label())  
+#             if '10s' in q[3]['cmd']['movingave']:
+#                 self.lines47.set_xdata(q[3]['data']["time"])
+#                 self.lines47.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma3 value
+#                 self.lines47.set_label('MA_10s' )
+#                 self.lines48.set_xdata(q[3]['data']["time"])
+#                 self.lines48.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma3 vol
+#                 self.lines48.set_label('Vol_MA_10s')
+#                 i=i+1
+#                 legend1.append(self.lines47.get_label()) 
+#                 legend2.append(self.lines48.get_label()) 
+#             if '30s' in q[3]['cmd']['movingave']:
+#                 self.lines49.set_xdata(q[3]['data']["time"])
+#                 self.lines49.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma4 value
+#                 self.lines49.set_label('MA_30s' )
+#                 self.lines4a.set_xdata(q[3]['data']["time"])
+#                 self.lines4a.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma4 vol
+#                 self.lines4a.set_label('Vol_MA_30s' )
+#                 i=i+1
+#                 legend1.append(self.lines49.get_label()) 
+#                 legend2.append(self.lines4a.get_label()) 
+#             if '1m' in q[3]['cmd']['movingave']:
+#                 self.lines4b.set_xdata(q[3]['data']["time"])
+#                 self.lines4b.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma5 value
+#                 self.lines4b.set_label('MA_1m' )
+#                 self.lines4c.set_xdata(q[3]['data']["time"])
+#                 self.lines4c.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma5 vol
+#                 self.lines4c.set_label('Vol_MA_1m')
+#                 i=i+1
+#                 legend1.append(self.lines4b.get_label()) 
+#                 legend2.append(self.lines4c.get_label()) 
+#             if '5m' in q[3]['cmd']['movingave']:
+#                 self.lines4d.set_xdata(q[3]['data']["time"])
+#                 self.lines4d.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma6 value
+#                 self.lines4d.set_label('MA_5m')
+#                 self.lines4e.set_xdata(q[3]['data']["time"])
+#                 self.lines4e.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma6 vol
+#                 self.lines4e.set_label('Vol_MA_5m' ) 
+#                 i=i+1 
+#                 legend1.append(self.lines4d.get_label()) 
+#                 legend2.append(self.lines4e.get_label()) 
+#             if '10m' in q[3]['cmd']['movingave']:
+#                 self.lines4f.set_xdata(q[3]['data']["time"])
+#                 self.lines4f.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma7 value
+#                 self.lines4f.set_label('MA_10m' )
+#                 self.lines4g.set_xdata(q[3]['data']["time"])
+#                 self.lines4g.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma7 value
+#                 self.lines4g.set_label('Vol_MA_10m' ) 
+#                 i=i+1  
+#                 legend1.append(self.lines4f.get_label()) 
+#                 legend2.append(self.lines4g.get_label())  
+#             if '30m' in q[3]['cmd']['movingave']:
+#                 self.lines4h.set_xdata(q[3]['data']["time"])
+#                 self.lines4h.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma8 value
+#                 self.lines4h.set_label('MA_30m' )
+#                 self.lines4i.set_xdata(q[3]['data']["time"])
+#                 self.lines4i.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma8 value
+#                 self.lines4i.set_label('Vol_MA_30m') 
+#                 i=i+1      
+#                 legend1.append(self.lines4h.get_label()) 
+#                 legend2.append(self.lines4i.get_label())  
+#             if '1h' in q[3]['cmd']['movingave']:
+#                 self.lines4j.set_xdata(q[3]['data']["time"])
+#                 self.lines4j.set_ydata([j[i].split(':')[0] for j in q[3]['data']["ma"]])  # ma9 value
+#                 self.lines4j.set_label('MA_1h' )
+#                 self.lines4k.set_xdata(q[3]['data']["time"])
+#                 self.lines4k.set_ydata([j[i].split(':')[1] for j in q[3]['data']["ma"]])  # ma9 value
+#                 self.lines4k.set_label('Vol_MA_1h') 
+#                 legend1.append(self.lines4j.get_label()) 
+#                 legend2.append(self.lines4k.get_label())   
+#               
+#             self.axarr[6].set_ylim(0.5 * min(q[3]['data']['price']), 1.5 * max(q[3]['data']['price']))
+#             self.axarr[7].set_ylim(0, 1.5 * max(q[3]['data']['vol']))
+#             
+#             if q[3]['cmd']['type'] == 'h':
+#                 self.reset_xlim_history(3)
+#             else:
+#                 self.axarr[6].set_xticks([matplotlib.dates.num2date(q[3]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[3]['cmd']['interval'])) for i in range(10)])  
+#                 self.axarr[7].set_xticks([matplotlib.dates.num2date(q[3]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[3]['cmd']['interval'])) for i in range(10)])                  
+#                 self.axarr[7].set_xticklabels([(matplotlib.dates.num2date(q[3]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[3]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
+#             
+#             self.axarr[6].set_title('id:4, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[3]['cmd']['symbol'], q[3]['cmd']['type'], q[3]['cmd']['interval'], q[3]['data']['price'][-1], q[3]['data']['vol'][-1]),y=0.85,fontsize='medium') 
+#             self.axarr[6].legend(legend1,fontsize='x-small')
+#             self.axarr[7].legend(legend2,fontsize='xx-small')
+#             
+#         
+#         # Update 5th subplot data
+#         if len(q) > 4 and q[4]['dirty'] == True:  
+#             self.lines51.set_xdata(q[4]['data']["time"])  
+#             self.lines51.set_ydata(q[4]['data']['price'])  
+#             self.lines51.set_label('price_%s' %q[4]['cmd']["price"])       
+#             self.lines52.set_xdata(q[4]['data']["time"])
+#             self.lines52.set_ydata(q[4]['data']['vol'])
+#             self.lines52.set_label('vol')
+#             i=0
+#             legend1=[];legend2=[]
+#             legend1.append(self.lines51.get_label()) 
+#             legend2.append(self.lines52.get_label()) 
+#             if '1s' in q[4]['cmd']['movingave']:
+#                 self.lines53.set_xdata(q[4]['data']["time"])      
+#                 self.lines53.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma1 value    
+#                 self.lines53.set_label('MA_1s')
+#                 self.lines54.set_xdata(q[4]['data']["time"])
+#                 self.lines54.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma1 vol
+#                 self.lines54.set_label('Vol_MA_1s') 
+#                 i=i+1
+#                 legend1.append(self.lines53.get_label()) 
+#                 legend2.append(self.lines54.get_label())     
+#             if '5s' in q[4]['cmd']['movingave']:
+#                 self.lines55.set_xdata(q[4]['data']["time"])
+#                 self.lines55.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma2 value
+#                 self.lines55.set_label('MA_5s')
+#                 self.lines56.set_xdata(q[4]['data']["time"])
+#                 self.lines56.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma2 vol
+#                 self.lines56.set_label('Vol_MA_5s' ) 
+#                 i=i+1
+#                 legend1.append(self.lines55.get_label()) 
+#                 legend2.append(self.lines56.get_label())   
+#             if '10s' in q[4]['cmd']['movingave']:
+#                 self.lines57.set_xdata(q[4]['data']["time"])
+#                 self.lines57.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma3 value
+#                 self.lines57.set_label('MA_10s' )
+#                 self.lines58.set_xdata(q[4]['data']["time"])
+#                 self.lines58.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma3 vol
+#                 self.lines58.set_label('Vol_MA_10s')
+#                 i=i+1
+#                 legend1.append(self.lines57.get_label()) 
+#                 legend2.append(self.lines58.get_label())
+#             if '30s' in q[4]['cmd']['movingave']:
+#                 self.lines59.set_xdata(q[4]['data']["time"])
+#                 self.lines59.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma4 value
+#                 self.lines59.set_label('MA_30s' )
+#                 self.lines5a.set_xdata(q[4]['data']["time"])
+#                 self.lines5a.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma4 vol
+#                 self.lines5a.set_label('Vol_MA_30s' )
+#                 i=i+1
+#                 legend1.append(self.lines59.get_label()) 
+#                 legend2.append(self.lines5a.get_label())
+#             if '1m' in q[4]['cmd']['movingave']:
+#                 self.lines5b.set_xdata(q[4]['data']["time"])
+#                 self.lines5b.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma5 value
+#                 self.lines5b.set_label('MA_1m' )
+#                 self.lines5c.set_xdata(q[4]['data']["time"])
+#                 self.lines5c.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma5 vol
+#                 self.lines5c.set_label('Vol_MA_1m')
+#                 i=i+1
+#                 legend1.append(self.lines5b.get_label()) 
+#                 legend2.append(self.lines5c.get_label())
+#             if '5m' in q[4]['cmd']['movingave']:
+#                 self.lines5d.set_xdata(q[4]['data']["time"])
+#                 self.lines5d.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma6 value
+#                 self.lines5d.set_label('MA_5m')
+#                 self.lines5e.set_xdata(q[4]['data']["time"])
+#                 self.lines5e.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma6 vol
+#                 self.lines5e.set_label('Vol_MA_5m' )  
+#                 i=i+1
+#                 legend1.append(self.lines5d.get_label()) 
+#                 legend2.append(self.lines5e.get_label())
+#             if '10m' in q[4]['cmd']['movingave']:
+#                 self.lines5f.set_xdata(q[4]['data']["time"])
+#                 self.lines5f.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma7 value
+#                 self.lines5f.set_label('MA_10m' )
+#                 self.lines5g.set_xdata(q[4]['data']["time"])
+#                 self.lines5g.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma7 value
+#                 self.lines5g.set_label('Vol_MA_10m' ) 
+#                 i=i+1   
+#                 legend1.append(self.lines5f.get_label()) 
+#                 legend2.append(self.lines5g.get_label())
+#             if '30m' in q[4]['cmd']['movingave']:
+#                 self.lines5h.set_xdata(q[4]['data']["time"])
+#                 self.lines5h.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma8 value
+#                 self.lines5h.set_label('MA_30m' )
+#                 self.lines5i.set_xdata(q[4]['data']["time"])
+#                 self.lines5i.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma8 value
+#                 self.lines5i.set_label('Vol_MA_30m')  
+#                 i=i+1      
+#                 legend1.append(self.lines5h.get_label()) 
+#                 legend2.append(self.lines5i.get_label())
+#             if '1h' in q[4]['cmd']['movingave']:
+#                 self.lines5j.set_xdata(q[4]['data']["time"])
+#                 self.lines5j.set_ydata([j[i].split(':')[0] for j in q[4]['data']["ma"]])  # ma9 value
+#                 self.lines5j.set_label('MA_1h' )
+#                 self.lines5k.set_xdata(q[4]['data']["time"])
+#                 self.lines5k.set_ydata([j[i].split(':')[1] for j in q[4]['data']["ma"]])  # ma9 value
+#                 self.lines5k.set_label('Vol_MA_1h')   
+#                 legend1.append(self.lines5j.get_label()) 
+#                 legend2.append(self.lines5k.get_label())
+#             self.axarr[8].set_ylim(0.5 * min(q[4]['data']['price']), 1.5 * max(q[4]['data']['price']))
+#             self.axarr[9].set_ylim(0, 1.5 * max(q[4]['data']['vol']))
+#             
+#             if q[4]['cmd']['type'] == 'h':
+#                 self.reset_xlim_history(5)
+#             else:
+#                 self.axarr[8].set_xticks([matplotlib.dates.num2date(q[4]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[4]['cmd']['interval'])) for i in range(10)])  
+#                 self.axarr[9].set_xticks([matplotlib.dates.num2date(q[4]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[4]['cmd']['interval'])) for i in range(10)])                  
+#                 self.axarr[9].set_xticklabels([(matplotlib.dates.num2date(q[4]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[4]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
+#             
+#             self.axarr[8].set_title('id:5, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[4]['cmd']['symbol'], q[4]['cmd']['type'], q[4]['cmd']['interval'], q[4]['data']['price'][-1], q[4]['data']['vol'][-1]),y=0.85,fontsize='medium') 
+#             self.axarr[8].legend(legend1,fontsize='x-small')
+#             self.axarr[9].legend(legend2,fontsize='xx-small')
+#             
+#         
+#         # Update 6th subplot data
+#         if len(q) > 5 and q[5]['dirty'] == True:  
+#             self.lines61.set_xdata(q[5]['data']["time"])  
+#             self.lines61.set_ydata(q[5]['data']['price'])  
+#             self.lines61.set_label('price_%s' %q[5]['cmd']["price"])       
+#             self.lines62.set_xdata(q[5]['data']["time"])
+#             self.lines62.set_ydata(q[5]['data']['vol'])
+#             self.lines62.set_label('vol')
+#             i=0
+#             legend1=[];legend2=[]
+#             legend1.append(self.lines61.get_label()) 
+#             legend2.append(self.lines62.get_label())
+#             if '1s' in q[5]['cmd']['movingave']:
+#                 self.lines63.set_xdata(q[5]['data']["time"])      
+#                 self.lines63.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma1 value    
+#                 self.lines63.set_label('MA_1s')
+#                 self.lines64.set_xdata(q[5]['data']["time"])
+#                 self.lines64.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma1 vol
+#                 self.lines64.set_label('Vol_MA_1s') 
+#                 i=i+1
+#                 legend1.append(self.lines63.get_label()) 
+#                 legend2.append(self.lines64.get_label())     
+#             if '5s' in q[5]['cmd']['movingave']:
+#                 self.lines65.set_xdata(q[5]['data']["time"])
+#                 self.lines65.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma2 value
+#                 self.lines65.set_label('MA_5s')
+#                 self.lines66.set_xdata(q[5]['data']["time"])
+#                 self.lines66.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma2 vol
+#                 self.lines66.set_label('Vol_MA_5s' )  
+#                 i=i+1
+#                 legend1.append(self.lines65.get_label()) 
+#                 legend2.append(self.lines66.get_label())  
+#             if '10s' in q[5]['cmd']['movingave']:
+#                 self.lines67.set_xdata(q[5]['data']["time"])
+#                 self.lines67.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma3 value
+#                 self.lines67.set_label('MA_10s' )
+#                 self.lines68.set_xdata(q[5]['data']["time"])
+#                 self.lines68.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma3 vol
+#                 self.lines68.set_label('Vol_MA_10s')
+#                 i=i+1
+#                 legend1.append(self.lines67.get_label()) 
+#                 legend2.append(self.lines68.get_label())
+#             if '30s' in q[5]['cmd']['movingave']:
+#                 self.lines69.set_xdata(q[5]['data']["time"])
+#                 self.lines69.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma4 value
+#                 self.lines69.set_label('MA_30s' )
+#                 self.lines6a.set_xdata(q[5]['data']["time"])
+#                 self.lines6a.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma4 vol
+#                 self.lines6a.set_label('Vol_MA_30s' )
+#                 i=i+1
+#                 legend1.append(self.lines69.get_label()) 
+#                 legend2.append(self.lines6a.get_label())
+#             if '1m' in q[5]['cmd']['movingave']:
+#                 self.lines6b.set_xdata(q[5]['data']["time"])
+#                 self.lines6b.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma5 value
+#                 self.lines6b.set_label('MA_1m' )
+#                 self.lines6c.set_xdata(q[5]['data']["time"])
+#                 self.lines6c.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma5 vol
+#                 self.lines6c.set_label('Vol_MA_1m')
+#                 i=i+1
+#                 legend1.append(self.lines6b.get_label()) 
+#                 legend2.append(self.lines6c.get_label())
+#             if '5m' in q[5]['cmd']['movingave']:
+#                 self.lines6d.set_xdata(q[5]['data']["time"])
+#                 self.lines6d.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma6 value
+#                 self.lines6d.set_label('MA_5m')
+#                 self.lines6e.set_xdata(q[5]['data']["time"])
+#                 self.lines6e.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma6 vol
+#                 self.lines6e.set_label('Vol_MA_5m' ) 
+#                 i=i+1 
+#                 legend1.append(self.lines6d.get_label()) 
+#                 legend2.append(self.lines6e.get_label())
+#             if '10m' in q[5]['cmd']['movingave']:
+#                 self.lines6f.set_xdata(q[5]['data']["time"])
+#                 self.lines6f.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma7 value
+#                 self.lines6f.set_label('MA_10m' )
+#                 self.lines6g.set_xdata(q[5]['data']["time"])
+#                 self.lines6g.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma7 value
+#                 self.lines6g.set_label('Vol_MA_10m' )  
+#                 i=i+1  
+#                 legend1.append(self.lines6f.get_label()) 
+#                 legend2.append(self.lines6g.get_label())
+#             if '30m' in q[5]['cmd']['movingave']:
+#                 self.lines6h.set_xdata(q[5]['data']["time"])
+#                 self.lines6h.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma8 value
+#                 self.lines6h.set_label('MA_30m' )
+#                 self.lines6i.set_xdata(q[5]['data']["time"])
+#                 self.lines6i.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma8 value
+#                 self.lines6i.set_label('Vol_MA_30m') 
+#                 i=i+1       
+#                 legend1.append(self.lines6h.get_label()) 
+#                 legend2.append(self.lines6i.get_label())
+#             if '1h' in q[5]['cmd']['movingave']:
+#                 self.lines6j.set_xdata(q[5]['data']["time"])
+#                 self.lines6j.set_ydata([j[i].split(':')[0] for j in q[5]['data']["ma"]])  # ma9 value
+#                 self.lines6j.set_label('MA_1h' )
+#                 self.lines6k.set_xdata(q[5]['data']["time"])
+#                 self.lines6k.set_ydata([j[i].split(':')[1] for j in q[5]['data']["ma"]])  # ma9 value
+#                 self.lines6k.set_label('Vol_MA_1h')   
+#                 legend1.append(self.lines6j.get_label()) 
+#                 legend2.append(self.lines6k.get_label())
+#                 
+#             self.axarr[10].set_ylim(0.5 * min(q[5]['data']['price']), 1.5 * max(q[5]['data']['price']))
+#             self.axarr[11].set_ylim(0, 1.5 * max(q[5]['data']['vol']))
+#             
+#             if q[5]['cmd']['type'] == 'h':
+#                 self.reset_xlim_history(5)
+#             else:
+#                 self.axarr[10].set_xticks([matplotlib.dates.num2date(q[5]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[5]['cmd']['interval'])) for i in range(10)])  
+#                 self.axarr[11].set_xticks([matplotlib.dates.num2date(q[5]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[5]['cmd']['interval'])) for i in range(10)])                  
+#                 self.axarr[11].set_xticklabels([(matplotlib.dates.num2date(q[5]['data']['time'][0]) + i*10 * datetime.timedelta(0, ConvertInterval(q[5]['cmd']['interval']))).strftime('%H:%M:%S') for i in range(10)],rotation=0,size='xx-small',)
+#             
+#             self.axarr[10].set_title('id:6, symbol: %s_%s, interv: %s, price=%.2f, vol=%.2f' % (q[5]['cmd']['symbol'], q[5]['cmd']['type'], q[5]['cmd']['interval'], q[5]['data']['price'][-1], q[5]['data']['vol'][-1]),y=0.85,fontsize='medium') 
+#             self.axarr[10].legend(legend1,fontsize='x-small')
+#             self.axarr[11].legend(legend2,fontsize='xx-small')
             
                  
         # auto rescale
-        for i in self.axarr:
-            print self.axarr.index(i)
-            i.relim()
-            i.autoscale_view()
+#         for i in self.axarr:
+#             i.relim()
+#             i.autoscale_view()
 
         # We need to draw *and* flush         
         self.figure.canvas.draw()  # will cause isse, Tkinter is intended to be run in a single thread      
@@ -1380,8 +1459,8 @@ if __name__ == "__main__":
     t = threading.Thread(target=server.serve_forever)
     t.daemon = True  # ctrl+c kill the main thread only. Need put sub-thread in daemon mode so that can be killed by ctrl+c
     t.start()
-    plot.start()
-#     plot.go()  # need run in main thread,so replace start()
+#     plot.start()
+    plot.go()  # need run in main thread,so replace start()
 
 
     

@@ -29,11 +29,11 @@ def create_engine():
     options = {}
 
     if settings.DEBUG:
-        options.update(echo=True)
+        options.update(echo=False)
 
     if url.drivername == 'sqlite' and url.database in (None, '', ':memory:'):
         options.update(poolclass=StaticPool)
-        
+
         engine = sqlalchemy.create_engine(url, **options)
 
         Base.metadata.create_all(engine)

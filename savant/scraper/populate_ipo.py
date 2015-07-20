@@ -35,6 +35,8 @@ for url in ipo_urls:
         session.commit()
 
     ipo_data = scrape_ipo(url.url)
+    if ipo_data == {}:
+        continue
     log.info("IPO data from NASDAQ.com:\n%s" % cjson.encode(ipo_data))
     underwriters = ipo_data["underwriters"]
     lead_underwriters = ipo_data["lead_underwriters"]
@@ -53,7 +55,9 @@ for url in ipo_urls:
 
     ipo_data_dir = os.path.join(tickdata_dir, ipo_date)
     ipo_data_path = os.path.join(ipo_data_dir, "%s_markethours.csv.gz" % url.symbol)
+    exist = False
     if os.path.exists(ipo_data_dir) and os.path.exists(ipo_data_path):
+        exist = True
         log.info("IPO data found")
     else:
         request = {"command": "get", "symbol": url.symbol, "date": ipo_date}
@@ -64,7 +68,7 @@ for url in ipo_urls:
             fetcher_caller.close()
         except:
             log.error("Unable to send fetch request")
-            break
+            continue
 
         count_down = 60
         fetched = False
@@ -72,26 +76,38 @@ for url in ipo_urls:
             if os.path.exists(ipo_data_path):
                 log.info("IPO data fetched: %s" % url.symbol)
                 fetched = True
+                time.sleep(5)
                 break
             time.sleep(1)
             count_down -= 1
         if not fetched:
             log.error("Unable to download data for %s" % url.symbol)
-            continue
 
-    ticks = data_processor.get_ticks(url.symbol, ipo_date, ipo_date)
-    analyzer = TradeAnalyzer(ticks)
-    ipo_data["first_opening_price"] = analyzer.get_opening_price()
-    ipo_data["first_closing_price"] = analyzer.get_closing_price()
-    ipo_data["first_trade_time"] = analyzer.get_first_trade_time()
-    ipo_data["first_day_high"] = analyzer.get_high_price()
-    ipo_data["first_day_low"] = analyzer.get_low_price()
-    ipo_data["first_day_high_percent_change"] = analyzer.get_high_percent_change()
-    ipo_data["first_day_low_percent_change"] = analyzer.get_low_percent_change()
-    ipo_data["first_day_volume"] = analyzer.get_volume()
-    ipo_data["scoop_rating"] = "N/A"
-    ipo_data["company_id"] = comp.id
-    log.info("Final IPO data for %s:\n%s" % (url.symbol, ipo_data))
+    if exist or fetched:
+        ticks = data_processor.get_ticks(url.symbol, ipo_date, ipo_date)
+        analyzer = TradeAnalyzer(ticks)
+        ipo_data["first_opening_price"] = analyzer.get_opening_price()
+        ipo_data["first_closing_price"] = analyzer.get_closing_price()
+        ipo_data["first_trade_time"] = analyzer.get_first_trade_time()
+        ipo_data["first_day_high"] = analyzer.get_high_price()
+        ipo_data["first_day_low"] = analyzer.get_low_price()
+        ipo_data["first_day_high_percent_change"] = analyzer.get_high_percent_change()
+        ipo_data["first_day_low_percent_change"] = analyzer.get_low_percent_change()
+        ipo_data["first_day_volume"] = analyzer.get_volume()
+        ipo_data["scoop_rating"] = "N/A"
+        ipo_data["company_id"] = comp.id
+        log.info("Final IPO data for %s:\n%s" % (url.symbol, ipo_data))
+    else:
+        ipo_data["first_opening_price"] = 0.0
+        ipo_data["first_closing_price"] = 0.0
+        ipo_data["first_trade_time"] = "N/A"
+        ipo_data["first_day_high"] = 0.0
+        ipo_data["first_day_low"] = 0.0
+        ipo_data["first_day_high_percent_change"] = 0.0
+        ipo_data["first_day_low_percent_change"] = 0.0
+        ipo_data["first_day_volume"] = 0.0
+        ipo_data["scoop_rating"] = "N/A"
+        ipo_data["company_id"] = comp.id
 
     """
     for u in underwriters:

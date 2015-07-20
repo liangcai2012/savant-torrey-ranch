@@ -1,5 +1,6 @@
 import os, sys
 import numpy
+from datetime import datetime
 
 from savant.config import settings
 
@@ -21,16 +22,20 @@ class TradeAnalyzer:
 
     def get_opening_price(self):
         if not self.opening:
-            self.opening = self.tick_data.iloc[0, 3]
+            self.opening = self.tick_data.iloc[0, 2]
         return self.opening
 
     def get_closing_price(self):
         if not self.closing:
-            self.closing = self.tick_data.iloc[-1, 3]
+            self.closing = self.tick_data.iloc[-1, 2]
         return self.closing
 
     def get_first_trade_time(self):
-        return self.tick_data.iloc[0, 1]
+        dt = self.tick_data.iloc[0, 0]
+        if isinstance(dt, datetime):
+            return self.tick_data.iloc[0, 0].strftime("%H:%M:%S")
+        else:
+            return datetime.strptime(dt, "%m/%d/%Y %H:%M:%S").strftime("%H:%M:%S")
 
     def get_high_price(self):
         if not self.high:
@@ -66,7 +71,7 @@ class TradeAnalyzer:
     def validate_input(self):
         try:
             columns = sorted(list(self.tick_data.columns))
-            assert sorted(["date", "time", "type", "price", "size", "exch", "cond"]) == columns
+            assert sorted(["datetime", "type", "price", "size", "exch", "cond"]) == columns
         except AssertionError:
             raise Exception("Unexpected columns")
 
@@ -74,7 +79,7 @@ class TradeAnalyzer:
 if __name__ == "__main__":
     from savant.ticker.processors import TickDataProcessor
     ticker = TickDataProcessor()
-    data = ticker.get_ticks("SERV", "20140626", "20140626")
+    data = ticker.get_ticks("NTRA", "20150702", "20150702", parse_dates=False)
     analyzer = TradeAnalyzer(data)
     print analyzer.get_opening_price()
     print analyzer.get_closing_price()
