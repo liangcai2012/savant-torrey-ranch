@@ -3,7 +3,7 @@ import pandas as pd
 
 def rate_finder(sym):
     header_row=['date','name','symbol','underwriter','a','b','c','d','e','f','rate','meet']
-    data=pd.read_csv('iposcoop.csv' , header=None, names=header_row)
+    data=pd.read_csv('../../../out/iposcoop.csv' , header=None, names=header_row)
 
     df=pd.DataFrame(data)
     # print data
