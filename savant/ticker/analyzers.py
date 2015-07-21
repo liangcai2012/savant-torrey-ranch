@@ -68,24 +68,34 @@ class TradeAnalyzer:
             self.volume = int(numpy.sum(self.tick_data["size"]))
         return self.volume
 
+    def find_next_spike(begin_datetime, noise_level):
+        if not isinstance(begin_datetime, datetime):
+            raise ValueError("Invalid datetime value: expected python datetime object")
+        t0 = begin_datetime
+        p0 = self.get_price_by_datetime(t)
+            
+                
+    def get_price_by_datetime(self, dt):
+        data = self.tick_data[:dt]
+        if not data.empty:
+            return data.iloc[-1, 2]
+        else:
+            return None
+
     def validate_input(self):
         try:
             columns = sorted(list(self.tick_data.columns))
             assert sorted(["datetime", "type", "price", "size", "exch", "cond"]) == columns
         except AssertionError:
-            raise Exception("Unexpected columns")
+            try:
+                assert sorted(["type", "price", "size", "exch", "cond"]) == columns
+            except AssertionError:
+                raise Exception("Unexpected columns")
 
 
 if __name__ == "__main__":
     from savant.ticker.processors import TickDataProcessor
     ticker = TickDataProcessor()
-    data = ticker.get_ticks_by_date("NTRA", "20150702", "20150702", parse_dates=False)
+    data = ticker.get_ticks_by_date("NTRA", "20150702", "20150702", parse_dates=True)
     analyzer = TradeAnalyzer(data)
-    print analyzer.get_opening_price()
-    print analyzer.get_closing_price()
-    print analyzer.get_first_trade_time()
-    print analyzer.get_high_price()
-    print analyzer.get_low_price()
-    print analyzer.get_high_percent_change()
-    print analyzer.get_low_percent_change()
-    print analyzer.get_volume()
+    print analyzer.get_price_by_datetime(datetime.strptime("07/02/2015 11:00:00", "%m/%d/%Y %H:%M:%S"))
