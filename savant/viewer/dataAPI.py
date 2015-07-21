@@ -25,6 +25,8 @@ class DataAPI:
 #         raise NotImplementedError("Subclass must implement abstract method")
         self.price1_h_last=200
         self.price1_l_last=180
+        self.price1_o_last=190
+        self.price1_c_last=195
         self.vol_last=20000
         
     # subscribe a list of symbals in this interface instance for obtaining realtime.
@@ -62,9 +64,13 @@ class DataAPI:
         self.price1_h_last=self.price1_h_new
         self.price1_l_new=random.uniform(self.price1_l_last*0.9,self.price1_l_last*1.1)
         self.price1_l_last=self.price1_l_new
+        self.price1_o_new=random.uniform(self.price1_o_last*0.9,self.price1_o_last*1.1)
+        self.price1_o_last=self.price1_o_new
+        self.price1_c_new=random.uniform(self.price1_c_last*0.9,self.price1_c_last*1.1)
+        self.price1_c_last=self.price1_c_new
         self.vol_new=random.uniform(self.vol_last*0.95,self.vol_last*1.05)
         self.vol_last=self.vol_new
-        data=dumps({'client':'viewer_1s','timestamp':matplotlib.dates.date2num(st),'data':[{'symbol':'QQQ','bar':{'h':self.price1_h_new,'l':self.price1_l_new, 'vol':self.vol_new},'ma':[ None,None ,None ,None ,'190:20000','201:21000', None,None ,None ],'delay':'1s'}]})
+        data=dumps({'client':'viewer_1s','timestamp':matplotlib.dates.date2num(st),'data':[{'symbol':'QQQ','bar':{'h':self.price1_h_new,'l':self.price1_l_new, 'o':self.price1_o_new,'c':self.price1_c_new, 'vol':self.vol_new},'ma':[ None,None ,None ,None ,'190:20000','201:21000', None,None ,None ],'delay':'1s'}]})
 #         data=dumps({'client':'viewer_1s','timestamp':matplotlib.dates.date2num(st),'data':[{'symbol':'QQQ','bar':{'h':self.price1_h_new,'l':self.price1_l_new, 'vol':self.vol_new},'ma':{'1m':'190:20000','5m':'201:21000'},'delay':'1s'}]})
         return data
 

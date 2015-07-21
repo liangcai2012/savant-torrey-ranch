@@ -183,10 +183,12 @@ public class SymData {
 				if(lastSecond == 0)
 					lastSecond = asecond;
 				//otherwise we will update lastSecond later
+				System.out.format("updating: %d, %d, %.2f\n", asecond, vol, price);
 				lastTickSecond = asecond;
 			}
 
 			skipTill(second -1);
+			//System.out.format("-------lastSecond: %d -- second: %d \t", lastSecond, second);
 			if(lastSecond < second){//then lastSecond = second-1
 				//update the moving averages first
 				
@@ -210,8 +212,10 @@ public class SymData {
 				if(type == 0){
 					bw_o[pos] = bw_h[pos] = bw_l[pos] = bw_c[pos] = price;
 					bw_v[pos] = vol;
+				//	System.out.format("now bw_v %d, vol %d  at pos %d \n", bw_v[pos], vol,  pos);
 				}
 				else{
+				//	System.out.format("price -1 written to new pos %d \n", pos);
 					bw_o[pos]=bw_h[pos]=bw_c[pos]=-1;
 					bw_l[pos]=MAXPRICE;
 					bw_v[pos]=0;
@@ -223,7 +227,7 @@ public class SymData {
 				}	
 			}
 			// if still in the same second, we only need to update the bar window when type == 0 
-			if(lastSecond == second){ 
+			else if(lastSecond == second){ 
 				//only update the bar window data
 				if(type == 0){
 					if(bw_o[pos] == -1)
@@ -234,6 +238,8 @@ public class SymData {
 						bw_l[pos] = price;
 					bw_c[pos] = price;
 					bw_v[pos]+=vol;
+					//System.out.format("equal, price %.2f vol %d  written to new pos %d \n", price, vol,  pos);
+					//System.out.format("now bw_v %d, vol %d  at pos %d \n", bw_v[pos], vol,  pos);
 					if(aveEnabled){
 						bw_tp[pos]+=price * vol;
 					}
@@ -252,6 +258,7 @@ public class SymData {
 						bw_l[bpos] = price;
 					bw_c[bpos] = price;
 					bw_v[bpos]+=vol;
+					//System.out.format("delayed, price %.2f vol %d  written to new pos %d \n", price, vol,  pos);
 					if(aveEnabled){
 						double tp = price * vol;	
 						bw_tp[bpos]=tp;
@@ -300,7 +307,10 @@ public class SymData {
 			wpos=wrapIndex(wpos+1);
 		}
 		
-		retval = String.valueOf(open)+","+String.valueOf(high)+","+String.valueOf(low)+","+String.valueOf(close)+","+String.valueOf(vol);
+		if(open == -1)
+			retval = "";
+		else
+			retval = String.valueOf(open)+","+String.valueOf(high)+","+String.valueOf(low)+","+String.valueOf(close)+","+String.valueOf(vol);
 		return retval; 
 	}
 
