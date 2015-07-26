@@ -68,27 +68,86 @@ class TradeAnalyzer:
             self.volume = int(numpy.sum(self.tick_data["size"]))
         return self.volume
 
-    def find_next_spike(begin_datetime, noise_level):
+    def find_next_spike(self, begin_datetime, noise_level):
+        """
+        Given a datetime and threshold, return the time, price, and type of the next 
+        extremum (major spike or dip) in the tick data. The query datetime cannot
+        be earlier than the first trade. 
+        :param begin_datetime - datetime
+        :param noise_level - threshold
+        """
+        if not self.datetime_parsed:
+            raise TypeError("Datetime not parsed: re-process data with parse_dates flag")
         if not isinstance(begin_datetime, datetime):
             raise ValueError("Invalid datetime value: expected python datetime object")
         t0 = begin_datetime
-        p0 = self.get_price_by_datetime(t)
-            
-                
-    def get_price_by_datetime(self, dt):
-        data = self.tick_data[:dt]
-        if not data.empty:
-            return data.iloc[-1, 2]
+        p0 = self.get_price_by_datetime(t0)
+        if p0 == None:
+            raise ValueError("No data available prior to the datetime provided")
+        d = 0
+        pending = False
+        for tick in self.tick_data[begin_datetime:].iterrows():
+            t = tick[0]
+            p = tick[1][1]
+            if not pending:
+                if p > p0:
+                    d = 1
+                elif p < p0:
+                    d = -1
+                if numpy.absolute(p - p0)/float(p0) > noise_level:
+                    pending = True
+                    t0 = t
+                    p0 = p
+            elif d == 1:
+                if p > p0:
+                    t0 = t
+                    p0 = p
+                if p < p0 and pending and (p0 - p)/float(p0) > noise_level:
+                    pending = False
+                    break
+            else:
+                if p < p0:
+                    t0 = t
+                    p0 = p
+                if pending and p > p0 and (p - p0)/float(p0) > noise_level:
+                    pending = False
+                    break
+        if not pending and d != 0:
+            return (t0, p0, d)
         else:
             return None
+
+    def get_price_by_datetime(self, dt, tail=False):
+        """
+        Query the price of the ticker at the datetime provided. If no trade
+        occurs at the given datetime, the last trade price retrievable will
+        be returned.
+        :param dt - datetime
+        :param tail - if true function returns the last trade price at the 
+                      given datetime
+        """
+        try:
+            rows = self.tick_data.loc[dt]
+            if not tail:
+                return rows.iloc[0,1]
+            else:
+                return rows.iloc[-1,1]
+        except KeyError:
+            data = self.tick_data[:dt]
+            if not data.empty:
+                return data.iloc[-1, 1]
+            else:
+                return None
 
     def validate_input(self):
         try:
             columns = sorted(list(self.tick_data.columns))
-            assert sorted(["datetime", "type", "price", "size", "exch", "cond"]) == columns
+            assert sorted(["datetime", "type", "price", "size", "exch", "cond"]) == sorted(columns)
+            self.datetime_parsed = False
         except AssertionError:
             try:
-                assert sorted(["type", "price", "size", "exch", "cond"]) == columns
+                assert sorted(["type", "price", "size", "exch", "cond"]) == sorted(columns)
+                self.datetime_parsed = True
             except AssertionError:
                 raise Exception("Unexpected columns")
 
@@ -98,4 +157,7 @@ if __name__ == "__main__":
     ticker = TickDataProcessor()
     data = ticker.get_ticks_by_date("NTRA", "20150702", "20150702", parse_dates=True)
     analyzer = TradeAnalyzer(data)
-    print analyzer.get_price_by_datetime(datetime.strptime("07/02/2015 11:00:00", "%m/%d/%Y %H:%M:%S"))
+    #print analyzer.get_price_by_datetime(datetime.strptime("07/02/2015 10:43:27", "%m/%d/%Y %H:%M:%S"))
+    print analyzer.find_next_spike(datetime.strptime("07/02/2015 10:44:00", "%m/%d/%Y %H:%M:%S"), 0.02)
+    #print analyzer.tick_data
+
