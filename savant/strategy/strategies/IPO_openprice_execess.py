@@ -84,5 +84,24 @@ def plot_IPO_excess_dist(symb_list, save_fig_path=False):
         plt.savefig(str(save_fig_path))
     plt.show()
 
+def prices_count(prices):
+    counts = {}
+    for i in range(6):
+        days = {}
+        for sym in prices:
+            pcd = prices[sym]
+            pcd_higher = pcd [pcd["High"] > pcd.iloc[0]["Open"] * ( 1 + i  / 100.0)]
+            if pcd_higher.size > 0 and (pcd.index <= pcd_higher.index[0]).sum() < 6:
+                days[sym] = (pcd.index <= pcd_higher.index[0]).sum() - 1
+            else:
+                days[sym] = -1
+        result = pd.DataFrame.from_dict (days, orient='index' )
+        result.columns = pd.Index(['days'])
+        counts[i] = result["days"].value_counts()
+
+    for key in counts:
+        print 'exceed by ' + str(key) + "%"
+        print counts[key]
+
 if __name__ == "__main__":
     plot_IPO_excess_dist( [u'AAVL', u'ABY', u'AKBA', u'BLCM', u'CLDN'])
