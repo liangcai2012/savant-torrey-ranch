@@ -59,7 +59,6 @@ public class ATTickDataFetcher {
         serverapi.ATInitAPI();
         this.pendingRequests = new LinkedList<JSONObject>();
         this.beginTime = DEFAULT_BEGIN_TIME;
-        this.timeWindow = DEFAULT_TIME_WINDOW;
     }
 
     public void init() {
@@ -111,10 +110,10 @@ public class ATTickDataFetcher {
                     String strCurrBeginTime = this.beginTime;
                     String strCurrEndTime = "";
                     do {
-                        strCurrEndTime = addTime(strCurrBeginTime, this.timeWindow);
+                        strCurrEndTime = addTime(strCurrBeginTime, DEFAULT_TIME_WINDOW);
                         request = buildRequest(symbol,date,strCurrBeginTime,strCurrEndTime);
                         this.addPendingRequest(request);
-                        strCurrBeginTime = addTime(strCurrBeginTime, this.timeWindow);
+                        strCurrBeginTime = strCurrEndTime;
                     } while ((subtractTime(DEFAULT_END_TIME,strCurrEndTime) > 0));
                     long res = sendNextRequest();
                     if (res < 0) {
@@ -197,6 +196,31 @@ public class ATTickDataFetcher {
     public void onTickHistoryOverload() {
         JSONObject lastRequest = this.getPendingRequest();
         this.removePendingRequest();
+        try {
+            String symbol = (String) lastRequest.get("symbol");
+            String beginDateTime = (String) lastRequest.get("beginDateTime");
+            String endDateTime = (String) lastRequest.get("endDateTime");
+            String date = beginDateTime.substring(0, 8);
+            int deltaT = (int) subtractTime(endDateTime.substring(8), beginDateTime.substring(8));
+            if (deltaT >= MIN_INTERVAL) {
+                int timeWindow = deltaT/2;
+                String midPointTime = addTime(this.beginTime,timeWindow);
+                logger.log(Level.INFO,midPointTime);
+                this.insertPendingRequest(buildRequest(symbol, date, midPointTime, endDateTime.substring(8)));
+                this.insertPendingRequest(buildRequest(symbol, date, beginDateTime.substring(8), midPointTime));
+                this.sendNextRequest();
+            } else {
+                logger.log(Level.WARNING, "Fetch halted: Unexpected data volume");
+                this.cancelRequest();
+                this.reset();
+            }
+        } catch (ParseException pe) {
+            logger.log(Level.SEVERE,pe.getMessage());
+        } catch (JSONException je) {
+            logger.log(Level.SEVERE,je.getMessage());
+        }
+        /*
+        this.removePendingRequest();
         this.setTimeWindow(this.timeWindow / 2);
         if (this.timeWindow >= MIN_INTERVAL) {
             try {
@@ -224,6 +248,7 @@ public class ATTickDataFetcher {
             this.cancelRequest();
             this.reset();
         }
+        */
     }
 
     public void readLog(long[] ts,String fn)
@@ -363,10 +388,6 @@ public class ATTickDataFetcher {
         this.beginTime = endDateTime.substring(8);
     }
 
-    private void setTimeWindow(int window) {
-        this.timeWindow = window;
-    }
-
     //return file size for estimation purpose
     private long completeFetch() {
         String filepath = this.outputPath + "_markethours.csv";
@@ -419,7 +440,6 @@ public class ATTickDataFetcher {
 
     private void reset() {
         this.beginTime = DEFAULT_BEGIN_TIME;
-        this.setTimeWindow(DEFAULT_TIME_WINDOW);
         CANCEL = false;
     }
 
