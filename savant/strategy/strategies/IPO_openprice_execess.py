@@ -1,7 +1,7 @@
 # coding: utf-8
 
-get_ipython().magic(u'matplotlib inline')
-import socket, yaml, os, cjson, requests, sys, datetime
+#get_ipython().magic(u'matplotlib inline')
+import socket, os, cjson, requests, sys, datetime
 # root_dir = os.path.dirname(__file__)
 root_dir = os.getcwd()
 import pandas as pd
@@ -10,7 +10,7 @@ from savant.db.models import IPOInfoUrl, HistoricalIPO, Company, Underwriter, Co
 from savant.config import settings
 from savant.db.models import Exchange, Sector, Industry
 
-import socket, yaml, os, cjson, requests, sys, datetime
+#import socket, yaml, os, cjson, requests, sys, datetime
 
 class ATConnection:
     def __init__(self):
