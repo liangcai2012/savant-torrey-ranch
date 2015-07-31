@@ -4,7 +4,7 @@ import sqlite3 as sqlite
 
 from sqlalchemy import (Boolean, Column, Date, Enum, ForeignKey, Index,
                         Integer, Float, String, Text, TypeDecorator, event,
-                        Sequence, Table)
+                        Sequence, Table, DateTime)
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import relationship, backref
 
@@ -33,7 +33,7 @@ class Company(db.Base):
 
     # Exchange
     exchange_id = Column(Integer, ForeignKey("exchange.id"))
-    
+
     # Sector
     sector_id = Column(Integer, ForeignKey("sector.id"))
 
@@ -42,10 +42,10 @@ class Company(db.Base):
 
     # Company primary location
     #headquarter = Column(String(100))
-    
+
     # Market cap
     market_cap = Column(Integer)
-    
+
     # Public shares as of the date this table is updated
     float_shares = Column(Integer)
 
@@ -93,7 +93,7 @@ class Exchange(db.Base):
 
 class Sector(db.Base):
     __tablename__ = "sector"
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(String(20), nullable=False, unique=True)
 
@@ -162,7 +162,7 @@ class IPOInfoUrl(db.Base):
 
 class HistoricalIPO(db.Base):
     __tablename__ = "historical_ipo"
-    
+
     company_id = Column(Integer, ForeignKey("company.id"), primary_key=True)
 
     ipo_date = Column(Date)
@@ -180,9 +180,29 @@ class HistoricalIPO(db.Base):
     first_day_low = Column(Float)
     first_day_low_percent_change = Column(Float)
     first_day_volume = Column(Integer)
-    
+
     def __init__(self, **params):
         self.__dict__.update(params)
 
     def __repr__(self):
         return "<Historical_IPO(company_id='%s', ipo_date='%s', price='%s', shares='%s', outstanding='%s', scoop_rating='%s')>" % (self.company_id, self.ipo_date, self.price, self.shares, self.outstanding, self.scoop_rating)
+
+
+class PostIPOPrice(db.Base):
+    __tablename__ = "post_ipo_price"
+
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer, ForeignKey("company.id"), primary_key=False)
+
+    datetime = Column(DateTime)
+    open = Column(Float)
+    high = Column(Float)
+    low = Column(Float)
+    close = Column(Float)
+    volume = Column(Integer)
+
+    def __init__(self, **params):
+        self.__dict__.update(params)
+
+    def __repr__(self):
+        return "<Post_IPO_Price(company_id='%s', datetime='%s', open='%s', high='%s', low='%s', close='%s', volume='%s')>" % (self.company_id, self.datetime, self.open, self.high, self.low, self.close, self.volume)

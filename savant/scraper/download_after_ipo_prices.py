@@ -1,12 +1,9 @@
 import os, requests, sys, datetime
 import matplotlib.pyplot as plt
-import math
 import pandas as pd
-from sqlalchemy import create_engine # database connection
-from savant.db.models import IPOInfoUrl, HistoricalIPO, Company, Underwriter, CompanyUnderwriterAssociation
+import savant.db
+from savant.db.models import HistoricalIPO, Company, PostIPOPrice
 from savant.config import settings
-from savant.db.models import Exchange, Sector, Industry
-import sqlite3
 import numpy as np
 
 if sys.version_info[0] < 3:
@@ -17,7 +14,7 @@ else:
 class ATConnection:
     def __init__(self):
         self.root_url = 'http://127.0.0.1:5000'
-        self.bar_names = ['datetime', 'Open', 'High', 'Low', 'Close', 'Volume' ]
+        self.bar_names = ['datetime', 'open', 'high', 'low', 'close', 'volume' ]
         self.bar_parse = lambda x: datetime.datetime.strptime(x, '%Y%m%d%H%M%S%f')
 
     def quoteData(self, params):
@@ -39,10 +36,15 @@ class ATConnection:
         return requests.get(url, params=params)
 
 
+try:
+    PostIPOPrice.__table__.create(bind = savant.db.create_engine())
+except:
+    savant.db.session.rollback()
+
+
 def IPO_first_daily_price(symb_list):
     at = ATConnection()
     comps =  Company.query.filter(Company.symbol.in_(symb_list)).all()
-    prices = {}
 
     for comp in comps:
         ipo =  HistoricalIPO.query.filter_by(company_id=comp.id).first()
@@ -50,39 +52,17 @@ def IPO_first_daily_price(symb_list):
         params['symbol'] = comp.symbol
         params['historyType'] = 1
         params['beginTime'] = ipo.ipo_date.strftime('%Y%m%d%H%M%S')
-        params['endTime'] = (ipo.ipo_date + datetime.timedelta(days=30)).strftime('%Y%m%d%H%M%S')
+        params['endTime'] = (ipo.ipo_date + datetime.timedelta(days=10)).strftime('%Y%m%d%H%M%S')
         try:
-            prices[comp.symbol] = at.barData(params=params)
+            prices = at.barData(params=params)
+            for ind, price in prices.iterrows():
+                post_ipo_price = PostIPOPrice(**price.to_dict())
+                post_ipo_price.datetime = price.name
+                post_ipo_price.company_id = comp.id
+                savant.db.session.add(post_ipo_price)
+                savant.db.session.commit()
+
         except:
-            print comp.symbol
-    return prices
+            savant.db.session.rollback()
+            print "cannot get " + comp.symbol
 
-def plot_IPO_excess_dist(symb_list, save_fig_path=False):
-    prices = IPO_first_daily_price(symb_list)
-    plt.figure()
-
-    for i in range(0, 5):
-        y = {}
-        for sym in prices:
-            try:
-                y[sym] = (prices[sym].iloc[i]["High"] / prices[sym].iloc[0]["Open"] - 1)* 100
-            except:
-                1
-        x = pd.DataFrame.from_dict(y, orient='index' )[0].value_counts().sort_index()
-        x_cum = pd.Series.copy( x)
-        for ind in x.index:
-            if ind < 0:
-                x_cum[ind] = x[x.index <= ind].sum()
-            else:
-                x_cum[ind] = x[x.index >= ind].sum()
-
-        plt.plot(x.index, x_cum.values *1.0 / x.values.sum(), '-*')
-        plt.xlim(-1, 20)
-        plt.xlabel('excess open price by %')
-        plt.ylabel('% percent')
-    if save_fig_path:
-        plt.savefig(str(save_fig_path))
-    plt.show()
-
-if __name__ == "__main__":
-    plot_IPO_excess_dist( [u'AAVL', u'ABY', u'AKBA', u'BLCM', u'CLDN'])
