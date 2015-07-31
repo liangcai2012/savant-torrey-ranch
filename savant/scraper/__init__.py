@@ -189,30 +189,34 @@ def scrape_ipo(url):
     except:
         print "Unable to reach or parse url:", url
         return data
+    try:
+       table = soup.find("div", {"id": "infoTable"}).table
+       rows = table.find_all("tr")
+       for row in rows:
+           key = row.td.text.strip()
+           if key == "Share Price":
+               value = row.find_all("td")[1].text.strip("$")
+               try:
+                   data["price"] = float(value) if "-" not in value else sum([float(i) for i in value.split("-")])/2.0
+               except:
+                   data["price"] = 0.0
+           elif key == "Status":
+               data["ipo_date"] = row.find_all("td")[1].text.split("(")[1].strip(")")
+           elif key == "Shares Offered":
+               value = row.find_all("td")[1].text.replace(",", "")
+               data["shares"] = int(value) if value.isdigit() else "N/A"
+           elif key == "Shares Outstanding":
+               value = row.find_all("td")[1].text.replace("," ,"")
+               data["outstanding"] = int(value) if value.isdigit() else "N/A"
+   
+       exp_table = soup.find("div", {"class": "tab3"}).div.table
+       rows = exp_table.find_all("tr")
+       data["lead_underwriters"] = []
+       data["underwriters"] = []
+    except:
+       print "Unable to parse the page: ", url
+       return data
 
-    table = soup.find("div", {"id": "infoTable"}).table
-    rows = table.find_all("tr")
-    for row in rows:
-        key = row.td.text.strip()
-        if key == "Share Price":
-            value = row.find_all("td")[1].text.strip("$")
-            try:
-                data["price"] = float(value) if "-" not in value else sum([float(i) for i in value.split("-")])/2.0
-            except:
-                data["price"] = 0.0
-        elif key == "Status":
-            data["ipo_date"] = row.find_all("td")[1].text.split("(")[1].strip(")")
-        elif key == "Shares Offered":
-            value = row.find_all("td")[1].text.replace(",", "")
-            data["shares"] = int(value) if value.isdigit() else "N/A"
-        elif key == "Shares Outstanding":
-            value = row.find_all("td")[1].text.replace("," ,"")
-            data["outstanding"] = int(value) if value.isdigit() else "N/A"
-
-    exp_table = soup.find("div", {"class": "tab3"}).div.table
-    rows = exp_table.find_all("tr")
-    data["lead_underwriters"] = []
-    data["underwriters"] = []
     for row in rows:
         key = row.td.text.strip()
         if key == "Lead Underwriter":

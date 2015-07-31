@@ -28,28 +28,12 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 
 /*
 	Algorithm to find market open/close signal:
-	1) bookkeep records from 9:30:00 until 9:30:05 or the first 100 records: 
-	2)if there is one record with cond = 9 (NASDAQ symbosl), assert the following record have same price and size. Remove this record, all records before it belong to pre-market
-	3)else(NYSE or AMEX symbols), found the record with maximum size, all records before it belong to pre-market, assert the exch be 78(NYSE) or 65(AMEX)
-	Same for after-market(change from 16:00:00-16:05:00 or the first 100 records), a closing 
+   extended hour trade records contain FormT condition type (12), therefore the first/close record does not contain FormT is considered the open/close signal.
+   1) If record does not contains cond=12, market record
+   2) else if time is earlier than 12:00:00, then premarkeot
+   3) else aftermarket
 
-	state machine: 
-	state 0: init: premarket
-	state 1: time>9:30:00: to find market open signal, save data to temp_list
-	state 2: rec with cond=9 found, or time>=9:30:05 or len(temp_list)=100: markethour
-	state 2.1: if cond=9 was found, the next record should have same price and val, remove this record
-	state 3: time>16:0:0: to find market close signal, save data to temp_list
-	state 4: rec with cond=9 found, or time>16:05:00 or len(temp_list)==100: aftermarket
-	state 4.1 if cond =9 was found, the next record should have same price and val, remove this record
-*/				 
-	int state; // can be 0 to 4, see comments in Requestor.java
-	String date;
-	int numRec;
-	long[] vol = new long[100];
-	double[] price= new double[100];
-	String[] rec= new String[100];
-	boolean crossRecVerified; 
-
+   */
 
 	Logger logger = Logger.getLogger(ATTickDataFetcher.class.getName());
 	//SavantLogger logger;
@@ -105,7 +89,7 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 					sb.append(atTradeRecord.lastDateTime.month+ "/" + atTradeRecord.lastDateTime.day + "/" + atTradeRecord.lastDateTime.year);   
 					sb.append(" ");
 					//time
-					sb.append(atTradeRecord.lastDateTime.hour + ":" + atTradeRecord.lastDateTime.minute + ":" + atTradeRecord.lastDateTime.second);
+					sb.append(atTradeRecord.lastDateTime.hour + ":" + atTradeRecord.lastDateTime.minute + ":" + atTradeRecord.lastDateTime.second + "." + atTradeRecord.lastDateTime.milliseconds);
 					sb.append(",");
 					//type
 					sb.append("TRADE");
@@ -121,164 +105,28 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 					sb.append(atTradeRecord.lastExchange.m_atExchangeType);
 					sb.append(",");
 					//condition
+               boolean formT = false;
 					sb.append(atTradeRecord.lastCondition[0].m_atTradeConditionType);
-
-//					sb.append("[");
-//					sb.append(++index);
-//					sb.append("/");
-//					sb.append(recCount);
-//					sb.append("]");
-//					sb.append(" [" + atTradeRecord.lastDateTime.month+ "/" + atTradeRecord.lastDateTime.day + "/" + atTradeRecord.lastDateTime.year + " ");
-//					sb.append(atTradeRecord.lastDateTime.hour + ":" + atTradeRecord.lastDateTime.minute + ":" + atTradeRecord.lastDateTime.second + "] ");
-//					sb.append("TRADE ");
-//					
-//					strFormat = "%0." + atTradeRecord.lastPrice.precision + "f";
-//					sb.append("  \t[last:" + new PrintfFormat(strFormat).sprintf(atTradeRecord.lastPrice.price));
-//					sb.append("  \tlastsize:" + atTradeRecord.lastSize);
-//					sb.append("  \tlastexch:" + atTradeRecord.lastExchange.m_atExchangeType);
-//					sb.append("  \tcond:" + atTradeRecord.lastCondition[0].m_atTradeConditionType);
-
-			
-//					String hour = (atTradeRecord.lastDateTime.hour >= 10) ? String.valueOf(atTradeRecord.lastDateTime.hour) : "0" + atTradeRecord.lastDateTime.hour;
-//					String minute = (atTradeRecord.lastDateTime.minute >= 10) ? String.valueOf(atTradeRecord.lastDateTime.minute) : "0" + atTradeRecord.lastDateTime.minute;
-//					String second = (atTradeRecord.lastDateTime.second >= 10) ? String.valueOf(atTradeRecord.lastDateTime.second) : "0" + atTradeRecord.lastDateTime.second;
-//					String tradeTime = hour + minute + second;
-
+               if(atTradeRecord.lastCondition[0].m_atTradeConditionType==12 || atTradeRecord.lastCondition[0].m_atTradeConditionType == 13)
+                  formT = true;
+               for(int i=1; i<=3; i++){ 
+                  sb.append("-");
+					   sb.append(atTradeRecord.lastCondition[i].m_atTradeConditionType);
+                  if(atTradeRecord.lastCondition[i].m_atTradeConditionType==12 || atTradeRecord.lastCondition[i].m_atTradeConditionType == 13)
+                     formT = true;
+               }
 					String curRecord=sb.toString();
-					int rtime = atTradeRecord.lastDateTime.hour*10000+atTradeRecord.lastDateTime.minute*100+atTradeRecord.lastDateTime.second;
-					if(rtime < 93000){
-						state=0;
-						premarketTickRecords.add(curRecord);
+               if(formT){
+					      int rtime = atTradeRecord.lastDateTime.hour*10000+atTradeRecord.lastDateTime.minute*100+atTradeRecord.lastDateTime.second;
+					      if(rtime < 93100)
+						      premarketTickRecords.add(curRecord);
+                     else if(rtime > 160000)
+						   	aftermarketTickRecords.add(curRecord);
+                     else
+				            marketTickRecords.add(curRecord);
 					}
-
-					else if((rtime>=93000) && (rtime < 160000)){
-						if(state==0){
-							numRec= 0;
-							state=1;
-							//System.out.println("state is now 1: "+String.valueOf(rtime));
-						}
-						if(state == 1){
-							//book keep rec and vol
-							rec[numRec]=curRecord;
-							vol[numRec]=atTradeRecord.lastSize;
-							price[numRec]=atTradeRecord.lastPrice.price;
-							numRec ++;
-							if((atTradeRecord.lastCondition[0].m_atTradeConditionType != 9)&&(rtime<93002)&&(numRec<100)){
-								//keep state = 1 and continue
-								continue;
-							}
-							//otherwise, we can change the state to 2
-							state = 2;
-							int lastPreIndex;
-							//this check has to be first as this has higher priority
-							if(atTradeRecord.lastCondition[0].m_atTradeConditionType == 9){
-								lastPreIndex = numRec-2;
-								crossRecVerified=false;
-							}
-							else{
-								//try to find the max index in the vol[i]
-							
-								int mi = -1;
-								long mv = 0;
-								for (int i = 0; i < numRec; i++) {
-    								if (vol[i] > mv) {
-										mv = vol[i];
-										mi = i;
-									}
-								}
-								lastPreIndex = mi-1;
-								//System.out.println("max index:" + String.valueOf(mi)+"  "+String.valueOf(rtime));
-								//if not due to cond=9, no need to verify cross record
-								crossRecVerified = true;
-							}
-							for(int i=0; i<=lastPreIndex; i++)
-								premarketTickRecords.add(rec[i]);
-							for(int i=lastPreIndex+1; i<numRec; i++)
-								marketTickRecords.add(rec[i]);
-						}
-						//state must be 2
-						else{
-							if(!crossRecVerified){
-								crossRecVerified = true; 
-								if ((atTradeRecord.lastSize==vol[numRec]) && 
-										(atTradeRecord.lastPrice.price == price[numRec])){
-									//skipping this record
-									continue;
-								}
-            					logger.log(Level.SEVERE, this.fetchingSym +": record following cross record does not have same price and size: " +  rec[numRec]);
-							}
-							marketTickRecords.add(curRecord);
-						}
-					}
-					//rtime > 160000
-					else{
-						if(state<3){
-							state = 3;
-							numRec = 0;
-						}
-						if(state == 3){
-							//book keep rec and vol
-							rec[numRec]=curRecord;
-							vol[numRec]=atTradeRecord.lastSize;
-							price[numRec]=atTradeRecord.lastPrice.price;
-							numRec ++;
-							if((atTradeRecord.lastCondition[0].m_atTradeConditionType != 9)&&(rtime<160500)&&(numRec<100)){
-								//keep state = 3 and continue
-								continue;
-							}
-							//otherwise, we can change the state to 4 
-							state = 4;
-							int lastMarketIndex;
-							//this check has to be first as this has higher priority
-							if(atTradeRecord.lastCondition[0].m_atTradeConditionType == 9){
-								lastMarketIndex = numRec-1;
-								crossRecVerified=false;
-							}
-							else{
-								//try to find the max index in the vol[i]
-								int mi = -1;
-								long mv = 0;
-								for (int i = 0; i < numRec; i++) {
-    								if (vol[i] > mv) {
-										mv = vol[i];
-										mi = i;
-									}
-								}
-								lastMarketIndex = mi;
-								//if not due to cond=9, no need to verify cross record
-								crossRecVerified = true;
-							}
-							for(int i=0; i<=lastMarketIndex; i++)
-								marketTickRecords.add(rec[i]);
-							for(int i=lastMarketIndex+1; i<numRec; i++)
-								aftermarketTickRecords.add(rec[i]);
-						}
-						//state must be 4 
-						else{
-							if(!crossRecVerified){
-								crossRecVerified = true; 
-								if ((atTradeRecord.lastSize==vol[numRec]) && 
-										(atTradeRecord.lastPrice.price == price[numRec])){
-									//skipping this record
-									continue;
-								}
-            					logger.log(Level.SEVERE, this.fetchingSym +": record following cross record does not have same price and size: " +  rec[numRec]);
-							}
-							aftermarketTickRecords.add(curRecord);
-						}
-					}
-					
-				//	try {
-				//		if (m_fetcher.subtractTime(tradeTime, "093000") < 0) {
-				//			premarketTickRecords.add(sb.toString() + "\n");
-				//		} else if (atTradeRecord.lastDateTime.hour >= 16) {
-				//			aftermarketTickRecords.add(sb.toString() + "\n");
-				//		} else {
-				//			marketTickRecords.add(sb.toString() + "\n");
-				//		}
-				//	} catch (ParseException e) {
-				//		System.out.println("Time parsing error");
-				//	}
+               else
+				      marketTickRecords.add(curRecord);
 				}
 				break;
 				case ATTickHistoryRecordType.TickHistoryRecordQuote: {
@@ -324,26 +172,6 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 			}
 		}
 			
-		//if state is 3, we will force it to 4 as there might not be any following tick
-		if((state == 3) && (numRec >0)){
-			int mi = -1;
-			long mv = 0;
-			for (int i = 0; i < numRec; i++) {
-    			if (vol[i] > mv) {
-					mv = vol[i];
-					mi = i;
-				}
-			}
-			for(int i=0; i<=mi; i++)
-				marketTickRecords.add(rec[i]);
-			for(int i=mi+1; i<numRec; i++)
-				aftermarketTickRecords.add(rec[i]);
-		}
-		//if state is 4, but crossRecVerified is still false, that is an error 
-		if((state == 4) && (!crossRecVerified)){
-           	logger.log(Level.SEVERE, this.fetchingSym +": record following cross record does not have same price and size: " +  rec[numRec]);
-		}
-		
 		if (!premarketTickRecords.isEmpty()) {
 			this.writeTickRecord(this.premarketFilePath,premarketTickRecords);
 		}
@@ -521,12 +349,6 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 		this.premarketFilePath = premarketFilePath;
 		this.marketFilePath = marketFilePath;
 		this.aftermarketFilePath = aftermarketFilePath;
-
-		initSignalFinding();
 	}
 
-	public void initSignalFinding(){
-		state=0; // can be 0 to 4, see comments in Requestor.java
-		numRec=0;
-	}
 }
