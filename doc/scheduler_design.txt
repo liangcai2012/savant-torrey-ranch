@@ -1,33 +1,22 @@
-The scheduler can be implemented as an ever running server which holds a task queue in 'mind' and accepts a command input from an outside client console.
+The scheduler can be implemented as an ever running server which holds a task queue in mind and accepts a command input from an outside client console.
 
-- Command client, an independent python process that commands the scheduler server via IPC. It can be one of the following commands so far:
+- Command client, an independent python process that commands the scheduler server via IPC. It can be one of the following commands:
 
-1. 'GET <SYMBOL> <INTERVAL_START> <INTERVAL_END> <RANK>'. Request a new fetch action. Responses would be a simple acknowledgement showing it'd been enqueued, or the folder location (string) holding the fetched zips, if the request had the highest rank.
+1. 'get <SYMBOL> <INTERVAL_START> <INTERVAL_END> <RANK>'. Request a new fetch action. Responses would be a simple acknowledgement showing it'd been enqueued or the first day's fetching status, if the request had the highest rank.
+2. 'where <SYMBOL>'. Request all fetched days (in intervals) to a given symbol. Response would be the interval list.
+3. 'queue'. Request and to be responded a list of all queue tasks.
+4. 'end'. Terminate the scheduler decently (to correctly save DB table and task file). Response would be an acknowledgement.
 
-2. 'WHERE <SYMBOL>'. Request a location inquery of all completed sections to a given symbol. Response would be a list of folder pathes holding the pre-fetched zips.
+- Scheduler Server, a non-blocking daemon process keep fetching the (priority-)queue front task, if any. But if any command comes before each of the fetching, the command will be responded first. The scheduler will maintain in memory a task (priority-)queue, which serves as the kernel object synchronizing all the others: command, interval table, task file.
 
-3. 'QUEUE'. Request a list of all requested tasks queued in the Scheduler's 'mind' (will be detailed later) and to be responded.
-
-4. 'END'. Terminate the scheduler decently (to correctly save DB table and task file). Response would be an acknowledgement.
-
-- Scheduler Server, a non-blocking daemon process keep solving the (priority-)queue front task, if any. But if any command comes before each of the solving, the command will be responded first. The scheduler will maintain in memory a task (priority-)queue, which serves as the kernel object synchronizing all others: parsed command, interval DB tables, бн 
-
-1. Each task in the priority-queue is a tuple of 'RANK, REQUEST_TIME, interval_start, interval_end, symbol', where only RANK (DESC) and REQUEST_TIME (ASC) are ordered to prioritize its position in the queue.
-
-2. Only the front task will be handled, after spawning a one-day piece sub-task to be immediately executed. The remaining sub-task, if any, will continue to stay at front but with a updated interval_start, or eliminated (popped) from the queue otherwise.
-
-    A. Spawning the first piece sub-task needs to read a DB table for a set of pre-fetched intervals for the given symbol. Minusing the set will break the task into pieces, the first of which, further shortened to a day, will be the immediate sub-task to be executed then in the same scheduler cycle.
-    
-    B. Once the fetching sub-task is done, a sub folder named SYMBOL->INTERVAL would be created to hold the zips. A merging action shall be taken to union this INTERVAL to its neighboring one, i.e. creating a merged interval folder to hold the neighboring interval folders (then a folder structure of interval tree is formed), and updating the front interval of the DB table row to be the merged interval.
-
+1. Each task in the priority-queue is a tuple of 'RANK, REQUEST_TIME, DATE, symbol', where RANK, REQUEST_TIME, and DATE are (heap-)ordered to prioritize its position in the queue.
+2. Only the front day task will be immediately executed, then poped out from the queue.
+    A. Before the fetching the server will read a DB table for a set of pre-fetched intervals of the symbol. Only if the asked day has not been fetched before, the fetching job can be launched.
+    B. After the fetching happens, some intervals would be updated, or be created.
 3. Before the queue being checked to handle the front task in each cycle, the scheduler has a chance to listen to one command. To respond each command in the above-mentioned client section, the server will conduct the following operations:
+    A. 'get': Break down the INTERVAL to multiple consecutive daily tasks; Push the tasks to the queue. In case the RANK is '-1' (treated as 1+highest), the response will be sent after the following fetching job to be completed, b/c it must belong to this inquiry.
+    B. 'where': Read into the SYMBOL row from DB table for the existing interval set, and respond the set back.
+    C. 'queue': Respond the task queue back.
+    D. 'end': Terminate the server loop decently after dumping the task queue to file, which will can be loaded up once the server restarts later.     
 
-    A. GET: Read in the SYMBOL row from DB table to learn the existing interval set; Minus the set from the input INTERVAL to get 1st one-day piece and the remaining set; Fetch the 1st one-day piece; Merge the folder and remaining set; Save the set back to DB. In case the RANK is '-1' (treated as 1+highest), the response will be sent after the following fetching job, b/c it must be the sub-task belong to it.
-
-    B. WHERE: Read in the SYMBOL row from DB table to learn the existing interval set, and respond the set back.
-
-    C. QUEUE: Respond the task queue back.
-
-    D. END: Terminate the server loop decently after dumping the task queue to file, will can be loaded up once the server restarts later.     
-
-- The design may ask the folder structure to be adjusted to SYMBOL -> INTERVAL, if the fetching can zip the attick data of many days. Depending on the usage in a later time, say, resolution of retrieval is set to be a day, s.t. have to zip by days (then lots of files), the current structure can be kept, and the above mentioned merging work can be saved too.
+- The design will honor the current folder structure DAY -> SYMBOL, and in fact does not assume any specific folder structure to hold those results. It's the client code that interperates the intervals to the storage pathes by 'where' command or a direct DB reading.
