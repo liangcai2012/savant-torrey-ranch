@@ -92,7 +92,6 @@ def scrape_yahoo(symbol, full=False):
         print "Could not reach profile page for", symbol
     except Exception, e:
         print "Error in parsing profile page for %s: %s" % (symbol, e)
-        return data
 
     try:
         soup = get_soup(key_stat_url, params)
@@ -244,9 +243,9 @@ def get_company_overview(symbol):
     if len(data) == 1:
         return None
 
-    existing = Company.query.filter_by(name=data["name"]).first()
-    if existing:
-        return existing
+    #existing = Company.query.filter_by(name=data["name"]).first()
+    #if existing:
+    #    return existing
 
     if "exchange" in data:
         exch = Exchange.query.filter_by(name=data["exchange"]).first()

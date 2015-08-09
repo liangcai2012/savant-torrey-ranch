@@ -41,13 +41,17 @@ try:
 except:
     savant.db.session.rollback()
 
-
-def IPO_first_daily_price(symb_list):
+def IPO_first_daily_price(symb_list=None):
     at = ATConnection()
-    comps =  Company.query.filter(Company.symbol.in_(symb_list)).all()
-
+    if symb_list is None:
+        comps =  Company.query.all()
+    else:
+        comps =  Company.query.filter(Company.symbol.in_(symb_list)).all()
     for comp in comps:
         ipo =  HistoricalIPO.query.filter_by(company_id=comp.id).first()
+        if ipo is None:
+            continue
+        #print comp.id, ipo
         params = {}
         params['symbol'] = comp.symbol
         params['historyType'] = 1
@@ -57,12 +61,16 @@ def IPO_first_daily_price(symb_list):
             prices = at.barData(params=params)
             for ind, price in prices.iterrows():
                 post_ipo_price = PostIPOPrice(**price.to_dict())
-                post_ipo_price.datetime = price.name
+                #print post_ipo_price
+                #post_ipo_price.datetime = price.name
+                post_ipo_price.date = price.name.split(' ')[0]
                 post_ipo_price.company_id = comp.id
                 savant.db.session.add(post_ipo_price)
                 savant.db.session.commit()
 
         except:
             savant.db.session.rollback()
-            print "cannot get " + comp.symbol
+            print "cannot save" + comp.symbol
+
+IPO_first_daily_price()
 

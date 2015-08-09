@@ -59,6 +59,7 @@ def IPO_first_daily_price(symb_list):
 
 def plot_IPO_excess_dist(symb_list, save_fig_path=False):
     prices = IPO_first_daily_price(symb_list)
+    print prices
     plt.figure()
 
     for i in range(0, 5):
@@ -68,6 +69,7 @@ def plot_IPO_excess_dist(symb_list, save_fig_path=False):
                 y[sym] = (prices[sym].iloc[i]["High"] / prices[sym].iloc[0]["Open"] - 1)* 100
             except:
                 1
+        print y
         x = pd.DataFrame.from_dict(y, orient='index' )[0].value_counts().sort_index()
         x_cum = pd.Series.copy( x)
         for ind in x.index:

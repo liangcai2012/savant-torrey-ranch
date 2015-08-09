@@ -28,7 +28,7 @@ def create_engine():
     url = make_url(settings.DATABASE_URI)
     options = {}
 
-    if settings.DEBUG:
+    if settings.DEBUG == "True":
         options.update(echo=True)
 
     if url.drivername == 'sqlite' and url.database in (None, '', ':memory:'):
