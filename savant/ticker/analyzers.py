@@ -12,6 +12,10 @@ class TradeAnalyzer:
     def __init__(self, tick_data):
         self.tick_data = tick_data
         self.validate_input()
+        if self.datetime_parsed:
+            self.adj_ind = 1
+        else:
+            self.adj_ind = 0
         self.opening = None
         self.closing = None
         self.high = None
@@ -22,37 +26,40 @@ class TradeAnalyzer:
 
     def get_opening_price(self):
         if not self.opening:
-            self.opening = self.tick_data.iloc[0, 2]
-        return self.opening
+            self.opening = self.tick_data.iloc[0, 2-self.adj_ind]
+        return float(self.opening)
 
     def get_closing_price(self):
         if not self.closing:
-            self.closing = self.tick_data.iloc[-1, 2]
-        return self.closing
+            self.closing = self.tick_data.iloc[-1, 2-self.adj_ind]
+        return float(self.closing)
 
     def get_first_trade_time(self):
-        dt = self.tick_data.iloc[0, 0]
-        if isinstance(dt, datetime):
-            return self.tick_data.iloc[0, 0].strftime("%H:%M:%S")
+        if self.datetime_parsed:
+            return self.tick_data.iloc[0].name
         else:
-            return datetime.strptime(dt, "%m/%d/%Y %H:%M:%S").strftime("%H:%M:%S")
+            dt = self.tick_data.iloc[0, 0]
+            if isinstance(dt, datetime):
+                return self.tick_data.iloc[0, 0].strftime("%H:%M:%S")
+            else:
+                return datetime.strptime(dt, "%m/%d/%Y %H:%M:%S").strftime("%H:%M:%S")
 
     def get_high_price(self):
         if not self.high:
             self.high = self.tick_data["price"].max()
-        return self.high
+        return float(self.high)
 
     def get_low_price(self):
         if not self.low:
             self.low = self.tick_data["price"].min()
-        return self.low
+        return float(self.low)
 
     def get_high_percent_change(self):
         # stock price peak percentage change relative to opening
         if not self.high_percent:
             opening = self.get_opening_price()
             high = self.get_high_price()
-            self.high_percent = 100*(high-opening)/float(opening)
+            self.high_percent = 100*(high-opening)/opening
         return self.high_percent
 
     def get_low_percent_change(self):
@@ -60,7 +67,7 @@ class TradeAnalyzer:
         if not self.low_percent:
             opening = self.get_opening_price()
             low = self.get_low_price()
-            self.low_percent = 100*(low-opening)/float(opening)
+            self.low_percent = 100*(low-opening)/opening
         return self.low_percent 
 
     def get_volume(self):
@@ -68,7 +75,7 @@ class TradeAnalyzer:
             self.volume = int(numpy.sum(self.tick_data["size"]))
         return self.volume
 
-    def find_next_spike(self, begin_datetime, noise_level):
+    def find_next_spike_by_datetime(self, begin_datetime, noise_level):
         """
         Given a datetime and threshold, return the time, price, and type of the next 
         extremum (major spike or dip) in the tick data. The query datetime cannot
@@ -117,6 +124,43 @@ class TradeAnalyzer:
         else:
             return None
 
+    def find_next_spike(self, noise_level):
+        t0 = self.get_first_trade_time()
+        p0 = self.get_opening_price()
+        d = 0
+        pending = False
+        for tick in self.tick_data.iterrows():
+            t = tick[0] if self.datetime_parsed else tick[1][0]
+            p = float(tick[1][2-self.adj_ind])
+            if not pending:
+                if p > p0:
+                    d = 1
+                elif p < p0:
+                    d = -1
+                if numpy.absolute(p - p0)/p0 > noise_level:
+                    pending = True
+                    t0 = t
+                    p0 = p
+            elif d == 1:
+                if p > p0:
+                    t0 = t
+                    p0 = p
+                if p < p0 and pending and (p0 - p)/p0 > noise_level:
+                    pending = False
+                    break
+            else:
+                if p < p0:
+                    t0 = t
+                    p0 = p
+                if pending and p > p0 and (p - p0)/p0 > noise_level:
+                    pending = False
+                    break
+        if not pending and d != 0:
+            return (t0, p0, d)
+        else:
+            return None
+
+
     def get_price_by_datetime(self, dt, tail=False):
         """
         Query the price of the ticker at the datetime provided. If no trade
@@ -155,9 +199,13 @@ class TradeAnalyzer:
 if __name__ == "__main__":
     from savant.ticker.processors import TickDataProcessor
     ticker = TickDataProcessor()
-    data = ticker.get_ticks_by_date("NTRA", "20150702", "20150702", parse_dates=True)
+    data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=False)
+    #data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=True, nrows=6000)
     analyzer = TradeAnalyzer(data)
     #print analyzer.get_price_by_datetime(datetime.strptime("07/02/2015 10:43:27", "%m/%d/%Y %H:%M:%S"))
-    print analyzer.find_next_spike(datetime.strptime("07/02/2015 10:44:00", "%m/%d/%Y %H:%M:%S"), 0.02)
+    #print analyzer.find_next_spike_by_datetime(datetime.strptime("07/02/2015 10:43:27", "%m/%d/%Y %H:%M:%S"), 0.02)
+    print analyzer.get_first_trade_time()
+    print analyzer.get_opening_price()
+    print analyzer.find_next_spike(0.05)
     #print analyzer.tick_data
 

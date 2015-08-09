@@ -14,7 +14,7 @@ class TickDataProcessor:
     def __init__(self):
         self.base_dir = settings.DOWNLOAD_DIR
 
-    def get_ticks_by_date(self, symbol, begin_date, end_date, hours="regular", parse_dates=False):
+    def get_ticks_by_date(self, symbol, begin_date, end_date, hours="regular", parse_dates=False, nrows=None):
         dates = self.parse_dates(begin_date, end_date)
 
         suffix = self.get_file_suffix(hours)
@@ -31,9 +31,9 @@ class TickDataProcessor:
                 if not os.path.exists(data_path):
                     raise IOException("Data file not found: %s" % data_path)
                 if parse_dates:
-                    cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"], parse_dates=[0], index_col=0)
+                    cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"], parse_dates=[0], index_col=0, nrows=nrows)
                 else:
-                    cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"])
+                    cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"], nrows=nrows)
                 tick_data = tick_data.append(cur_ticks)
         return tick_data
 
