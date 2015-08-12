@@ -1,0 +1,19 @@
+Plotter需求
+
+1）vol和price应该放在两个独立的y轴（参加nasdaq.com （http://www.nasdaq.com/symbol/shak）或google finance），而不是把图叠加在一起 （如Yahoo http://finance.yahoo.com/echarts?s=SHAK+Interactive#{"range":"1d"}。
+最好vol部分和价格部分的高度是可以通过参数调整的。以便我们在需要时看到vol或者价格的更多细节
+
+2）用不同颜色来区分不同的MA overlay，然后在legend里要注明，这个可以参照上述matplot的example
+
+3）关于在x轴显示时间的问题，matplot已经提供了一个date2num的函数，请看看是否可以直接利用。
+
+4）关于显示比例的问题，我考虑了一些，我觉得做成动态调整的太复杂，而且user experience也不一定理想，所以是否可以做成相对固定的。参照
+interval＝1m,  x axis span = 18 hour （基本就是1天完整时间）
+我们可以初步确定
+｛1s: 20m, 5s: 2h, 10s: 4h, 30s: 12h, 1m: 18h, 5m: 5 d, 10m: 10d, 30m: 30d, 1h: 60d}
+这种做法有点类似同花顺的显示方法。好处是可以相对固定每个图的点数。最大是1200个点。同时x轴的tick也可以相对固定。
+
+note: According Chuan's design, each chart displays 1200 points no matter what the unit is.  
+
+5）在每张图上，需要标注显示图的id，和interval，symbol
+

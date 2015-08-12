@@ -1,7 +1,7 @@
 import os, sys
 import logging
 from savant.db import session
-from savant.db.models import Company, Exchange, Industry, Sector, Underwriter, CompanyUnderwriterAssociation
+from savant.db.models import Company, Exchange, Industry, Sector
 from savant import scraper
 import time
 
@@ -13,9 +13,6 @@ symbols += scraper.get_symbols("NYSE")
 
 #unwr_dict = scraper.get_underwriters()
 count = 0
-known_exchs = set([e.name for e in Exchange.query.all()])
-known_industries = set([e.name for e in Industry.query.all()])
-known_sectors = set([e.name for e in Sector.query.all()])
 
 for symbol in symbols:
     count += 1
@@ -24,60 +21,13 @@ for symbol in symbols:
     if "-" in symbol:
         continue
 
-    if Company.query.filter_by(symbol=symbol).first():
-        continue
-
-    data = scraper.scrape_nasdaq(symbol)
-    if not data:
-        continue
-    elif len(data.keys()) == 1:
-        data.update(scraper.scrape_yahoo(symbol, full=True))
+    comp = scraper.get_company_overview(symbol)
+#    if comp and not Company.query.filter_by(symbol=comp.symbol).first() and not Company.query.filter_by(name=comp.name).first():
+    if comp and not Company.query.filter_by(symbol=comp.symbol).first():
+        session.add(comp)
+        session.commit()
     else:
-        data.update(scraper.scrape_yahoo(symbol))
-
-    if len(data) == 1:
-        continue
-
-    if Company.query.filter_by(name=data["name"]).first():
-        continue
-
-    if "exchange" in data:
-        if data["exchange"] not in known_exchs:
-            print >> sys.stderr, data["exchange"]
-            exch = Exchange(name=data["exchange"])
-            session.add(exch)
-            session.commit()
-            known_exchs.add(data["exchange"])
-        else:
-            exch = Exchange.query.filter_by(name=data["exchange"]).first()
-        del data["exchange"]
-        data["exchange_id"] = exch.id
- 
-    if "industry" in data:
-        if data["industry"] not in known_industries:
-            indus = Industry(name=data["industry"])
-            session.add(indus)
-            session.commit()
-            known_industries.add(data["industry"])
-        else:
-            indus = Industry.query.filter_by(name=data["industry"]).first()
-        del data["industry"]
-        data["industry_id"] = indus.id
-
-    if "sector" in data:
-        if data["sector"] not in known_sectors:
-            sect = Sector(name=data["sector"])
-            session.add(sect)
-            session.commit()
-            known_sectors.add(data["sector"])
-        else:
-            sect = Sector.query.filter_by(name=data["sector"]).first()
-        del data["sector"]
-        data["sector_id"] = sect.id
-
-    comp = Company(**data)
-    session.add(comp)
-    session.commit()
+        print "Company exists in db"
 
     """
     if symbol in unwr_dict:
@@ -94,7 +44,5 @@ for symbol in symbols:
             comp.underwriters.append(a)
             session.commit()
     """
-
-session.commit()
 
 session.close()

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/configure"/>
+	<classpathentry kind="lib" path="/Users/liangcai/Projects/stocktechanalysis/savant-torrey-ranch/lib/atapi.jar"/>
+	<classpathentry kind="lib" path="/Users/liangcai/Projects/stocktechanalysis/savant-torrey-ranch/lib/gnu-crypto.jar"/>
+	<classpathentry kind="lib" path="/Users/liangcai/Projects/stocktechanalysis/savant-torrey-ranch/lib/javax-crypto.jar"/>
+	<classpathentry kind="lib" path="/Users/liangcai/Projects/stocktechanalysis/savant-torrey-ranch/lib/javax-security.jar"/>
+	<classpathentry kind="lib" path="/Users/liangcai/Projects/stocktechanalysis/savant-torrey-ranch/lib/org.json-20120521.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

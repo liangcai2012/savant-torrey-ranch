@@ -1,0 +1,72 @@
+import time
+import json
+from savant import streamer
+
+class DataError(RuntimeError):
+   def __init__(self, args):
+      self.args = args
+
+class DataAPI:
+	
+	def __init__(self, clientName, serverIP= None, port= None,parameters= None):
+		self.sc = streamer.getStreamerCaller()
+		self.client = clientName 
+		if serverIP != None:
+			self.realtime = True
+		else:
+			self.realtime = False
+
+
+
+	def subscribeRealtime(self, symList):
+		if self.realtime:
+			jret = json.loads(self.sc.subscribe(self.client, symList))
+			if jret["response"]["errcode"] == 0:
+				return 0
+		return -1
+
+
+    # subscrib a list of tuples [{sym, time}] in this instance for obtaining history.
+    # time format: YYYYMMDD-HHMMSS
+    # raise an error if serverIp and port are specified in __init__
+    # read multiple history data in one instance is not common. In most case the list 
+    # should contain only one sym-time tuple. 
+	def subscribeHistory(self, symPeriodList):
+		pass
+
+
+	# unsubscribe part of symbols previous subscribed 
+	def unsubscribeRealtime(self):
+		if self.realtime:
+			jret = json.loads(self.sc.unsubscribe(self.client))
+			if jret["response"]["errcode"] == 0:
+				return 0
+		return -1
+
+    # unsubscribe part of the symbol-time tuples previous subscribed. For history data, this api has no real effect
+	def unsubscribeHistory(self, symPeriodList):
+		pass
+
+
+	# update data with given interval
+    # return a list of data for all subscribed symbol or symbol-time tuples. The returned data format can be seen in 
+	def update(self, interval, bar_mask, ma_mask):
+		if self.realtime:
+			return json.loads(self.sc.update(self.client, interval))
+
+
+#    def setReponseMsg(self, client, symbol, bar, ma, delay, timestamp, interval):
+#        data = {"symbol": symbol,\
+#                "bar": bar, \
+#                "ma": ma,\
+#                  "delay" :delay}
+#        msg = {"client": client, "timestamp": timestamp ,\
+#               "interval": interval,
+#               "data":data
+#               }
+#        return msg
+
+a = 1
+
+def getDataAPI(clientName, serverIP= None, port= None,parameters= None):
+	return DataAPI(clientName, serverIP, port,parameters)

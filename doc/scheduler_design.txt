@@ -1,0 +1,22 @@
+The scheduler can be implemented as an ever running server which holds a task queue in mind and accepts a command input from an outside client console.
+
+- Command client, an independent python process that commands the scheduler server via IPC. It can be one of the following commands:
+
+1. 'get <SYMBOL> <INTERVAL_START> <INTERVAL_END> <RANK>'. Request a new fetch action. Responses would be a simple acknowledgement showing it'd been enqueued or the first day's fetching status, if the request had the highest rank.
+2. 'where <SYMBOL>'. Request all fetched days (in intervals) to a given symbol. Response would be the interval list.
+3. 'queue'. Request and to be responded a list of all queue tasks.
+4. 'end'. Terminate the scheduler decently (to correctly save DB table and task file). Response would be an acknowledgement.
+
+- Scheduler Server, a non-blocking daemon process keep fetching the (priority-)queue front task, if any. But if any command comes before each of the fetching, the command will be responded first. The scheduler will maintain in memory a task (priority-)queue, which serves as the kernel object synchronizing all the others: command, interval table, task file.
+
+1. Each task in the priority-queue is a tuple of 'RANK, REQUEST_TIME, DATE, symbol', where RANK, REQUEST_TIME, and DATE are (heap-)ordered to prioritize its position in the queue.
+2. Only the front day task will be immediately executed, then poped out from the queue.
+    A. Before the fetching the server will read a DB table for a set of pre-fetched intervals of the symbol. Only if the asked day has not been fetched before, the fetching job can be launched.
+    B. After the fetching happens, some intervals would be updated, or be created.
+3. Before the queue being checked to handle the front task in each cycle, the scheduler has a chance to listen to one command. To respond each command in the above-mentioned client section, the server will conduct the following operations:
+    A. 'get': Break down the INTERVAL to multiple consecutive daily tasks; Push the tasks to the queue. In case the RANK is '-1' (treated as 1+highest), the response will be sent after the following fetching job to be completed, b/c it must belong to this inquiry.
+    B. 'where': Read into the SYMBOL row from DB table for the existing interval set, and respond the set back.
+    C. 'queue': Respond the task queue back.
+    D. 'end': Terminate the server loop decently after dumping the task queue to file, which will can be loaded up once the server restarts later.     
+
+- The design will honor the current folder structure DAY -> SYMBOL, and in fact does not assume any specific folder structure to hold those results. It's the client code that interperates the intervals to the storage pathes by 'where' command or a direct DB reading.

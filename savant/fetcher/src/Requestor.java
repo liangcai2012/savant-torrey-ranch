@@ -1,6 +1,7 @@
 import java.io.*;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -16,15 +17,26 @@ import at.shared.ATServerAPIDefines.ATTICKHISTORY_TRADE_RECORD;
 import at.shared.ATServerAPIDefines.ATTickHistoryRecordType;
 import at.shared.ATServerAPIDefines.ATTickHistoryResponseType;
 
-
 public class Requestor extends at.feedapi.ActiveTickServerRequester
 {
 	ATTickDataFetcher m_fetcher;
+	String fetchingSym;
 	String premarketFilePath;
 	String marketFilePath;
 	String aftermarketFilePath;
 
+
+/*
+	Algorithm to find market open/close signal:
+   extended hour trade records contain FormT condition type (12), therefore the first/close record does not contain FormT is considered the open/close signal.
+   1) If record does not contains cond=12, market record
+   2) else if time is earlier than 12:00:00, then premarkeot
+   3) else aftermarket
+
+   */
+
 	Logger logger = Logger.getLogger(ATTickDataFetcher.class.getName());
+	//SavantLogger logger;
 
 	public Requestor(APISession apiSession, ActiveTickStreamListener streamer, ATTickDataFetcher fetcher)
 	{
@@ -68,41 +80,53 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 		while(itrDataItems.hasNext())
 		{	
 			ATServerAPIDefines.ATTICKHISTORY_RECORD record = (ATServerAPIDefines.ATTICKHISTORY_RECORD)itrDataItems.next();
-			switch(record.recordType.m_historyRecordType)
-			{
+			switch(record.recordType.m_historyRecordType) {
 				case ATTickHistoryRecordType.TickHistoryRecordTrade:
 				{
 					ATTICKHISTORY_TRADE_RECORD atTradeRecord = (ATTICKHISTORY_TRADE_RECORD)record; 
 					StringBuilder sb = new StringBuilder();
-					sb.append("[");
-					sb.append(++index);
-					sb.append("/");
-					sb.append(recCount);
-					sb.append("]");
-					sb.append(" [" + atTradeRecord.lastDateTime.month+ "/" + atTradeRecord.lastDateTime.day + "/" + atTradeRecord.lastDateTime.year + " ");
-					sb.append(atTradeRecord.lastDateTime.hour + ":" + atTradeRecord.lastDateTime.minute + ":" + atTradeRecord.lastDateTime.second + "] ");
-					sb.append("TRADE ");
-					
+					//date
+					sb.append(atTradeRecord.lastDateTime.month+ "/" + atTradeRecord.lastDateTime.day + "/" + atTradeRecord.lastDateTime.year);   
+					sb.append(" ");
+					//time
+					sb.append(atTradeRecord.lastDateTime.hour + ":" + atTradeRecord.lastDateTime.minute + ":" + atTradeRecord.lastDateTime.second + "." + atTradeRecord.lastDateTime.milliseconds);
+					sb.append(",");
+					//type
+					sb.append("TRADE");
+					sb.append(",");
+					//price
 					strFormat = "%0." + atTradeRecord.lastPrice.precision + "f";
-					sb.append("  \t[last:" + new PrintfFormat(strFormat).sprintf(atTradeRecord.lastPrice.price));
-					sb.append("  \tlastsize:" + atTradeRecord.lastSize);
-					sb.append("  \tlastexch:" + atTradeRecord.lastExchange.m_atExchangeType);
-					sb.append("  \tcond:" + atTradeRecord.lastCondition[0].m_atTradeConditionType);
-					String hour = (atTradeRecord.lastDateTime.hour >= 10) ? String.valueOf(atTradeRecord.lastDateTime.hour) : "0" + atTradeRecord.lastDateTime.hour;
-					String minute = (atTradeRecord.lastDateTime.minute >= 10) ? String.valueOf(atTradeRecord.lastDateTime.minute) : "0" + atTradeRecord.lastDateTime.minute;
-					String second = (atTradeRecord.lastDateTime.second >= 10) ? String.valueOf(atTradeRecord.lastDateTime.second) : "0" + atTradeRecord.lastDateTime.second;
-					String tradeTime = hour + minute + second;
-					try {
-						if (m_fetcher.subtractTime(tradeTime, "093000") < 0) {
-							premarketTickRecords.add(sb.toString() + "\n");
-						} else if (atTradeRecord.lastDateTime.hour >= 16) {
-							aftermarketTickRecords.add(sb.toString() + "\n");
-						} else {
-							marketTickRecords.add(sb.toString() + "\n");
-						}
-					} catch (ParseException e) {
-						System.out.println("Time parsing error");
+					sb.append( new PrintfFormat(strFormat).sprintf(atTradeRecord.lastPrice.price));
+					sb.append(",");
+					//vol
+					sb.append(atTradeRecord.lastSize);
+					sb.append(",");
+					//exch
+					sb.append(atTradeRecord.lastExchange.m_atExchangeType);
+					sb.append(",");
+					//condition
+               boolean formT = false;
+					sb.append(atTradeRecord.lastCondition[0].m_atTradeConditionType);
+               if(atTradeRecord.lastCondition[0].m_atTradeConditionType==12 || atTradeRecord.lastCondition[0].m_atTradeConditionType == 13)
+                  formT = true;
+               for(int i=1; i<=3; i++){ 
+                  sb.append("-");
+					   sb.append(atTradeRecord.lastCondition[i].m_atTradeConditionType);
+                  if(atTradeRecord.lastCondition[i].m_atTradeConditionType==12 || atTradeRecord.lastCondition[i].m_atTradeConditionType == 13)
+                     formT = true;
+               }
+					String curRecord=sb.toString();
+               if(formT){
+					      int rtime = atTradeRecord.lastDateTime.hour*10000+atTradeRecord.lastDateTime.minute*100+atTradeRecord.lastDateTime.second;
+					      if(rtime < 93100)
+						      premarketTickRecords.add(curRecord);
+                     else if(rtime > 160000)
+						   	aftermarketTickRecords.add(curRecord);
+                     else
+				            marketTickRecords.add(curRecord);
 					}
+               else
+				      marketTickRecords.add(curRecord);
 				}
 				break;
 				case ATTickHistoryRecordType.TickHistoryRecordQuote: {
@@ -147,6 +171,7 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 				}
 			}
 		}
+			
 		if (!premarketTickRecords.isEmpty()) {
 			this.writeTickRecord(this.premarketFilePath,premarketTickRecords);
 		}
@@ -261,8 +286,10 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 		}		
 	}
 
-	public void writeTickRecord(String filepath, ArrayList<String> records)
+//	public void writeTickRecord(String filepath, ArrayList<String> records)
+	public void writeTickRecord(String filepath, ArrayList<String> csvTicks)
 	{
+//		ArrayList<String> csvTicks = reformatATTick(records);
 		try {
             /*
 			FileOutputStream dest = new FileOutputStream(filepath);
@@ -276,20 +303,52 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 			}
 			FileWriter fw = new FileWriter(data,true);
 			BufferedWriter writer = new BufferedWriter(fw);
-			for (String record : records) {
+			for (String record : csvTicks) {
 				//writer.write(record.getBytes(), 0, record.length());
                 writer.write(record+"\n");
 			}
 			writer.close();
 
 		} catch (IOException e) {
-			System.out.println("Cannot write to file");
+			System.out.println("Cannot write to file: " + e.getMessage() + e.getStackTrace());
 		}
 	}
 
-	public void setOutputPath(String premarketFilePath, String marketFilePath, String aftermarketFilePath) {
+	public ArrayList<String> reformatATTick(ArrayList<String> records) {
+		ArrayList<String> new_ticks = new ArrayList<>();
+		for (String record : records) {
+			ArrayList<String> values = new ArrayList<>(Arrays.asList(record.split("\\s+")));
+			if (values.get(3).equals("QUOTE")) {
+				continue;
+			}
+			String[] newValues = new String[7];
+			try {
+				newValues[0] = values.get(1).replace("[", "");
+				newValues[1] = values.get(2).replace("]", "");
+				newValues[2] = values.get(3);
+				for (int i = 4; i < values.size(); i++) {
+					newValues[i - 1] = values.get(i).split(":")[1];
+				}
+			} catch (Exception e) {
+				System.out.println(e.fillInStackTrace());
+			}
+			String new_tick = "";
+			for (String value : newValues) {
+				new_tick += value + ",";
+			}
+			new_tick = new_tick.substring(0, new_tick.length()-1);
+			new_ticks.add(new_tick);
+		}
+		return new_ticks;
+	}
+
+
+	//this is called when fetch data request is received
+	public void setOutputPath(String symbol, String premarketFilePath, String marketFilePath, String aftermarketFilePath) {
+		this.fetchingSym = symbol;
 		this.premarketFilePath = premarketFilePath;
 		this.marketFilePath = marketFilePath;
 		this.aftermarketFilePath = aftermarketFilePath;
 	}
+
 }

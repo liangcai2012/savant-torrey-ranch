@@ -17,7 +17,7 @@ class SavantLogger:
         self.config()
 
     def config(self):
-        self.base_dir = os.path.join(settings.OUTPUT_DIR, "log", self.mod)
+        self.base_dir = os.path.join(settings.LOG_DIR, self.mod)
         if not os.path.exists(self.base_dir):
             os.makedirs(self.base_dir)
         date = datetime.date.today().strftime("%Y%m%d")
