@@ -1,28 +1,32 @@
+# This tool is for database migration. It is mainly for adding, deleting columes of existing database:
+#step 1: Edit new schema
+#step 2: Edit migration code, map old columes to new columes
+#step 3: Execute the script
+#step 4: replace the database with the existing database file
+#step 5: replace schema in model.py with the new schema
+
+# to add a new colume, add it in the schema class, dont use nullable=False
+# to remove a colume, pop the key from the corresponding dict object
+
+
+
 from datetime import date
 from random import randint
 import sqlite3 as sqlite
 
+from sqlalchemy import create_engine
 from sqlalchemy import (Boolean, Column, Date, Enum, ForeignKey, Index,
                         Integer, Float, String, Text, TypeDecorator, event,
                         Sequence, Table, DateTime)
-from sqlalchemy.engine import Engine
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, exc, sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+import savant.db
+import savant.db.models
 
-from savant import db
+CBase = declarative_base()
 
 
-@event.listens_for(Engine, 'connect')
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    """
-    See http://docs.sqlalchemy.org/en/latest/dialects/sqlite.html#foreign-key-support
-    """
-    if isinstance(dbapi_connection, sqlite.Connection):
-        cursor = dbapi_connection.cursor()
-        cursor.execute('PRAGMA foreign_keys=ON')
-        cursor.close()
-
-CBase = db.Base 
-########################Schema ########################
+####################Edit here for new schema#######################
 class Company(CBase):
     __tablename__ = "company"
 
@@ -232,4 +236,113 @@ class PostIPOPrice(CBase):
     def __repr__(self):
         return "<Post_IPO_Price(company_id='%s', datetime='%s', open='%s', high='%s', low='%s', close='%s', volume='%s')>" % (self.company_id, self.datetime, self.open, self.high, self.low, self.close, self.volume)
 
-#########################End Schema ###############################
+####################End of new schema ######################
+
+
+#####################Edit following to move the data from old schema to new schema
+
+#create a new database with the above schema
+import os
+newdbpath= './savant_new.db'
+if os.path.exists(newdbpath):
+   os.remove(newdbpath)
+dest_engine = create_engine('sqlite:///./savant_new.db')
+dest_session= sessionmaker(dest_engine)
+dest_session.configure(bind=dest_engine)
+CBase.metadata.create_all(dest_engine)
+s= dest_session()
+
+print "must copy exchange, sector, industry tables first"
+exchanges = savant.db.models.Exchange.query.all()
+for ex in exchanges:
+   nex_dict = ex.__dict__.copy()
+   if '_sa_instance_state' in nex_dict.keys():
+      nex_dict.pop("_sa_instance_state")
+   nex = Exchange("")
+   nex.clone(nex_dict)
+   s.add(nex)
+s.commit()
+
+sectors = savant.db.models.Sector.query.all()
+for sec in sectors:
+   nsec_dict = sec.__dict__.copy()
+   if '_sa_instance_state' in nsec_dict.keys():
+      nsec_dict.pop("_sa_instance_state")
+   nsec = Sector("")
+   nsec.clone(nsec_dict)
+   s.add(nsec)
+s.commit()
+
+inds = savant.db.models.Industry.query.all()
+for ind in inds:
+   nind_dict = ind.__dict__.copy()
+   if '_sa_instance_state' in nind_dict.keys():
+      nind_dict.pop("_sa_instance_state")
+   nind = Industry("")
+   nind.clone(nind_dict)
+   s.add(nind)
+s.commit()
+
+print "then copy company table"
+cs = savant.db.models.Company.query.all()
+for c in cs:
+   nc_dict = c.__dict__.copy()
+   if '_sa_instance_state' in nc_dict.keys():
+      nc_dict.pop("_sa_instance_state")
+   nc = Company(**nc_dict)
+   s.add(nc)
+s.commit()
+
+print "copy ipo_url which is not dependent on any table"
+iius = savant.db.models.IPOInfoUrl.query.all()
+for iiu in iius:
+   niiu_dict = iiu.__dict__.copy()
+   if '_sa_instance_state' in niiu_dict.keys():
+      niiu_dict.pop("_sa_instance_state")
+   niiu = IPOInfoUrl("", "", "")
+   niiu.clone(niiu_dict)
+   s.add(niiu)
+s.commit()
+
+print "copy underwriter before CompanyUnderwriterAssociation" 
+us = savant.db.models.Underwriter.query.all()
+for u in us:
+   nu_dict = u.__dict__.copy()
+   if '_sa_instance_state' in nu_dict.keys():
+      nu_dict.pop("_sa_instance_state")
+   nu = Underwriter("")
+   nu.clone(nu_dict)
+   s.add(nu)
+s.commit()
+
+cuas = savant.db.models.CompanyUnderwriterAssociation.query.all()
+for cua in cuas:
+   ncua_dict = cua.__dict__.copy()
+   if '_sa_instance_state' in ncua_dict.keys():
+      ncua_dict.pop("_sa_instance_state")
+   ncua = CompanyUnderwriterAssociation()
+   ncua.clone(ncua_dict)
+   s.add(ncua)
+s.commit()
+
+print "now copy HistoricalIPO and PostIPOPrice table"
+his = savant.db.models.HistoricalIPO.query.all()
+for hi in his:
+   hi_dict = hi.__dict__
+   if '_sa_instance_state' in hi_dict.keys():
+      hi_dict.pop("_sa_instance_state")
+   nhi = HistoricalIPO(**hi_dict)
+   s.add(nhi)
+s.commit()
+
+#change datetime to date
+pips = savant.db.models.PostIPOPrice.query.all()
+for pip in pips:
+   pip_dict = pip.__dict__
+   pip_dict["date"]=pip_dict["datetime"].date()
+   pip_dict.pop("datetime")
+   if '_sa_instance_state' in pip_dict.keys():
+      pip_dict.pop("_sa_instance_state")
+   new_pip = PostIPOPrice(**pip_dict)
+   s.add(new_pip)
+s.commit()

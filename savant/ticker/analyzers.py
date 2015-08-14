@@ -186,14 +186,9 @@ class TradeAnalyzer:
     def validate_input(self):
         try:
             columns = sorted(list(self.tick_data.columns))
-            assert sorted(["datetime", "type", "price", "size", "exch", "cond"]) == sorted(columns)
-            self.datetime_parsed = False
+            assert sorted(["datetime", "type", "price", "size", "exch", "cond"]) == columns
         except AssertionError:
-            try:
-                assert sorted(["type", "price", "size", "exch", "cond"]) == sorted(columns)
-                self.datetime_parsed = True
-            except AssertionError:
-                raise Exception("Unexpected columns")
+            raise Exception("Unexpected columns")
 
 
 if __name__ == "__main__":

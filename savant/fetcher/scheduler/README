@@ -1,0 +1,21 @@
+- USAGE
+
+Run python script 'server.py' to start the scheduler server first. The server will keep fetching pending tasks till interuped by a client command. To issue a client command, open another console and run the python script 'client.py', then type in one of the following commands:
+	A. 'get CL 2015-07-05 2015-07-09 2'. Give a rank '-1' will assign the requests the highest rank. The response will be either 'queued' in former, or 'CL 2015-07-05 already existed!' / 'fetching: RANK 0 CL 2015-07-05' in the later case.
+	B. 'where CL'. Response will be '[2015-02-05 2015-02-12) [2015-05-13 2015-07-10) [2015-07-12 2015-07-18)'
+	C. 'queue'. Response will be:0,2015-07-19_11:59:00,2015-03-12,CL
+		0,2015-07-19_11:59:00,2015-03-13,CL
+		0,2015-07-19_11:59:00,2015-03-15,CL
+		0,2015-07-19_11:59:00,2015-03-17,CL
+		0,2015-07-19_11:59:00,2015-03-14,CL
+	D. 'end'. Response will be 'end request'. The command will terminate the server. Then server has to be relaunched from the server side to restart.
+	E. The client shall be closed as soon. Any invalid command or empty one will be ignored after hitting <return>.
+
+- DEPENDENCY
+
+A. Generate a database 'map.db' and  run 'create table symbolmap (symbol text, map text)'.
+B. Generate an empty file 'queue.txt'.
+
+- CHECKLIST
+5 files (including this README) in fetcher/scheduler folder
+1 file in fetcher folder

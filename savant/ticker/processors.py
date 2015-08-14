@@ -71,7 +71,57 @@ class TickDataProcessor:
         return suffix
 
 
+def tick2bar(symbol, date, duration=1000000, interval=1, save_to_disk=False):
+    tick_processor = TickDataProcessor()
+    ticks = tick_processor.get_ticks_by_date(symbol, date, date)
+    begin_time = None
+    cur_open_time = None
+    tick_batch = []
+    bars = []
+
+    for tick in ticks.iterrows():
+        time = tick[1][0].split()[1]
+        if begin_time == None:
+            begin_time = time
+        if cur_open_time == None:
+            cur_open_time = time
+        if calc_time_diff(begin_time, time) > duration:
+            return bars
+
+        if calc_time_diff(cur_open_time, time) < interval:
+            tick_batch.append(tick)
+        else:
+            bar = calc_bar_from_tick_batch(tick_batch)
+            bars.append(bar)
+            cur_open_time = time
+            tick_batch = [tick]
+        
+def calc_time_diff(timeOne, timeTwo, millisec=False):
+    try:
+        c1, ms1 = timeOne.split(".")
+        c2, ms2 = timeTwo.split(".")
+        h1, m1, s1 = [int(i) for i in c1.split(":")]
+        h2, m2, s2 = [int(i) for i in c2.split(":")]
+        if millisec:
+            return (h2-h1)*3600 + (m2-m1)*60 + (s2-s1) + (int(ms2)-int(ms1))/1000
+        else:
+            return (h2-h1)*3600 + (m2-m1)*60 + (s2-s1)
+    except:
+        raise ValueError("The times given are invalid")
+
+def calc_bar_from_tick_batch(ticks):
+    bar = {}
+    bar["interval"] = ticks[0][1][0].split()[-1] + "-" + ticks[-1][1][0].split()[-1]
+    trade_prices = [t[1][2] for t in ticks]
+    bar["open"] = trade_prices[0]
+    bar["close"] = trade_prices[-1]
+    bar["high"] = max(trade_prices)
+    bar["low"] = min(trade_prices)
+    bar["avg"] = sum(trade_prices)/float(len(trade_prices))
+    return bar
+
 if __name__ == "__main__":
-    ticker = TickDataProcessor()
-    print ticker.get_ticks_by_date("NTRA", "20150702", "20150702")
-    print ticker.get_ticks_by_datetime("NTRA", datetime.strptime("07/02/2015 11:00:00", "%m/%d/%Y %H:%M:%S"), datetime.strptime("07/02/2015 15:00:00", "%m/%d/%Y %H:%M:%S"))
+    #ticker = TickDataProcessor()
+    #print ticker.get_ticks_by_date("NTRA", "20150702", "20150702")
+    #print ticker.get_ticks_by_datetime("NTRA", datetime.strptime("07/02/2015 11:00:00", "%m/%d/%Y %H:%M:%S"), datetime.strptime("07/02/2015 15:00:00", "%m/%d/%Y %H:%M:%S"))
+    print tick2bar("NVET", "20150205", 30)
