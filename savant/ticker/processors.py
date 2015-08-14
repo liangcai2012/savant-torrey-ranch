@@ -77,7 +77,7 @@ def tick2bar(symbol, date, duration=1000000, interval=1, save_to_disk=False):
     begin_time = None
     cur_open_time = None
     tick_batch = []
-    bars = []
+    bars = pd.DataFrame(columns=["interval", "open", "high", "low", "close", "average", "volume"])
 
     for tick in ticks.iterrows():
         time = tick[1][0].split()[1]
@@ -92,7 +92,7 @@ def tick2bar(symbol, date, duration=1000000, interval=1, save_to_disk=False):
             tick_batch.append(tick)
         else:
             bar = calc_bar_from_tick_batch(tick_batch)
-            bars.append(bar)
+            bars = bars.append([bar])
             cur_open_time = time
             tick_batch = [tick]
         
@@ -117,7 +117,8 @@ def calc_bar_from_tick_batch(ticks):
     bar["close"] = trade_prices[-1]
     bar["high"] = max(trade_prices)
     bar["low"] = min(trade_prices)
-    bar["avg"] = sum(trade_prices)/float(len(trade_prices))
+    bar["average"] = sum(trade_prices)/float(len(trade_prices))
+    bar["volume"] = sum([int(t[1][3]) for t in ticks])
     return bar
 
 if __name__ == "__main__":
