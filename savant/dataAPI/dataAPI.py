@@ -1,6 +1,9 @@
 import time
 import json
+import sys
+sys.path.append("../../")
 from savant import streamer
+print sys.path
 
 class DataError(RuntimeError):
    def __init__(self, args):
