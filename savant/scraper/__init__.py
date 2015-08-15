@@ -233,15 +233,21 @@ def get_company_overview(symbol):
         return existing
 
     data = scrape_nasdaq(symbol)
+    in_nas = 1 
     if not data:
         return None
     elif len(data.keys()) == 1:
+        in_nas = 2 
         data.update(scrape_yahoo(symbol, full=True))
     else:
+        in_nas = 3 
         data.update(scrape_yahoo(symbol))
 
     if len(data) == 1:
         return None
+
+    if data["symbol"]=='AMBI':
+        print symbol, in_nas
 
     #existing = Company.query.filter_by(name=data["name"]).first()
     #if existing:
