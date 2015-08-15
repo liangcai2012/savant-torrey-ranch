@@ -4,6 +4,7 @@ import dataAPI
 import os
 import datetime
 import time
+import readgz
 class CBarData:
     def __init__(self):
         self.reset()
@@ -57,7 +58,9 @@ class HistoricalDataReader:
 
         filepath = helper.GetDataFileFullPath(symbol,startDay)
         try:
-            self.dataFile = open(filepath, "r+");
+            #self.dataFile = open(filepath, "r+");
+            self.dataFile  = readgz.Reader_gz()
+            self.dataFile.open(filepath)
         except:
             self.dataFile = None
             self.lastError=errors.EC_File_not_exist
@@ -67,14 +70,14 @@ class HistoricalDataReader:
          # the number of time update function is called.
         self.updateCount = 0
     def ParseTradeData(self, loopCount, line):
-        fields = line.split("\t")
-        fields_time =  fields[0].split("[")
-        fields2_time =  fields_time[2].split("]")
-        t1 = datetime.datetime.strptime(fields2_time[0], "%m/%d/%Y %H:%M:%S")
+        fields = line.split(",")
+        #fields_time =  fields[0].split("[")
+        fields2_time =  fields[0] #.split("]")
+        t1 = datetime.datetime.strptime(fields2_time, "%m/%d/%Y %H:%M:%S.%f")
         timestamp = time.mktime(t1.timetuple())
-        fields_last = fields[1].split(":")
-        fields_lastsize = fields[2].split(":")
-        self.process(loopCount, timestamp, fields_last[1], fields_lastsize[1])
+        fields_last = fields[2]
+        fields_lastsize = fields[3]
+        self.process(loopCount, timestamp, fields_last, fields_lastsize)
     def process(self,loopCount, timestamp, lastPrice, lastSize ):
         if loopCount == 0:
                 self.startTimestamp = timestamp
@@ -100,7 +103,7 @@ class HistoricalDataReader:
                 # loopCount !=0 means partial data.
                 if(loopCount ==0):
                     #raise dataAPI.DataError([-1,"End of data"])
-                    self.dataFile.close()
+                    #self.dataFile.close()
                     self.lastError = errors.EC_END_OF_DATA
                     self.dataFile = None
 
