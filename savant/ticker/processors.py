@@ -14,72 +14,48 @@ class TickDataProcessor:
     def __init__(self):
         self.base_dir = settings.DOWNLOAD_DIR
 
-    def from_file(self, symbol, begin_date, end_date, hours="regular"):
+    def get_ticks_paths_by_date(self, symbol, date):
+        paths=[]
+        suffix_list = self.get_file_suffix("full")
+        for suffix in suffix_list:
+            filename = symbol + suffix + ".csv.gz" 
+            data_path = os.path.join(self.base_dir, date, filename)
+            print data_path
+            if not os.path.exists(data_path):
+               paths.append("")
+            else:
+               paths.append(data_path)
+        return paths
+
+    def get_ticks_by_date(self, symbol, begin_date, end_date, hours="regular", parse_dates=False, nrows=None):
         dates = self.parse_dates(begin_date, end_date)
 
-        if hours == "regular":
-            suffix = "_markethours"
-        elif hours == "pre":
-            suffix = "_premarket"
-        elif hours == "after":
-            suffix = "_aftermarket"
-        else:
-            raise ValueError("No such hours: %s" % hours)
-        filename = symbol + suffix + ".tsv"
+        suffix = self.get_file_suffix(hours)
+        filenames = [symbol + s + ".csv.gz" for s in suffix]
 
-        tick_data = pd.DataFrame(columns=["datetime", "last", "last_size", "last_exch", "cond"])
+        if parse_dates:
+            tick_data = pd.DataFrame(columns=["type", "price", "size", "exch", "cond"])
+        else:
+            tick_data = pd.DataFrame(columns=["datetime", "type", "price", "size", "exch", "cond"])
 
         for date in dates:
-            data_path = os.path.join(self.base_dir, date, filename)
-            if not os.path.exists(data_path) and os.path.exists(data_path + ".gz"):
-                subprocess.call(["gzip", "-d", os.path.join(data_path + ".gz")])
-
-            cur_ticks = []
-            with open(data_path) as f:
-                for line in f:
-                    if len(cur_ticks) == self.BATCH_SIZE:
-                        cur_data = self.from_list(cur_ticks)
-                        tick_data = tick_data.append(cur_data)
-                    line = line.strip()
-                    if line != "":
-                        cur_ticks.append(line)
-                if len(cur_ticks) > 0:
-                    cur_data = self.from_list(cur_ticks)
-                    tick_data = tick_data.append(cur_data)
-
+            for filename in filenames:
+                data_path = os.path.join(self.base_dir, date, filename)
+                if not os.path.exists(data_path):
+                    raise IOException("Data file not found: %s" % data_path)
+                if parse_dates:
+                    cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"], parse_dates=[0], index_col=0, nrows=nrows)
+                else:
+                    cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"], nrows=nrows)
+                tick_data = tick_data.append(cur_ticks)
         return tick_data
-                        
-    def from_list(self, raw_ticks):
-        res = defaultdict(list)
-        for tick in raw_ticks:
-            info = tick.split("\t")
-            meta = info[0].strip().split()
-            dt = (meta[1] + " " + meta[2]).strip("[]")
-            """
-            if tick_type = "Quote":
-                bid = float(info[1].split(":")[1])
-                ask = float(info[2].split(":")[1])
-                bid_size = int(info[3].split(":")[1])
-                ask_size = int(info[4].split(":")[1])
-                bid_exch = int(info[5].split(":")[1])
-                ask_exch = int(info[6].split(":")[1])
-                cond = int(info[7].split(":")[1])
-                t = Quote(dt, bid, ask, bid_size, ask_size, bid_exch, ask_exch, cond)
-            """
-            if meta[3].upper() == "TRADE":
-                last = float(info[1].split(":")[1])
-                last_size = int(info[2].split(":")[1])
-                last_exch = int(info[3].split(":")[1])
-                cond = int(info[4].split(":")[1])
-                res["datetime"].append(dt)
-                res["last"].append(last)
-                res["last_size"].append(last_size)
-                res["last_exch"].append(last_exch)
-                res["cond"].append(cond)
 
-        df = pd.DataFrame(res)
-        columns = ["datetime", "last", "last_size", "last_exch", "cond"]
-        return df[columns]
+    def get_ticks_by_datetime(self, symbol, begin_datetime, end_datetime, hours="regular", parse_dates=False):
+        if not isinstance(begin_datetime, datetime) or not isinstance(end_datetime, datetime):
+            raise ValueError("Invalid datetime")
+
+        tick_data = self.get_ticks_by_date(symbol, begin_datetime.strftime("%Y%m%d"), end_datetime.strftime("%Y%m%d"), hours=hours, parse_dates=True)
+        return tick_data[begin_datetime:end_datetime] 
 
     def parse_dates(self, begin, end):
         bd = datetime.strptime(begin, "%Y%m%d")
@@ -94,6 +70,72 @@ class TickDataProcessor:
             bd += delta
         return dates
 
+    def get_file_suffix(self, hours):
+        if hours == "regular":
+            suffix = ["_markethours"]
+        elif hours == "pre":
+            suffix = ["_premarket"]
+        elif hours == "after":
+            suffix = ["_aftermarket"]
+        elif hours == "full":
+            suffix = ["_markethours", "_premarket", "_aftermarket"]
+        else:
+            raise ValueError("No such hours: %s" % hours)
+        return suffix
+
+
+def tick2bar(symbol, date, duration=1000000, interval=1, save_to_disk=False):
+    tick_processor = TickDataProcessor()
+    ticks = tick_processor.get_ticks_by_date(symbol, date, date)
+    begin_time = None
+    cur_open_time = None
+    tick_batch = []
+    bars = pd.DataFrame(columns=["interval", "open", "high", "low", "close", "average", "volume"])
+
+    for tick in ticks.iterrows():
+        time = tick[1][0].split()[1]
+        if begin_time == None:
+            begin_time = time
+        if cur_open_time == None:
+            cur_open_time = time
+        if calc_time_diff(begin_time, time) > duration:
+            return bars
+
+        if calc_time_diff(cur_open_time, time) < interval:
+            tick_batch.append(tick)
+        else:
+            bar = calc_bar_from_tick_batch(tick_batch)
+            bars = bars.append([bar])
+            cur_open_time = time
+            tick_batch = [tick]
+        
+def calc_time_diff(timeOne, timeTwo, millisec=False):
+    try:
+        c1, ms1 = timeOne.split(".")
+        c2, ms2 = timeTwo.split(".")
+        h1, m1, s1 = [int(i) for i in c1.split(":")]
+        h2, m2, s2 = [int(i) for i in c2.split(":")]
+        if millisec:
+            return (h2-h1)*3600 + (m2-m1)*60 + (s2-s1) + (int(ms2)-int(ms1))/1000
+        else:
+            return (h2-h1)*3600 + (m2-m1)*60 + (s2-s1)
+    except:
+        raise ValueError("The times given are invalid")
+
+def calc_bar_from_tick_batch(ticks):
+    bar = {}
+    bar["interval"] = ticks[0][1][0].split()[-1] + "-" + ticks[-1][1][0].split()[-1]
+    trade_prices = [t[1][2] for t in ticks]
+    bar["open"] = trade_prices[0]
+    bar["close"] = trade_prices[-1]
+    bar["high"] = max(trade_prices)
+    bar["low"] = min(trade_prices)
+    bar["average"] = sum(trade_prices)/float(len(trade_prices))
+    bar["volume"] = sum([int(t[1][3]) for t in ticks])
+    return bar
+
 if __name__ == "__main__":
-    ticker = TickDataProcessor()
-    print ticker.from_file("CLCD", "20150522", "20150522")
+    #ticker = TickDataProcessor()
+    #print ticker.get_ticks_by_date("NTRA", "20150702", "20150702")
+    #print ticker.get_ticks_by_datetime("NTRA", datetime.strptime("07/02/2015 11:00:00", "%m/%d/%Y %H:%M:%S"), datetime.strptime("07/02/2015 15:00:00", "%m/%d/%Y %H:%M:%S"))
+    print tick2bar("NVET", "20150205", 30)
