@@ -7,7 +7,7 @@ def display_distribution(axes, data,  attribute,  span=None,  cumulative=False):
 
     if numerical and span and not cumulative:
         mat.plot(kind='hist', bins=int((mat.max() - mat.min())/ span) + 1, ax=axes )
-    if numerical and span and cumulative:
+    elif numerical and span:
         mat.value_counts().sort_index().cumsum().plot(style='*-', ax=axes)
     else:
         mat.value_counts().plot(kind='bar', ax=axes)
