@@ -58,7 +58,7 @@ def display_association(axes, data, attr_x, attr_y, span_x=None,
     mat = pd.DataFrame(0, index=spaned[attr_y].unique(),
                        columns=spaned[attr_x].unique())
 
-    matri = spaned.groupby(['key1','key2']).size().reset_index()
+    matri = spaned.groupby([attr_x, attr_y]).size().reset_index()
     for ind, ele in matri.iterrows():
         mat.loc[ele[attr_y]][ ele[attr_x]] = ele[0]
 
