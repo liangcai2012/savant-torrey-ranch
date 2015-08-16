@@ -39,8 +39,7 @@ def display_distribution(axes, data,  attribute,  bin_width=None,
     return mat
 
 
-def display_association(axes, data, attr_x, attr_y, span_x=None,
-                        span_y=None):
+def display_association(axes, data, attr_x, attr_y, gridsize=100):
     '''
     this is to display association of two attributes. The meaning of each
     input should be similar to above.
@@ -52,7 +51,8 @@ def display_association(axes, data, attr_x, attr_y, span_x=None,
 
 
     if numerical:
-        spaned.plot(x=attr_x, y=attr_y, kind='hexbin', ax=axes)
+        spaned.plot(x=attr_x, y=attr_y, kind='hexbin', ax=axes,
+                    gridsize=gridsize)
         return spaned
 
     mat = pd.DataFrame(0, index=spaned[attr_y].unique(),
@@ -72,3 +72,27 @@ def display_association(axes, data, attr_x, attr_y, span_x=None,
     axes.set_ylabel(attr_y)
 
     return mat
+
+# li = [
+#     {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+#     {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+#     {'key1': 'ac', 'key2': 111, 'sym': 6},
+#     {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+#     {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+#     {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+#     {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+#     {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+#     {'key1': 'ac', 'key2': 11, 'sym': 1.2},
+#     {'key1': 'cc', 'key2': 4, 'sym': 1.11},
+#     {'key1': 'cc', 'key2': 4, 'sym': 2},
+#     {'key1': 'cc', 'key2': 11, 'sym': 2.1},
+#     {'key1': 'c',  'key2': 11, 'sym': 1.5},
+#     {'key1': 'cc', 'key2': 4, 'sym': 2.2},
+#     {'key1': 'cc', 'key2': 4, 'sym': 1.8}
+# ]
+
+# import matplotlib.pyplot as plt
+# plt.close('all')
+# f, axes = plt.subplots()
+# dd = display_association(axes, li,'key2', 'sym', 10)
+# f.savefig('sdf')
