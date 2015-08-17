@@ -22,17 +22,22 @@ ipo_urls = IPOInfoUrl.query.all()
 known_unwrs = set()
 
 for url in ipo_urls:
-    comp = get_company_overview(url.symbol)
-    if not comp:
-        log.warning("Cannot get company info for %s" % url.symbol)
+
+    comp = Company.query.filter_by(symbol=url.symbol).first()
+    if not comp: 
+#        session.add(comp)
+#        session.commit()
         continue
 
     if HistoricalIPO.query.filter_by(company_id=comp.id).first():
         print "Data exists for:", url.symbol
         continue
-    if not Company.query.filter_by(symbol=url.symbol).first():
-        session.add(comp)
-        session.commit()
+
+#    comp = get_company_overview(url.symbol)
+#    if not comp:
+#        log.warning("Cannot get company info for %s" % url.symbol)
+#        continue
+
 
     ipo_data = scrape_ipo(url.url)
     if ipo_data == {}:

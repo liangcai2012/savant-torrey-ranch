@@ -23,11 +23,13 @@ for symbol in symbols:
 
     comp = scraper.get_company_overview(symbol)
 #    if comp and not Company.query.filter_by(symbol=comp.symbol).first() and not Company.query.filter_by(name=comp.name).first():
-    if comp and not Company.query.filter_by(symbol=comp.symbol).first():
-        session.add(comp)
-        session.commit()
-    else:
-        print "Company exists in db"
+    if comp:
+        if not Company.query.filter_by(symbol=comp.symbol).first():
+            session.add(comp)
+            session.commit()
+        else:
+            print "Company exists in db"
+
 
     """
     if symbol in unwr_dict:
