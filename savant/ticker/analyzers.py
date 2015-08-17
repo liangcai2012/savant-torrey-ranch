@@ -4,7 +4,7 @@ from datetime import datetime
 
 from savant.config import settings
 
-class TradeAnalyzer:
+class TickDataAnalyzer:
     """
     Class to analyze one-day tick data
     """
@@ -183,13 +183,76 @@ class TradeAnalyzer:
             else:
                 return None
 
-    def validate_input(self):
+    def validate_data(self):
         try:
             columns = sorted(list(self.tick_data.columns))
             assert sorted(["datetime", "type", "price", "size", "exch", "cond"]) == columns
         except AssertionError:
             raise Exception("Unexpected columns")
 
+
+class BarDataAnalyzer:
+    """
+    Class to process and extract useful information from bar data.
+    """
+    PRICE_TYPES = ("open", "high", "low", "close", "average")
+
+    def __init__(self, data, interval=1):
+        self.data = data
+        self.interval = interval
+
+    def find_spikes(self, price_type="open", duration=1000000):
+        if price_type not in self.PRICE_TYPES:
+            raise ValueError("Unknown price type: must be one of the following (%s)" % ",".join(self.PRICE_TYPES))
+        spikes = []
+        count = 0
+
+    def find_next_spike(self, bars, noise_level):
+        t0 = self.data.iloc[0, 0].split()[1]
+        p0 = self.data.iloc[0, self.price_column]
+        d = 0
+        pending = False
+        for row in bars.iterrows():
+            t = row[1][0]
+            p = row[1][self.price_column]
+            if not pending:
+                if p > p0:
+                    d = 1
+                elif p < p0:
+                    d = -1
+                if numpy.absolute(p - p0)/p0 > noise_level:
+                    pending = True
+                    t0 = t
+                    p0 = p
+            elif d == 1:
+                if p > p0:
+                    t0 = t
+                    p0 = p
+                if p < p0 and pending and (p0 - p)/p0 > noise_level:
+                    pending = False
+                    break
+            else:
+                if p < p0:
+                    t0 = t
+                    p0 = p
+                if pending and p > p0 and (p - p0)/p0 > noise_level:
+                    pending = False
+                    break
+        if not pending and d != 0:
+            return (t0, p0, d)
+        else:
+            return None
+
+    def set_price_column(self, price_type):
+        columns = list(self.data.columns)
+        return columns.index(price_type)
+
+    def validate_data(self):
+        try:
+            columns = sorted(list(self.data.columns))
+            assert sorted(["datetime", "open", "high", "low", "close", "average", "volume"]) == columns
+        except:
+            raise Exception("Unexpected columns: check your data structure")
 
 if __name__ == "__main__":
     from savant.ticker.processors import TickDataProcessor
