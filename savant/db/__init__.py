@@ -7,7 +7,7 @@ from savant.config import settings
 import logging
 
 logging.basicConfig()
-logging.getLogger('sqlalchemy.engine').setLevel(logging.DEBUG)
+logging.getLogger('sqlalchemy.engine') #.setLevel(logging.DEBUG)
 
 
 class SessionFactory(sessionmaker):
@@ -28,12 +28,12 @@ def create_engine():
     url = make_url(settings.DATABASE_URI)
     options = {}
 
-    if settings.DEBUG:
+    if settings.DEBUG == "True":
         options.update(echo=True)
 
     if url.drivername == 'sqlite' and url.database in (None, '', ':memory:'):
         options.update(poolclass=StaticPool)
-        
+
         engine = sqlalchemy.create_engine(url, **options)
 
         Base.metadata.create_all(engine)

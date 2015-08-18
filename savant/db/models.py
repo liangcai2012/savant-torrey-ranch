@@ -4,7 +4,7 @@ import sqlite3 as sqlite
 
 from sqlalchemy import (Boolean, Column, Date, Enum, ForeignKey, Index,
                         Integer, Float, String, Text, TypeDecorator, event,
-                        Sequence, Table)
+                        Sequence, Table, DateTime)
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import relationship, backref
 
@@ -21,19 +21,20 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.execute('PRAGMA foreign_keys=ON')
         cursor.close()
 
-
-class Company(db.Base):
+CBase = db.Base 
+########################Schema ########################
+class Company(CBase):
     __tablename__ = "company"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False, unique=True)
+    name = Column(String(100), nullable=False)
 
     # Company ticker symbol
-    symbol = Column(String(10), nullable=False)
+    symbol = Column(String(10), nullable=False, unique=True)
 
     # Exchange
     exchange_id = Column(Integer, ForeignKey("exchange.id"))
-    
+
     # Sector
     sector_id = Column(Integer, ForeignKey("sector.id"))
 
@@ -42,10 +43,10 @@ class Company(db.Base):
 
     # Company primary location
     #headquarter = Column(String(100))
-    
+
     # Market cap
     market_cap = Column(Integer)
-    
+
     # Public shares as of the date this table is updated
     float_shares = Column(Integer)
 
@@ -68,14 +69,13 @@ class Company(db.Base):
     underwriters = relationship("CompanyUnderwriterAssociation")
 
     def __init__(self, **params):
-        params["date_updated"] = date.today()
+        #params["date_updated"] = date.today()
         self.__dict__.update(params)
 
-    def __repr__(self):
-        return "<Company(name='%s', symbol='%s', exchange_id='%s', market_cap='%s', float_shares='%s', previous_close='%s', previous_volume='%s', trailing_p/e='%s', beta='%s', date_updated='%s')>" % (self.name, self.symbol, self.exchange_id, self.market_cap, self.float_shares, self.prev_close, self.prev_volume, self.trailing_pe, self.nasdaq_beta, self.date_updated)
+    def clone(self, params):
+        self.__dict__.update(params)
 
-
-class Exchange(db.Base):
+class Exchange(CBase):
     __tablename__ = "exchange"
 
     id = Column(Integer, primary_key=True)
@@ -87,13 +87,16 @@ class Exchange(db.Base):
         #self.company_id = company_id
         self.name = name
 
+    def clone(self, params):
+        self.__dict__.update(params)
+
     def __repr__(self):
         return "<Exchange(name='%s')>" % (self.name)
 
 
-class Sector(db.Base):
+class Sector(CBase):
     __tablename__ = "sector"
-    
+
     id = Column(Integer, primary_key=True)
     name = Column(String(20), nullable=False, unique=True)
 
@@ -102,11 +105,14 @@ class Sector(db.Base):
     def __init__(self, name):
         self.name = name
 
+    def clone(self, params):
+        self.__dict__.update(params)
+
     def __repr__(self):
         return "<Sector(name='%s')>" % self.name
 
 
-class Industry(db.Base):
+class Industry(CBase):
     __tablename__ = "industry"
 
     id = Column(Integer, primary_key=True)
@@ -117,11 +123,14 @@ class Industry(db.Base):
     def __init__(self, name):
         self.name = name
 
+    def clone(self, params):
+        self.__dict__.update(params)
+
     def __repr__(self):
         return "<Industry(name='%s')>" % self.name
 
 
-class CompanyUnderwriterAssociation(db.Base):
+class CompanyUnderwriterAssociation(CBase):
     __tablename__ = "company_underwriter_association"
 
     company_id = Column(Integer, ForeignKey("company.id"), primary_key=True)
@@ -129,8 +138,14 @@ class CompanyUnderwriterAssociation(db.Base):
     lead = Column(Boolean)
     company = relationship("Underwriter", backref="companies")
 
+    def __init__(self):
+         pass
 
-class Underwriter(db.Base):
+    def clone(self, params):
+        self.__dict__.update(params)
+
+
+class Underwriter(CBase):
     __tablename__ = "underwriter"
 
     id = Column(Integer, primary_key=True)
@@ -139,11 +154,14 @@ class Underwriter(db.Base):
     def __init__(self, name):
         self.name = name
 
+    def clone(self, params):
+        self.__dict__.update(params)
+
     def __repr__(self):
         return "<Underwriter(name='%s')>" % self.name
 
 
-class IPOInfoUrl(db.Base):
+class IPOInfoUrl(CBase):
     __tablename__ = "ipo_url"
 
     id = Column(Integer, primary_key=True)
@@ -156,13 +174,16 @@ class IPOInfoUrl(db.Base):
         self.symbol = symbol
         self.url = url
 
+    def clone(self, params):
+        self.__dict__.update(params)
+
     def __repr__(self):
         return "<IPOInfoURL(company_name='%s', symbol='%s', url='%s')>" % (self.name, self.symbol, self.url)
 
 
-class HistoricalIPO(db.Base):
+class HistoricalIPO(CBase):
     __tablename__ = "historical_ipo"
-    
+
     company_id = Column(Integer, ForeignKey("company.id"), primary_key=True)
 
     ipo_date = Column(Date)
@@ -179,10 +200,36 @@ class HistoricalIPO(db.Base):
     first_day_high_percent_change = Column(Float)
     first_day_low = Column(Float)
     first_day_low_percent_change = Column(Float)
-    first_day_volumn = Column(Integer)
-    
+    first_day_volume = Column(Integer)
+
+    company = relationship("Company", foreign_keys='HistoricalIPO.company_id')
+
     def __init__(self, **params):
         self.__dict__.update(params)
 
     def __repr__(self):
         return "<Historical_IPO(company_id='%s', ipo_date='%s', price='%s', shares='%s', outstanding='%s', scoop_rating='%s')>" % (self.company_id, self.ipo_date, self.price, self.shares, self.outstanding, self.scoop_rating)
+
+
+class PostIPOPrice(CBase):
+    __tablename__ = "post_ipo_price"
+
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer, ForeignKey("company.id"), primary_key=False)
+
+    date= Column(Date)
+    open = Column(Float)
+    high = Column(Float)
+    low = Column(Float)
+    close = Column(Float)
+    volume = Column(Integer)
+
+    company = relationship("Company", foreign_keys='PostIPOPrice.company_id')
+
+    def __init__(self, **params):
+        self.__dict__.update(params)
+
+    def __repr__(self):
+        return "<Post_IPO_Price(company_id='%s', datetime='%s', open='%s', high='%s', low='%s', close='%s', volume='%s')>" % (self.company_id, self.datetime, self.open, self.high, self.low, self.close, self.volume)
+
+#########################End Schema ###############################

@@ -1,0 +1,13 @@
+1. Goal
+Based on estimation, it takes about about 8 hours to fetch one day's history tick data. That means it needs more than 25000 hour (3 years 24 hours a day) to collect history data 15 years. To be able to back-test many stretegies, we will have to fetch data in a random order. For example, some IPO strategies only need the first day tick data. So we collect these data first. To meet this requirement, we need a scheduler to fetch data from activetick.com 
+
+2. Baseline requirements
+2.1 Scheduler must be a background service component running 7x24. It generates a summary daily report and send it specified users via email such that it can be noticable once the program is hung unexpectedly.
+
+2.2 Scheduler should be able to accept requests containing fetching task description from users, as well as displaying the status of current work status. 
+
+An possible form of fetching task description/status is to use a set of text files. When a user want to create a fetch task, he/she adds a new task description file (text) to a particular folder, specifying task name,  priority and a list of symbol/date range pair. Once the scheduler detects this new task description file, it parses it and starts the task if the priority is higher than current task. Scheduler also creates a corresponding task status file and updates it once each fetching symbol/date range pair is completed.  
+
+A default fetching instruction with lowest priority can be hard coded. If all user specified tasks are completed, scheduler work on the default task
+
+2.3 Scheduler needs to maintain a database table to bookkeep all fetched data. If a task description file contains data that is already fetched, then scheduler will skip it. Currently the smallest unit of data being fetched is one symbol/day. In the future the fetcher might support partial day fetching, i.e., if part of tick data is already collected (eg. by streamer), the fetcher only needs to obtain the remaining data from activetick.com  To support this future feature,  the database table should be able to bookkeep partial day data. Also the database table might be accessed by streamer in the future.  
