@@ -14,6 +14,19 @@ class TickDataProcessor:
     def __init__(self):
         self.base_dir = settings.DOWNLOAD_DIR
 
+    def get_ticks_paths_by_date(self, symbol, date):
+        paths=[]
+        suffix_list = self.get_file_suffix("full")
+        for suffix in suffix_list:
+            filename = symbol + suffix + ".csv.gz" 
+            data_path = os.path.join(self.base_dir, date, filename)
+            print data_path
+            if not os.path.exists(data_path):
+               paths.append("")
+            else:
+               paths.append(data_path)
+        return paths
+
     def get_ticks_by_date(self, symbol, begin_date, end_date, hours="regular", parse_dates=False, nrows=None):
         dates = self.parse_dates(begin_date, end_date)
 

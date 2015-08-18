@@ -41,6 +41,19 @@ try:
 except:
     savant.db.session.rollback()
 
+
+def IPO_first_day_tick(sym, date):
+    at = ATConnection()
+    params = {}
+    params['symbol'] =sym 
+    params['trade'] = 1
+    params['quote'] = 0 
+    params['beginTime'] = date+"090000"
+    params['endTime'] = date+"220000"
+    prices = at.tickData(params=params)
+    print prices
+
+
 def IPO_first_daily_price(symb_list=None):
     at = ATConnection()
     if symb_list is None:
@@ -72,5 +85,6 @@ def IPO_first_daily_price(symb_list=None):
             savant.db.session.rollback()
             print "cannot save" + comp.symbol
 
-IPO_first_daily_price()
+IPO_first_day_tick('CORI', '20140403' )
+#IPO_first_daily_price()
 
