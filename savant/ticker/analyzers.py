@@ -207,7 +207,8 @@ class BarDataAnalyzer:
         if pt not in self.PRICE_TYPES:
             raise ValueError("Unknown price type: must be one of the following (%s)" % ",".join(self.PRICE_TYPES))
         self.price_type = pt
-        self.price_column = self.PRICE_TYPES.index(pt) + 1
+        columns = list(self.data.columns)
+        self.price_column = columns.index(price_type)
 
     def find_spikes(self, noise_level, price_type="open", duration=1000000):
         self.set_price_type(price_type)
@@ -261,10 +262,6 @@ class BarDataAnalyzer:
             return [[t0, p0, d], t]
         else:
             return None
-
-    def set_price_column(self, price_type):
-        columns = list(self.data.columns)
-        return columns.index(price_type)
 
     def validate_data(self):
         try:
