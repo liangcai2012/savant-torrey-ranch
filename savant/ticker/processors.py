@@ -77,7 +77,7 @@ def tick2bar(symbol, date, duration=1000000, interval=1, save_to_disk=False):
     begin_time = None
     cur_open_time = None
     tick_batch = []
-    bars = pd.DataFrame(columns=["interval", "open", "high", "low", "close", "average", "volume"])
+    bars = pd.DataFrame(columns=["datetime", "open", "high", "low", "close", "average", "volume"])
 
     for tick in ticks.iterrows():
         time = tick[1][0].split()[1]
@@ -111,7 +111,7 @@ def calc_time_diff(timeOne, timeTwo, millisec=False):
 
 def calc_bar_from_tick_batch(ticks):
     bar = {}
-    bar["interval"] = ticks[0][1][0].split()[-1] + "-" + ticks[-1][1][0].split()[-1]
+    bar["datetime"] = ticks[0][1][0]
     trade_prices = [t[1][2] for t in ticks]
     bar["open"] = trade_prices[0]
     bar["close"] = trade_prices[-1]
