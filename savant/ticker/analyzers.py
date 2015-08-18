@@ -1,5 +1,6 @@
 import os, sys
 import numpy
+import pandas as pd
 from datetime import datetime
 
 from savant.config import settings
@@ -202,24 +203,29 @@ class BarDataAnalyzer:
         self.data = data
         self.interval = interval
 
-    def find_spikes(self, noise_level, price_type="open", duration=1000000):
-        if price_type not in self.PRICE_TYPES:
+    def set_price_type(self, pt):
+        if pt not in self.PRICE_TYPES:
             raise ValueError("Unknown price type: must be one of the following (%s)" % ",".join(self.PRICE_TYPES))
+        self.price_type = pt
+        self.price_column = self.PRICE_TYPES.index(pt) + 1
+
+    def find_spikes(self, noise_level, price_type="open", duration=1000000):
+        self.set_price_type(price_type)
         spikes = []
         count = 0
         times = [b[1][0].split()[1] for b in list(self.data.iterrows())]
+        t0 = times[0]
         spike = self.find_next_spike(self.data, noise_level)
-        if not spike:
+        if not spike or calc_time_diff(t0, spike[1]) > duration:
             return spikes
-        spikes.append(spike)
-        while spike[0] < times[-1]:
-            if calc_time_diff(t0, time) > duration:
-                return spikes
-            ind = times.index(spike[0])
-            bars = self.data[ind+1:]
-            spike = self.find_next_spike(bars, noise_level)
-            if spike:
-                spikes.append(spike)
+        spikes.append([count]+spike[0])
+        count += 1
+        while calc_time_diff(spike[1], times[-1]) > 0:
+            ind = times.index(spike[1])
+            spike = self.find_next_spike(self.data[ind+1:], noise_level)
+            if spike and calc_time_diff(t0, spike[1]) <= duration:
+                spikes.append([count]+spike[0])
+                count += 1
             else:
                 return spikes
 
@@ -229,15 +235,12 @@ class BarDataAnalyzer:
         d = 0
         pending = False
         for row in bars.iterrows():
-            t = row[1][0]
+            t = row[1][0].split()[1]
             p = row[1][self.price_column]
             if not pending:
-                if p > p0:
-                    d = 1
-                elif p < p0:
-                    d = -1
                 if numpy.absolute(p - p0)/p0 > noise_level:
                     pending = True
+                    d = 1 if p > p0 else -1
                     t0 = t
                     p0 = p
             elif d == 1:
@@ -255,7 +258,7 @@ class BarDataAnalyzer:
                     pending = False
                     break
         if not pending and d != 0:
-            return (t0, p0, d)
+            return [[t0, p0, d], t]
         else:
             return None
 
@@ -283,6 +286,8 @@ if __name__ == "__main__":
     #print analyzer.find_next_spike(0.05)
     #print analyzer.tick_data
     from savant.ticker.processors import tick2bar
-    bars = tick2bar("NVET", "20150205", 30)
+    bars = tick2bar("NVET", "20150205", 3000)
     analyzer = BarDataAnalyzer(bars)
-    analyzer.find_spikes()
+    print analyzer.find_spikes(0.02, price_type="open")
+    print analyzer.find_spikes(0.02, price_type="close")
+    print analyzer.find_spikes(0.02, price_type="average")

@@ -23,3 +23,20 @@ class Trade(object):
         self.last_size = lastsize
         self.last_exch = lastexch
         self.cond = cond
+
+def calc_time_diff(timeOne, timeTwo, millisec=False):
+    """
+    Calculate difference in times in sec.
+    """
+    try:
+        c1, ms1 = timeOne.split(".")
+        c2, ms2 = timeTwo.split(".")
+        h1, m1, s1 = [int(i) for i in c1.split(":")]
+        h2, m2, s2 = [int(i) for i in c2.split(":")]
+        if millisec:
+            return (h2-h1)*3600 + (m2-m1)*60 + (s2-s1) + (int(ms2)-int(ms1))/1000
+        else:
+            return (h2-h1)*3600 + (m2-m1)*60 + (s2-s1)
+    except Exception, e:
+        print e
+        raise ValueError("The times given are invalid")

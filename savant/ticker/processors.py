@@ -6,6 +6,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 
 from savant.config import settings
+from savant.ticker import calc_time_diff
 
 
 class TickDataProcessor:
@@ -110,19 +111,6 @@ def tick2bar(symbol, date, duration=1000000, interval=1, save_to_disk=False):
             tick_batch = [tick]
 
     return bars
-        
-def calc_time_diff(timeOne, timeTwo, millisec=False):
-    try:
-        c1, ms1 = timeOne.split(".")
-        c2, ms2 = timeTwo.split(".")
-        h1, m1, s1 = [int(i) for i in c1.split(":")]
-        h2, m2, s2 = [int(i) for i in c2.split(":")]
-        if millisec:
-            return (h2-h1)*3600 + (m2-m1)*60 + (s2-s1) + (int(ms2)-int(ms1))/1000
-        else:
-            return (h2-h1)*3600 + (m2-m1)*60 + (s2-s1)
-    except:
-        raise ValueError("The times given are invalid")
 
 def calc_bar_from_tick_batch(ticks):
     bar = {}
