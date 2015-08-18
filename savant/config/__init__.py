@@ -67,4 +67,3 @@ alembic_settings_file = os.path.join(os.path.dirname(__file__), "alembic.ini")
 config = ConfigParser()
 config.read(alembic_settings_file)
 db_settings = config._sections
->>>>>>> b78c7d1619a5e5797e3e5d6c2ad4013164e449f3

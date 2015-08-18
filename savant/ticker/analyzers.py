@@ -3,6 +3,7 @@ import numpy
 from datetime import datetime
 
 from savant.config import settings
+from savant.ticker import calc_time_diff
 
 class TickDataAnalyzer:
     """
@@ -201,11 +202,26 @@ class BarDataAnalyzer:
         self.data = data
         self.interval = interval
 
-    def find_spikes(self, price_type="open", duration=1000000):
+    def find_spikes(self, noise_level, price_type="open", duration=1000000):
         if price_type not in self.PRICE_TYPES:
             raise ValueError("Unknown price type: must be one of the following (%s)" % ",".join(self.PRICE_TYPES))
         spikes = []
         count = 0
+        times = [b[1][0].split()[1] for b in list(self.data.iterrows())]
+        spike = self.find_next_spike(self.data, noise_level)
+        if not spike:
+            return spikes
+        spikes.append(spike)
+        while spike[0] < times[-1]:
+            if calc_time_diff(t0, time) > duration:
+                return spikes
+            ind = times.index(spike[0])
+            bars = self.data[ind+1:]
+            spike = self.find_next_spike(bars, noise_level)
+            if spike:
+                spikes.append(spike)
+            else:
+                return spikes
 
     def find_next_spike(self, bars, noise_level):
         t0 = self.data.iloc[0, 0].split()[1]
@@ -255,15 +271,18 @@ class BarDataAnalyzer:
             raise Exception("Unexpected columns: check your data structure")
 
 if __name__ == "__main__":
-    from savant.ticker.processors import TickDataProcessor
-    ticker = TickDataProcessor()
-    data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=False)
+    #from savant.ticker.processors import TickDataProcessor
+    #ticker = TickDataProcessor()
+    #data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=False)
     #data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=True, nrows=6000)
-    analyzer = TradeAnalyzer(data)
+    #analyzer = TradeAnalyzer(data)
     #print analyzer.get_price_by_datetime(datetime.strptime("07/02/2015 10:43:27", "%m/%d/%Y %H:%M:%S"))
     #print analyzer.find_next_spike_by_datetime(datetime.strptime("07/02/2015 10:43:27", "%m/%d/%Y %H:%M:%S"), 0.02)
-    print analyzer.get_first_trade_time()
-    print analyzer.get_opening_price()
-    print analyzer.find_next_spike(0.05)
+    #print analyzer.get_first_trade_time()
+    #print analyzer.get_opening_price()
+    #print analyzer.find_next_spike(0.05)
     #print analyzer.tick_data
-
+    from savant.ticker.processors import tick2bar
+    bars = tick2bar("NVET", "20150205", 30)
+    analyzer = BarDataAnalyzer(bars)
+    analyzer.find_spikes()

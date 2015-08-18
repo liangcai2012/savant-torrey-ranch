@@ -108,6 +108,8 @@ def tick2bar(symbol, date, duration=1000000, interval=1, save_to_disk=False):
             bars = bars.append([bar])
             cur_open_time = time
             tick_batch = [tick]
+
+    return bars
         
 def calc_time_diff(timeOne, timeTwo, millisec=False):
     try:
@@ -138,4 +140,4 @@ if __name__ == "__main__":
     #ticker = TickDataProcessor()
     #print ticker.get_ticks_by_date("NTRA", "20150702", "20150702")
     #print ticker.get_ticks_by_datetime("NTRA", datetime.strptime("07/02/2015 11:00:00", "%m/%d/%Y %H:%M:%S"), datetime.strptime("07/02/2015 15:00:00", "%m/%d/%Y %H:%M:%S"))
-    print tick2bar("NVET", "20150205", 30)
+    print list(tick2bar("NVET", "20150205", 30).iterrows())
