@@ -232,4 +232,29 @@ class PostIPOPrice(CBase):
     def __repr__(self):
         return "<Post_IPO_Price(company_id='%s', datetime='%s', open='%s', high='%s', low='%s', close='%s', volume='%s')>" % (self.company_id, self.datetime, self.open, self.high, self.low, self.close, self.volume)
 
-#########################End Schema ###############################
+class IPOVolume(CBase):
+    __tablename__ = "ipo_volume" 
+  
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer, ForeignKey("company.id"), primary_key=False)
+    
+    first_trade_vol = Column(Integer)
+    first_second_vol = Column(Integer)
+    first_minute_vol = Column(Integer)
+    first_5m_vol = Column(Integer)
+    first_30m_vol = Column(Integer)
+    first_1h_vol = Column(Integer)
+    first_1d_markethour_vol = Column(Integer)
+    first_1d_aftermarket_vol = Column(Integer)
+    
+    company = relationship("Company", foreign_keys='IPOVolume.company_id')
+
+    def __init__(self, **params):
+        self.__dict__.update(params)
+
+    def __repr__(self):
+        return "<IPO_Volume(company_id='%s', first_trade_vol='%s', first_second_vol='%s', first_minute_vol='%s', first_5m_vol='%s', first_30m_vol='%s', first_1h_vol='%s', first_1d_markethour_vol='%s', first_1d_aftermarket_vol='%s')>" % (self.company_id, self.first_trade_vol, self.first_second_vol, self.first_minute_vol, self.first_5m_vol, self.first_30m_vol, self.first_1h_vol, self.first_1d_markethour_vol, self.first_1d_aftermarket_vol)
+
+
+
+#########################End Schema ##########################
