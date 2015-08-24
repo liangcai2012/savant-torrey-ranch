@@ -159,12 +159,15 @@ class HistoricalDataReader:
 if __name__ == "__main__":
     o = CBarData()
     o.toDictionary()
-    hdr = HistoricalDataReader("qqq", "05/01/2015", "05/01/2015")
+    hdr = HistoricalDataReader("BTER", "/2015/08/05", "2015/08/06")
     for i in range(3600 *9):
         try:
-            for i in range(10):
-                ret = hdr.update(1,"000000", "000000")
-                print(ret)
+            #for i in range(10):
+            ret = hdr.update(1,"000000", "000000")
+            errorObj = ret["error"]
+            print(ret)
+            if(errorObj != None):
+                break;
         except dataAPI.DataError, e:
             print("total available number of bar data:", i)
             break
