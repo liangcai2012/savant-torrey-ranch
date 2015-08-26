@@ -5,6 +5,7 @@ from datetime import datetime
 
 from savant.config import settings
 from savant.ticker import calc_time_diff
+from __builtin__ import None
 
 class TickDataAnalyzer:
     """
@@ -25,7 +26,15 @@ class TickDataAnalyzer:
         self.high_percent = None
         self.low_percent = None
         self.volume = None
-
+        self.firstTrVol = None
+        self.firstSecVol = None
+        self.firstMinVol = None
+        self.firstFiveMinVol = None
+        self.firstThirtyMinVol = None
+        self.firstHourVol = None
+        self.firstDayVol = None
+        self.firstAfterVol = None
+        
     def get_opening_price(self):
         if not self.opening:
             self.opening = self.tick_data.iloc[0, 2-self.adj_ind]
@@ -45,7 +54,46 @@ class TickDataAnalyzer:
                 return self.tick_data.iloc[0, 0].strftime("%H:%M:%S")
             else:
                 return datetime.strptime(dt, "%m/%d/%Y %H:%M:%S").strftime("%H:%M:%S")
-
+    
+    def get_first_trade_volume(self):
+        if not self.firstTrVol:
+            self.firstTrVol = int(self.tick_data.iloc[0]["size"])
+        return self.firstTrVol
+    def get_first_second_vol(self):
+        if not self.firstSecVol:
+            self.firstSecVol = int(self.tick_data.iloc[0]["size"])
+        return self.firstSecVol
+    
+    def get_first_minute_vol(self): 
+        if not self.firstMinVol:
+            self.firstMinVol = int(self.tick_data.iloc[0]["size"])
+        return self.firstMinVol
+    
+    def get_first_5m_vol(self):
+        if not self.firstFiveMinVol:
+            self.firstFiveMinVol = int(self.tick_data.iloc[0]["size"])
+        return self.firstFiveMinVol
+     
+    def get_first_30m_vol(self):
+        if not self.firstThirtyMinVol:
+            self.firstThirtyMinVol = int(self.tick_data.iloc[0]["size"])
+        return self.firstThirtyMinVol
+     
+    def get_first_1h_vol(self):
+        if not self.firstHourVol:
+            self.firstHourVol = int(self.tick_data.iloc[0]["size"])
+        return self.firstHourVol
+     
+    def get_first_1d_markethour_vol(self):
+        if not self.firstDayVol:
+            self.firstDayVol = int(self.tick_data.iloc[0]["size"])
+        return self.firstDayVol
+    
+    def get_first_1d_aftermarket_vol(self):
+        if not self.firstAfterVol:
+            self.firstAfterVol = int(self.tick_data.iloc[0]["size"])
+        return self.firstAfterVol
+     
     def get_high_price(self):
         if not self.high:
             self.high = self.tick_data["price"].max()
@@ -76,6 +124,7 @@ class TickDataAnalyzer:
         if not self.volume:
             self.volume = int(numpy.sum(self.tick_data["size"]))
         return self.volume
+
 
     def find_next_spike_by_datetime(self, begin_datetime, noise_level):
         """
