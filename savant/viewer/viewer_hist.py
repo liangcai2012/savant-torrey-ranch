@@ -546,7 +546,7 @@ class DataPlotter():
         global q
         print '#########init q is: ', q
         next_call = time.time() 
-        while not time.sleep(next_call - time.time()):  # somehow need add +0.00001 to remove errno22 exception in Linux env. For Windows, we don't need add this          
+        while not time.sleep(max(0, next_call - time.time())):  # somehow need add +0.00001 to remove errno22 exception in Linux env. For Windows, we don't need add this          
 #             print '^^^^^^^^^^^^'
             t1=time.time()
             if  len(q) != 0  :

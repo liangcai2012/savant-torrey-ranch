@@ -6,6 +6,7 @@ import datetime
 import time
 import readgz
 import matplotlib.dates
+from savant.ticker.processors import *
 
 class CBarData:
     def __init__(self):
@@ -62,7 +63,9 @@ class HistoricalDataReader:
         self.lastError=errors.EC_NOT_ERROR
         self.startTimestamp = None
 
-        filepath = helper.GetDataFileFullPath(symbol,startDay)
+        #filepath = helper.GetDataFileFullPath(symbol,startDay)
+        ticker = TickDataProcessor()
+        feilpath = ticker.get_ticks_paths_by_date(symbol, startDay)
         try:
             #self.dataFile = open(filepath, "r+");
             self.dataFile  = readgz.Reader_gz()
