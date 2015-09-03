@@ -5,6 +5,8 @@ import os
 import datetime
 import time
 import readgz
+import matplotlib.dates
+
 class CBarData:
     def __init__(self):
         self.reset()
@@ -38,13 +40,17 @@ class CBarData:
             self.avg =int((self.avg * 100) + 0.5) / 100.0 # Adding 0.5 rounds it up
             #self.avg = "%.2f" % self.avg
 
-    def toDictionary(self):
+    def toDictionary(self):   
         ret = {"error":None,\
-            "open":self.open, "close":self.close, \
-               "low":self.low, "high":self.high, \
-               "volume":self.volume,"avg": self.avg}
+            "data":[{ "symbol":None,
+            "bar":{ "open":self.open, "close":self.close, \
+               "low":self.low, "high":self.high,
+               "volume":self.volume,"avg": self.avg}, 
+              "ma":None}      
+                    ] }          # Chuan: change API for compatible with viewer
 
         return ret
+
 
 
 class HistoricalDataReader:
@@ -141,6 +147,7 @@ class HistoricalDataReader:
         #self.startTimestamp
         tstr = self.get_timestamp()
         ret["time_stamp"] =  tstr
+        ret["data"][0]["symbol"]=self.symbol  # Chuan: change API for compatible with viewer
         return ret
     def get_timestamp(self):
 
@@ -152,8 +159,10 @@ class HistoricalDataReader:
         else:
             adjust_time = 8 *3600; #8 hours
             t = datetime.datetime.utcfromtimestamp(self.startTimestamp - adjust_time)
-            ret = t.strftime("%Y%m%d %H:%M:%S")
-        return ret
+#             ret = t.strftime("%Y-%m-%d %H:%M:%S")
+            ret=t
+            print ret
+        return matplotlib.dates.date2num(ret) # Chuan: change timestamp to float, viwer will do the convertion
 
 
 if __name__ == "__main__":
