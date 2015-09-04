@@ -116,7 +116,8 @@ class ViewerCmdHandler(SocketServer.BaseRequestHandler):
                     if (params['type'] == 'h'):
                         # history data, no need request data frequtly based on interver  
                         histRcver = DataReceiver('Viewer_history_' + params['symbol'], params)  # clientName,params
-                        histRcver.subscribeHistory([params['symbol'], params['start'], params['end']]) 
+                        print "hhhhhhh",params['symbol'], params['start'], params['end']
+                        histRcver.subscribeHistory(params['symbol'], params['start'], params['end']) 
                         histRcver.start()    
                         plot.reset_xlim_history(pos)      # no need set here, will be setup in plot loop                      
                 
@@ -278,9 +279,9 @@ class DataReceiver(threading.Thread):
     def subscribeRealtime(self, sym):
         self.dataapi.subscribeRealtime(sym)    
          
-    def subscribeHistory(self, symPeriodList):
+    def subscribeHistory(self, symPeriodList, start, stop):
 #         self.dataapi.subscribeRealtime(symPeriodList)  
-        self.dataapiHistory=hist.HistoricalDataReader("BTER", "/2015/08/05", "2015/08/06")
+        self.dataapiHistory=hist.HistoricalDataReader(symPeriodList, start, stop)
         
     def unsubscribeRealtime(self, sym):
         self.dataapi.unsubscribeRealtime(sym)
@@ -546,7 +547,7 @@ class DataPlotter():
         global q
         print '#########init q is: ', q
         next_call = time.time() 
-        while not time.sleep(max(0, next_call - time.time())):  # somehow need add +0.00001 to remove errno22 exception in Linux env. For Windows, we don't need add this          
+        while not time.sleep(next_call - time.time()):  # somehow need add +0.00001 to remove errno22 exception in Linux env. For Windows, we don't need add this          
 #             print '^^^^^^^^^^^^'
             t1=time.time()
             if  len(q) != 0  :
