@@ -151,10 +151,12 @@ class HistoricalDataReader:
         tstr = self.get_timestamp()
         ret["time_stamp"] =  tstr
         ret["data"][0]["symbol"]=self.symbol  # Chuan: change API for compatible with viewer
+        print ret
         return ret
     def get_timestamp(self):
 
         # data is not available
+        print self.startTimestamp
         if(self.startTimestamp == None):
             #just use the date specified in update function.
            ret = self.startDay
@@ -164,7 +166,7 @@ class HistoricalDataReader:
             t = datetime.datetime.utcfromtimestamp(self.startTimestamp - adjust_time)
 #             ret = t.strftime("%Y-%m-%d %H:%M:%S")
             ret=t
-            print ret
+        print "what the hell it is:", ret
         return matplotlib.dates.date2num(ret) # Chuan: change timestamp to float, viwer will do the convertion
 
 
