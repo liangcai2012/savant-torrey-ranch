@@ -1,4 +1,4 @@
-
+import datetime as dt
 class Quote(object):
 
     __slots__ = ("datetime", "bid", "ask", "bidsize", "asksize", "bidexch", "askexch", "cond")
@@ -40,3 +40,12 @@ def calc_time_diff(timeOne, timeTwo, millisec=False):
     except Exception, e:
         print e
         raise ValueError("The times given are invalid")
+
+def datetime_to_timestamp(datetime_str):
+    datetime_no_ms = datetime_str.split('.')[0]  # remove the millisecond part
+    try:
+        t = dt.datetime.strptime(datetime_no_ms, '%m/%d/%Y %H:%M:%S')
+        return t.strftime('%Y%m%d%H%M%S')
+    except ValueError:
+        return None
+

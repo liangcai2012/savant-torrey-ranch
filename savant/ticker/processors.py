@@ -43,7 +43,8 @@ class TickDataProcessor:
             for filename in filenames:
                 data_path = os.path.join(self.base_dir, date, filename)
                 if not os.path.exists(data_path):
-                    raise IOException("Data file not found: %s" % data_path)
+                    continue
+                    #raise IOException("Data file not found: %s" % data_path)
                 if parse_dates:
                     cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"], parse_dates=[0], index_col=0, nrows=nrows)
                 else:
@@ -84,8 +85,7 @@ class TickDataProcessor:
             raise ValueError("No such hours: %s" % hours)
         return suffix
 
-
-def tick2bar(symbol, date, duration=1000000, interval=1, save_to_disk=False):
+def tick2bar(symbol, date, duration=None, interval=1, save_to_disk=False, start_sec_int=None):
     tick_processor = TickDataProcessor()
     ticks = tick_processor.get_ticks_by_date(symbol, date, date)
     begin_time = None
@@ -95,12 +95,16 @@ def tick2bar(symbol, date, duration=1000000, interval=1, save_to_disk=False):
 
     for tick in ticks.iterrows():
         time = tick[1][0].split()[1]
-        if begin_time == None:
-            begin_time = time
+        if start_sec_int!=None:
+            if int(time.split('.')[0].replace(':','')) < start_sec_int:
+                continue
         if cur_open_time == None:
             cur_open_time = time
-        if calc_time_diff(begin_time, time) > duration:
-            return bars
+        if duration != None:
+            if begin_time == None:
+                begin_time = time
+            if calc_time_diff(begin_time, time) > duration:
+                return bars
 
         if calc_time_diff(cur_open_time, time) < interval:
             tick_batch.append(tick)
@@ -109,19 +113,18 @@ def tick2bar(symbol, date, duration=1000000, interval=1, save_to_disk=False):
             bars = bars.append([bar])
             cur_open_time = time
             tick_batch = [tick]
-
     return bars
 
 def calc_bar_from_tick_batch(ticks):
     bar = {}
     bar["datetime"] = ticks[0][1][0]
-    trade_prices = [t[1][2] for t in ticks]
+    trade_cost = [t[1][2]*t[1][3] for t in ticks]
     bar["open"] = trade_prices[0]
     bar["close"] = trade_prices[-1]
     bar["high"] = max(trade_prices)
     bar["low"] = min(trade_prices)
-    bar["average"] = sum(trade_prices)/float(len(trade_prices))
     bar["volume"] = sum([int(t[1][3]) for t in ticks])
+    bar["average"] = sum(trade_cost)/float(bar["volume"])
     return bar
 
 if __name__ == "__main__":

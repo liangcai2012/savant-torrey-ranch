@@ -98,6 +98,7 @@ class HistoricalDataReader:
         else:
             self.bardata.Done(loopCount)
             self.hasMoreData = False
+G
     def read_and_process_data(self):
         loopCount = 0
         if(self.dataFile == None):
@@ -107,7 +108,7 @@ class HistoricalDataReader:
 
             if self.lastDataLine == None:
                 self.lastDataLine = self.dataFile.readline()
-            if not self.lastDataLine:
+            if not self.lastDataLine:0gg
                 # raise exception only loopCount ==0.
                 # loopCount !=0 means partial data.
                 if(loopCount ==0):
@@ -128,6 +129,7 @@ class HistoricalDataReader:
                 #print(self.updateCount, "end of current period")
                 break
             self.lastDataLine = None
+
     # Paramters bar_mask, ma_mask are ignored.
     # todo support using Paramters bar_mask, ma_mask .
     def update(self, interval, bar_mask, ma_mask):
@@ -152,6 +154,7 @@ class HistoricalDataReader:
         ret["time_stamp"] =  tstr
         ret["data"][0]["symbol"]=self.symbol  # Chuan: change API for compatible with viewer
         return ret
+
     def get_timestamp(self):
 
         # data is not available
@@ -164,14 +167,13 @@ class HistoricalDataReader:
             t = datetime.datetime.utcfromtimestamp(self.startTimestamp - adjust_time)
 #             ret = t.strftime("%Y-%m-%d %H:%M:%S")
             ret=t
-            print ret
+        print ret
         return matplotlib.dates.date2num(ret) # Chuan: change timestamp to float, viwer will do the convertion
 
 
 if __name__ == "__main__":
     o = CBarData()
-    o.toDictionary()
-    hdr = HistoricalDataReader("BTER", "/2015/08/05", "2015/08/06")
+    hdr = HistoricalDataReader("BTER", "2015/08/05", "2015/08/06")
     for i in range(3600 *9):
         try:
             #for i in range(10):
