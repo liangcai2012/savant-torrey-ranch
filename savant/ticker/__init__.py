@@ -29,11 +29,16 @@ def calc_time_diff(timeOne, timeTwo, millisec=False):
     Calculate difference in times in sec.
     """
     try:
-        c1, ms1 = timeOne.split(".")
-        c2, ms2 = timeTwo.split(".")
+        ts1 =  timeOne.split(".")
+        ts2 =  timeTwo.split(".")
+        c1 = ts1[0]
+        c2 = ts2[0]
+        
         h1, m1, s1 = [int(i) for i in c1.split(":")]
         h2, m2, s2 = [int(i) for i in c2.split(":")]
         if millisec:
+            ms1=ts1[1]
+            ms2=ts2[1]
             return (h2-h1)*3600 + (m2-m1)*60 + (s2-s1) + (int(ms2)-int(ms1))/1000
         else:
             return (h2-h1)*3600 + (m2-m1)*60 + (s2-s1)
@@ -49,3 +54,4 @@ def datetime_to_timestamp(datetime_str):
     except ValueError:
         return None
 
+    

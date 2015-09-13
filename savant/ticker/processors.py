@@ -109,23 +109,31 @@ def tick2bar(symbol, date, duration=None, interval=1, save_to_disk=False, start_
         if calc_time_diff(cur_open_time, time) < interval:
             tick_batch.append(tick)
         else:
-            bar = calc_bar_from_tick_batch(tick_batch)
+            bar = {}
+            dt, po, pc, ph, pl, vol, pave = calc_bar_from_tick_batch(tick_batch)
+            bar["datetime"]=dt
+            bar["open"]=po
+            bar["close"]=pc
+            bar["high"]=ph
+            bar["low"]=pl
+            bar["average"]=pave
+            bar["volume"]=vol
             bars = bars.append([bar])
             cur_open_time = time
             tick_batch = [tick]
     return bars
 
 def calc_bar_from_tick_batch(ticks):
-    bar = {}
-    bar["datetime"] = ticks[0][1][0]
-    trade_cost = [t[1][2]*t[1][3] for t in ticks]
-    bar["open"] = trade_prices[0]
-    bar["close"] = trade_prices[-1]
-    bar["high"] = max(trade_prices)
-    bar["low"] = min(trade_prices)
-    bar["volume"] = sum([int(t[1][3]) for t in ticks])
-    bar["average"] = sum(trade_cost)/float(bar["volume"])
-    return bar
+    dt  = ticks[0][1][0]
+    trade_prices= [t[1][2] for t in ticks]
+    po = trade_prices[0]
+    pc = trade_prices[-1]
+    ph = max(trade_prices)
+    pl = min(trade_prices)
+    vol = sum([int(t[1][3]) for t in ticks])
+    trade_cost = sum([t[1][2]*t[1][3] for t in ticks])
+    pave = format(trade_cost/vol, ".2f")
+    return dt, po, pc, ph, pl, vol, pave 
 
 if __name__ == "__main__":
     #ticker = TickDataProcessor()
