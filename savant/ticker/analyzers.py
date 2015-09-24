@@ -5,6 +5,7 @@ from datetime import datetime
 
 from savant.config import settings
 from savant.ticker import calc_time_diff
+# from __builtin__ import None
 
 class TickDataAnalyzer:
     """
@@ -12,8 +13,9 @@ class TickDataAnalyzer:
     """
 
     def __init__(self, tick_data):
-        self.tick_data = tick_data
-        self.validate_input()
+        self.tick_data = tick_data 
+        self.datetime_parsed=True  #Chuan: add temp
+#         self.validate_input()  #Chuan: comment out
         if self.datetime_parsed:
             self.adj_ind = 1
         else:
@@ -25,7 +27,15 @@ class TickDataAnalyzer:
         self.high_percent = None
         self.low_percent = None
         self.volume = None
-
+        self.firstTrVol = None
+        self.firstSecVol = None
+        self.firstMinVol = None
+        self.firstFiveMinVol = None
+        self.firstThirtyMinVol = None
+        self.firstHourVol = None
+        self.firstDayVol = None
+        self.firstAfterVol = None
+        
     def get_opening_price(self):
         if not self.opening:
             self.opening = self.tick_data.iloc[0, 2-self.adj_ind]
@@ -38,14 +48,108 @@ class TickDataAnalyzer:
 
     def get_first_trade_time(self):
         if self.datetime_parsed:
-            return self.tick_data.iloc[0].name
+            return self.tick_data.iloc[0].datetime
         else:
-            dt = self.tick_data.iloc[0, 0]
+            dt = self.tick_data.iloc[0, 1]
             if isinstance(dt, datetime):
-                return self.tick_data.iloc[0, 0].strftime("%H:%M:%S")
+                return self.tick_data.iloc[0, 1].strftime("%H:%M:%S")
             else:
                 return datetime.strptime(dt, "%m/%d/%Y %H:%M:%S").strftime("%H:%M:%S")
-
+    
+    def get_first_trade_volume(self):
+        if not self.firstTrVol:
+            self.firstTrVol = int(self.tick_data.iloc[0]["size"])
+        return self.firstTrVol
+    def get_first_second_vol(self):
+        if not self.firstSecVol:
+            t0 = datetime.strptime(self.tick_data.iloc[0]["datetime"],"%m/%d/%Y %H:%M:%S.%f")
+            for tick in self.tick_data.iterrows():
+#                 print "tick is:" ,tick
+                t = datetime.strptime(tick[1]["datetime"],"%m/%d/%Y %H:%M:%S.%f")           
+#                 print "t an t0 is:",t, t0
+                delta = abs(t-t0).total_seconds()
+#                 print "delta is:",delta
+                if delta>1:
+                    id=tick[0]-1 if tick[0]>0 else 0
+                    self.firstSecVol=int(numpy.sum(self.tick_data[0:id]["size"]))
+#                     print "vol is:",self.firstSecVol
+                    break
+        return self.firstSecVol
+    
+    def get_first_minute_vol(self): 
+        if not self.firstMinVol:
+            t0 = datetime.strptime(self.tick_data.iloc[0]["datetime"],"%m/%d/%Y %H:%M:%S.%f")
+            for tick in self.tick_data.iterrows():
+#                 print "tick is:" ,tick
+                t = datetime.strptime(tick[1]["datetime"],"%m/%d/%Y %H:%M:%S.%f")           
+#                 print "t an t0 is:",t, t0
+                delta = abs(t-t0).total_seconds()
+#                 print "delta is:",delta
+                if delta>60:
+                    id=tick[0]-1 if tick[0]>0 else 0
+                    self.firstMinVol=int(numpy.sum(self.tick_data[0:id]["size"]))
+#                     print "vol is:",self.firstMinVol
+                    break
+        return self.firstMinVol
+    
+    def get_first_5m_vol(self):
+        if not self.firstFiveMinVol:
+            t0 = datetime.strptime(self.tick_data.iloc[0]["datetime"],"%m/%d/%Y %H:%M:%S.%f")
+            for tick in self.tick_data.iterrows():
+#                 print "tick is:" ,tick
+                t = datetime.strptime(tick[1]["datetime"],"%m/%d/%Y %H:%M:%S.%f")           
+#                 print "t an t0 is:",t, t0
+                delta = abs(t-t0).total_seconds()
+#                 print "delta is:",delta
+                if delta>300:
+                    id=tick[0]-1 if tick[0]>0 else 0
+                    self.firstFiveMinVol=int(numpy.sum(self.tick_data[0:id]["size"]))
+#                     print "vol is:",self.firstFiveMinVol
+                    break
+        return self.firstFiveMinVol
+     
+    def get_first_30m_vol(self):
+        if not self.firstThirtyMinVol:
+            t0 = datetime.strptime(self.tick_data.iloc[0]["datetime"],"%m/%d/%Y %H:%M:%S.%f")
+            for tick in self.tick_data.iterrows():
+#                 print "tick is:" ,tick
+                t = datetime.strptime(tick[1]["datetime"],"%m/%d/%Y %H:%M:%S.%f")           
+#                 print "t an t0 is:",t, t0
+                delta = abs(t-t0).total_seconds()
+#                 print "delta is:",delta
+                if delta>1800:
+                    id=tick[0]-1 if tick[0]>0 else 0
+                    self.firstThirtyMinVol=int(numpy.sum(self.tick_data[0:id]["size"]))
+#                     print "vol is:",self.firstThirtyMinVol
+                    break
+        return self.firstThirtyMinVol
+     
+    def get_first_1h_vol(self):
+        if not self.firstHourVol:
+            t0 = datetime.strptime(self.tick_data.iloc[0]["datetime"],"%m/%d/%Y %H:%M:%S.%f")
+            for tick in self.tick_data.iterrows():
+#                 print "tick is:" ,tick
+                t = datetime.strptime(tick[1]["datetime"],"%m/%d/%Y %H:%M:%S.%f")           
+#                 print "t an t0 is:",t, t0
+                delta = abs(t-t0).total_seconds()
+#                 print "delta is:",delta
+                if delta>3600:
+                    id=tick[0]-1 if tick[0]>0 else 0
+                    self.firstHourVol=int(numpy.sum(self.tick_data[0:id]["size"]))
+#                     print "vol is:",self.firstHourVol
+                    break
+        return self.firstHourVol
+     
+    def get_first_1d_markethour_vol(self):
+        if not self.firstDayVol:
+            self.firstDayVol=int(numpy.sum(self.tick_data["size"]))
+        return self.firstDayVol
+    
+    def get_first_1d_aftermarket_vol(self):
+        if not self.firstAfterVol:
+                self.firstAfterVol=int(numpy.sum(self.tick_data["size"]))
+        return self.firstAfterVol
+     
     def get_high_price(self):
         if not self.high:
             self.high = self.tick_data["price"].max()
@@ -76,6 +180,7 @@ class TickDataAnalyzer:
         if not self.volume:
             self.volume = int(numpy.sum(self.tick_data["size"]))
         return self.volume
+
 
     def find_next_spike_by_datetime(self, begin_datetime, noise_level):
         """
@@ -208,7 +313,7 @@ class BarDataAnalyzer:
             raise ValueError("Unknown price type: must be one of the following (%s)" % ",".join(self.PRICE_TYPES))
         self.price_type = pt
         columns = list(self.data.columns)
-        self.price_column = columns.index(price_type)
+        self.price_column = columns.index(self.price_type)  #Chuan: fix self.prcie_type
 
     def find_spikes(self, noise_level, price_type="open", duration=1000000):
         self.set_price_type(price_type)
@@ -271,20 +376,30 @@ class BarDataAnalyzer:
             raise Exception("Unexpected columns: check your data structure")
 
 if __name__ == "__main__":
-    #from savant.ticker.processors import TickDataProcessor
-    #ticker = TickDataProcessor()
-    #data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=False)
-    #data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=True, nrows=6000)
-    #analyzer = TradeAnalyzer(data)
-    #print analyzer.get_price_by_datetime(datetime.strptime("07/02/2015 10:43:27", "%m/%d/%Y %H:%M:%S"))
-    #print analyzer.find_next_spike_by_datetime(datetime.strptime("07/02/2015 10:43:27", "%m/%d/%Y %H:%M:%S"), 0.02)
-    #print analyzer.get_first_trade_time()
-    #print analyzer.get_opening_price()
-    #print analyzer.find_next_spike(0.05)
-    #print analyzer.tick_data
-    from savant.ticker.processors import tick2bar
-    bars = tick2bar("NVET", "20150205", 3000)
-    analyzer = BarDataAnalyzer(bars)
-    print analyzer.find_spikes(0.02, price_type="open")
-    print analyzer.find_spikes(0.02, price_type="close")
-    print analyzer.find_spikes(0.02, price_type="average")
+    from savant.ticker.processors import TickDataProcessor
+    ticker = TickDataProcessor()
+    data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=False)
+#     data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=True, nrows=6000)
+    print "1",data
+    analyzer = TickDataAnalyzer(data)   #Chuan: change to 'TickDataAnalyzer'
+#     print analyzer.get_price_by_datetime(datetime.strptime("07/02/2015 10:43:27.0", "%m/%d/%Y %H:%M:%S"))
+#     print analyzer.find_next_spike_by_datetime(datetime.strptime("07/02/2015 10:43:27.0", "%m/%d/%Y %H:%M:%S"), 0.02)
+    print analyzer.get_first_trade_time()
+    print analyzer.get_first_second_vol()
+    print analyzer.get_first_minute_vol()
+    print analyzer.get_first_5m_vol()
+    print analyzer.get_first_30m_vol()
+    print analyzer.get_first_1h_vol()
+    print analyzer.get_first_1d_markethour_vol()
+    print analyzer.get_first_1d_aftermarket_vol()
+#     print analyzer.get_opening_price()
+#     print analyzer.find_next_spike(0.05)
+#     print analyzer.tick_data
+    
+    
+#     from savant.ticker.processors import tick2bar
+#     bars = tick2bar("NVET", "20150205", 3000)
+#     analyzer = BarDataAnalyzer(bars)
+#     print analyzer.find_spikes(0.02, price_type="open")
+#     print analyzer.find_spikes(0.02, price_type="close")
+#     print analyzer.find_spikes(0.02, price_type="average")
