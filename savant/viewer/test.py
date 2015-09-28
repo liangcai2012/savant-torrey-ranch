@@ -13,7 +13,11 @@ def test():
 #     
 #     command_add3=dumps({'cmd':'add', 'symbol':'QQQ', 'type':'r','interval':'5s','pos':0,'price':'l','movingave':['1m','5m'],'volume':'y'})
     
+<<<<<<< HEAD
     command_add4=dumps({'cmd':'add', 'symbol':'BTER', 'type':'h','interval':'10m','pos':0,'price':'low','movingave':[''],'volume':'y','start':'2015/08/05','end':'2015/08/06'})
+=======
+    command_add4=dumps({'cmd':'add', 'symbol':'BETR', 'type':'h','interval':'10m','pos':0,'price':'low','movingave':[''],'volume':'y','start':'2015/08/05','end':'2015/08/06'})
+>>>>>>> 6fd34770dab51262edcd764b787344691bf66b45
     
     command_list=dumps({'cmd':'list'})
     command_mv=dumps({'cmd':'mv', 'id':0,'pos':1})

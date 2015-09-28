@@ -17,8 +17,6 @@ def scoop_openratio_assoc():
 		if ipo.HistoricalIPO.price > 1:
 			ratio = ipo.HistoricalIPO.first_opening_price/ipo.HistoricalIPO.price 
 			data.append({"symbol": ipo.Company.symbol, "price_rate": ratio, "scoop_rate": ipo.HistoricalIPO.scoop_rating}) 
-	print data
-	
 	fig = plt.Figure()
 	fig, axes = plt.subplots()
 	#fig.add_subplot(111)
