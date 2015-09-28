@@ -6,7 +6,6 @@ import datetime
 import time
 import readgz
 import matplotlib.dates
-from savant.ticker.processors import *
 
 class CBarData:
     def __init__(self):
@@ -63,14 +62,13 @@ class HistoricalDataReader:
         self.lastError=errors.EC_NOT_ERROR
         self.startTimestamp = None
 
-        #filepath = helper.GetDataFileFullPath(symbol,startDay)
-        ticker = TickDataProcessor()
-        feilpath = ticker.get_ticks_paths_by_date(symbol, startDay)
+        filepath = helper.GetDataFileFullPath(symbol,startDay)
+        print filepath
         try:
             #self.dataFile = open(filepath, "r+");
             self.dataFile  = readgz.Reader_gz()
             self.dataFile.open(filepath)
-        except:
+        except ValueError:
             self.dataFile = None
             self.lastError=errors.EC_File_not_exist
 
@@ -98,7 +96,6 @@ class HistoricalDataReader:
         else:
             self.bardata.Done(loopCount)
             self.hasMoreData = False
-G
     def read_and_process_data(self):
         loopCount = 0
         if(self.dataFile == None):
@@ -108,7 +105,7 @@ G
 
             if self.lastDataLine == None:
                 self.lastDataLine = self.dataFile.readline()
-            if not self.lastDataLine:0gg
+            if not self.lastDataLine:
                 # raise exception only loopCount ==0.
                 # loopCount !=0 means partial data.
                 if(loopCount ==0):
@@ -129,7 +126,6 @@ G
                 #print(self.updateCount, "end of current period")
                 break
             self.lastDataLine = None
-
     # Paramters bar_mask, ma_mask are ignored.
     # todo support using Paramters bar_mask, ma_mask .
     def update(self, interval, bar_mask, ma_mask):
@@ -154,8 +150,8 @@ G
         ret["time_stamp"] =  tstr
         ret["data"][0]["symbol"]=self.symbol  # Chuan: change API for compatible with viewer
         return ret
-
     def get_timestamp(self):
+        print self.startTimestamp
 
         # data is not available
         if(self.startTimestamp == None):
@@ -167,14 +163,18 @@ G
             t = datetime.datetime.utcfromtimestamp(self.startTimestamp - adjust_time)
 #             ret = t.strftime("%Y-%m-%d %H:%M:%S")
             ret=t
-        print ret
+            print "##############",ret
         return matplotlib.dates.date2num(ret) # Chuan: change timestamp to float, viwer will do the convertion
 
 
 if __name__ == "__main__":
+    
+    print matplotlib.__version__
     o = CBarData()
+    o.toDictionary()
     hdr = HistoricalDataReader("BTER", "2015/08/05", "2015/08/06")
     for i in range(3600 *9):
+        time.sleep(1)
         try:
             #for i in range(10):
             ret = hdr.update(1,"000000", "000000")

@@ -4,7 +4,7 @@ def GetCurrentScriptFileDirectory():
     return currentScriptFileDirectory
 def GetDataFileDirectory():
     currentScriptFileDirectory = GetCurrentScriptFileDirectory()
-    dataFileDirectory = currentScriptFileDirectory +"/../data/"
+    dataFileDirectory = currentScriptFileDirectory +"/../../out/data/"
     return dataFileDirectory
 def GetDataFileFullPath(symbol, strDate):
     # todo map (symbol, strDate)==> full path of the data file.

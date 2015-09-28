@@ -132,12 +132,12 @@ def interval_to_int(interval):
 if __name__ == "__main__":
 
     da = DataAPI("test")
-    #if da.subscribeHistory([{"sym":"NTRA", "time":"20150702-090000"}]) != 0:
-    if da.subscribeRealtime(["NTRA"]):
+    if da.subscribeHistory([{"sym":"NTRA", "time":"20150702-090000"}]) != 0:
+    #if da.subscribeRealtime(["NTRA"]):
         print "fail to subscribe"
         exit()
     while True:
         ret = da.update("10s")
-        #print ret
+        print ret
         if ret == None:
             break

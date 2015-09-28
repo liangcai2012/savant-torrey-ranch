@@ -18,6 +18,7 @@ import numpy as np
 # import re
 # from savant import dataAPI
 from savant.dataAPI import HistoricalDataReader as hist
+import savant.dataAPI as dataAPI
 import dataAPI_sim
 import datetime
 import itertools
@@ -279,9 +280,12 @@ class DataReceiver(threading.Thread):
     def subscribeRealtime(self, sym):
         self.dataapi.subscribeRealtime(sym)    
          
-    def subscribeHistory(self, symPeriodList, start, stop):
+    def subscribeHistory(self, symList, start, stop):
 #         self.dataapi.subscribeRealtime(symPeriodList)  
-        self.dataapiHistory=hist.HistoricalDataReader(symPeriodList, start, stop)
+        #self.dataapiHistory=hist.HistoricalDataReader(symPeriodList, start, stop)
+
+        self.dataapiHistory=dataAPI.getDataAPI("viewer")
+        self.dataapiHistory.subscribeHistory([{"sym": symList, "time": start.replace('/','')+'-090000' }])
         
     def unsubscribeRealtime(self, sym):
         self.dataapi.unsubscribeRealtime(sym)
@@ -299,11 +303,15 @@ class DataReceiver(threading.Thread):
                 i = i + 1
                 time.sleep(0.1)  # temp for debugging
 #                 data = loads(self.dataapi.update(self.interval, self.priceType, self.maType))  # issue:dataAPI update() do not have volume parameter?
-                data=self.dataapiHistory.update(ConvertInterval(self.interval),"000000", "000000")
-#                 print "data is:", data
-#                 data = loads(temp) 
-                if data['error']== None:
+                #data=self.dataapiHistory.update(ConvertInterval(self.interval),"000000", "000000")
+                data=self.dataapiHistory.update(self.interval,"000000", "000000")
+                if data == None:
+                    print "no more data"
+                    break
+                    
+                if 'error' not in data or data['error']== None:
                     self.fillDataQueue(q, data)  # q[id][data]= {'time':[],'price':[],'vol':[],'ma':[[],[],..]}
+
                 else:
                     hist_stop_show=1
                     print "@@@@@@@@@hist_stop_show set to 1 now!!!!!!!!!!!!!"
@@ -328,7 +336,8 @@ class DataReceiver(threading.Thread):
                     
                     self.fillDataQueue(q, data)  # q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[[20:1700, 19.8:1800],[19.8:1600, 19.9:1600],..]}                   
 #                     print '\n ##for debug: q now is:', q
-                    previousTimeStmp = data['time_stamp']
+                    #previousTimeStmp = data['time_stamp']
+                    previousTimeStmp = data['timestamp']
                 t2=time.time()
 #                 print 'recv data colaps time:' ,t2-t1
                 next_call = next_call + ConvertInterval(self.interval)
@@ -337,13 +346,20 @@ class DataReceiver(threading.Thread):
 
 
     def fillDataQueue(self, QData, RevData):  # q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[['20:1700', '19.8:1800'],['19.8:1600', '19.9:1600'],..]}
+            print "entering fillDataQueue", RevData
             global q  # we need change global q in this function
-            xdata = RevData['time_stamp']     
-            
+            #xdata = RevData['time_stamp']     
+
+            #xdata = time.mktime(datetime.datetime.strptime(RevData['timestamp'], "%Y%m%d%H%M%S").timetuple())    
+            xdata = datetime.datetime.strptime(RevData['timestamp'], "%Y%m%d%H%M%S")
+            print xdata
+            xdata = matplotlib.dates.date2num(xdata)
+            print xdata
+
             for symData in RevData['data']:  # DataAPI should return bar data like:   'bar': {'h':200,'vol':20000}  .
 #                 print 'symData:',symData
                 sym = symData['symbol']
-                bar = symData['bar'].keys()  # get bar data type from received data, it's a list
+                #bar = symData['bar'].keys()  # get bar data type from received data, it's a list
 #                 ma=set(symData['ma'].keys())                # get bar data type from received data, it's a set,because it's easy to use issubset()
                 if symData['ma']:
                     ma = set(ConvertMA([i for i, j in enumerate(symData['ma']) if j is not None], True))
@@ -352,14 +368,16 @@ class DataReceiver(threading.Thread):
 #                 delay = symData['delay']  # issue: what we use delay for?
                 
                 for q1 in q:  # note: there could be multiple item in q be feed data from current symData, like differnt price/ma type
-                    barTyp = q1['cmd']['price']  # get bar type from item in q
+                    barType = q1['cmd']['price']  # get bar type from item in q
                     maTyp = set(q1['cmd']['movingave'])  # get ma type from item in q, maTyp is a set
+
 #                     print 'barTyp and maTyp are:', barTyp, maTyp
 #                     print 'loop check to items in q, now is:', q1
                     # print "####### current thread params:",self.interval,sym,bar,ma,self.dataType
 #                     print maTyp,bar,self.dataType
 #                     print q1['cmd']['interval'] ,q1['cmd']['symbol'], barTyp, q1['cmd']['type'], maTyp.issubset(ma)
-                    if (q1['cmd']['interval'] == self.interval) and  (q1['cmd']['symbol'] == sym) and (barTyp in bar) and (q1['cmd']['type'] == self.dataType) and ( ma == '' or maTyp.issubset(ma) ):
+                    #if (q1['cmd']['interval'] == self.interval) and  (q1['cmd']['symbol'] == sym) and (q1['cmd']['type'] == self.dataType) and ( ma == '' or maTyp.issubset(ma) ):
+                    if (q1['cmd']['interval'] == self.interval) and  (q1['cmd']['symbol'] == sym) and (q1['cmd']['type'] == self.dataType):
 #                         print '\n found matched item in q'
                         idx = q.index(q1)
 #                         print '###data[time] size is:',len(q[idx]['data']['time'])
@@ -377,18 +395,32 @@ class DataReceiver(threading.Thread):
 #                        
                             
                         q[idx]['data']['time'].append(xdata)
-                        q[idx]['data']['price'].append(symData['bar'][barTyp])
-                        q[idx]['data']['vol'].append(symData['bar']['volume'])
+                        barSplit = symData['bar'].split(',')
+                        if barType == 'open':
+                            barIndex = 0
+                        elif barType == 'high':
+                            barIndex = 1
+                        elif barType == 'low':
+                            barIndex = 2
+                        elif barType == 'close':
+                            barIndex = 3
+                        else:
+                            print 'invalid bar type'
+                            exit()
+                        q[idx]['data']['price'].append(float(barSplit[barIndex]))
+                        q[idx]['data']['vol'].append(float(barSplit[4]))
+#                        q[idx]['data']['price'].append(symData['bar'][barTyp])
+#                        q[idx]['data']['vol'].append(symData['bar']['volume'])
                         
-                        if symData['ma']:
-                            tempMA = []
+#                        if symData['ma']:
+#                            tempMA = []
 #                         tempMA={}
 #                         print symData['ma']
-                            for i in maTyp:  # in order of ma type in q1
+#                            for i in maTyp:  # in order of ma type in q1
 #                             tempMA.append(symData['ma'][i]) 
-                                tempMA.append(symData['ma'][ConvertMA(i, False)])  # return ma value:vol pair, after append,  data looks like:['20:1700', '19.8:1800']                      
+#                                tempMA.append(symData['ma'][ConvertMA(i, False)])  # return ma value:vol pair, after append,  data looks like:['20:1700', '19.8:1800']                      
                         
-                            q[idx]['data']['ma'].append(tempMA)  # q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[[20:1700, 19.8:1800],[19.8:1600, 19.9:1600],..]} 
+#                            q[idx]['data']['ma'].append(tempMA)  # q[id][data]= {'time':[20150102-083059],'price':[19.8,19.9,..],'vol':[990,2000,...],'ma':[[20:1700, 19.8:1800],[19.8:1600, 19.9:1600],..]} 
                         q[idx]['dirty'] = True
         
     
@@ -547,14 +579,14 @@ class DataPlotter():
         global q
         print '#########init q is: ', q
         next_call = time.time() 
-        while not time.sleep(next_call - time.time()):  # somehow need add +0.00001 to remove errno22 exception in Linux env. For Windows, we don't need add this          
+        while not time.sleep(max(0, next_call - time.time())):  # somehow need add +0.00001 to remove errno22 exception in Linux env. For Windows, we don't need add this          
 #             print '^^^^^^^^^^^^'
             t1=time.time()
             if  len(q) != 0  :
 #                 print "\n@@@@@@@@@@@@@@@@@ under plotting q is:", q
                 self.plotData()
             t2=time.time()
-            print "plot colaps time:",t2-t1
+#            print "plot colaps time:",t2-t1
             if hist_stop_show==1:
                 break
             next_call = next_call + 2  # some instable found if set to 1s plotting rate.  for 2s rate, it's ok.

@@ -21,7 +21,6 @@ class TickDataProcessor:
         for suffix in suffix_list:
             filename = symbol + suffix + ".csv.gz" 
             data_path = os.path.join(self.base_dir, date, filename)
-            print data_path
             if not os.path.exists(data_path):
                paths.append("")
             else:
@@ -43,10 +42,13 @@ class TickDataProcessor:
             for filename in filenames:
                 data_path = os.path.join(self.base_dir, date, filename)
                 if not os.path.exists(data_path):
+                    print "cannot find", data_path
                     continue
                     #raise IOException("Data file not found: %s" % data_path)
                 if parse_dates:
-                    cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"], parse_dates=[0], index_col=0, nrows=nrows)
+                    dateparse = lambda x: pd.datetime.strptime(x+"000", '%m/%d/%Y %H:%M:%S.%f')
+                    cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"], parse_dates=[0], date_parser=dateparse, index_col=0, nrows=nrows)
+#                    cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"], parse_dates=[0], index_col=0, nrows=nrows)
                 else:
                     cur_ticks = pd.read_csv(data_path, compression="gzip", names=["datetime", "type", "price", "size", "exch", "cond"], nrows=nrows)
                 tick_data = tick_data.append(cur_ticks)
