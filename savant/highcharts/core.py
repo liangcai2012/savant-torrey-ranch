@@ -77,7 +77,7 @@ def serialize(df, output_type="javascript", chart_type="default", *args, **kwarg
 
     def serialize_navigation(df, output, *args, **kwargs):
         output["navigator"] = {
-            "enabled": kwargs.get("legend", True)
+            "enabled": kwargs.get("navigator", True)
         }
 
     def serialize_noData(df, output, *args, **kwargs):
@@ -172,6 +172,16 @@ def serialize(df, output_type="javascript", chart_type="default", *args, **kwarg
             #yAxis2["opposite"] = True
             output["yAxis"].append(yAxis2)
 
+    def serialize_rangeselector(df, output, *args, **kwargs):
+            output["rangeSelector"] = {
+                       "buttons" : [
+                        { "type" : 'minute', "count" : 1, "text" : '1m' }, 
+                        { "type" : 'minute', "count" : 10, "text" : '10m' }, 
+                        { "type" : 'hour', "count" : 1, "text" : '1h' }, 
+                        { "type" : 'all', "count" : 1, "text" : 'All' }], 
+                        "selected" : 1, "inputEnabled" : 'false'} 
+
+    
     def serialize_zoom(df, output, *args, **kwargs):
         if "zoom" in kwargs:
             if kwargs["zoom"] not in ("x", "y", "xy"):
@@ -186,6 +196,7 @@ def serialize(df, output_type="javascript", chart_type="default", *args, **kwarg
         df_copy = df_copy.reset_index()
     if "y" in kwargs:
         df_copy = pandas.DataFrame(df_copy, columns=kwargs["y"])
+    serialize_rangeselector(df_copy, output, *args, **kwargs)
     serialize_chart(df_copy, output, *args, **kwargs)
     serialize_colors(df_copy, output, *args, **kwargs)
     serialize_credits(df_copy, output, *args, **kwargs)
@@ -206,10 +217,10 @@ def serialize(df, output_type="javascript", chart_type="default", *args, **kwarg
     serialize_xAxis(df_copy, output, *args, **kwargs)
     serialize_yAxis(df_copy, output, *args, **kwargs)
     serialize_zoom(df_copy, output, *args, **kwargs)
+    print output["rangeSelector"]
     if output_type == "dict":
         return output
     if output_type == "json":
         return json_encode(output)
-    if chart_type == "stock":
-        return "new Highcharts.StockChart(%s);" % json_encode(output)
-    return "new Highcharts.Chart(%s);" % json_encode(output)
+    return json_encode(output)
+    #return "new Highcharts.Chart(%s);" % json_encode(output)
