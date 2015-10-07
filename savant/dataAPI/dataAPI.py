@@ -51,8 +51,12 @@ class DataAPI:
                 return 0
         return -1
 
+
+
+# TODO: This needs to be rewritten to get data from secondly bar directly.
     # update data with given interval
     # return a list of data for all subscribed symbol or symbol-time tuples. The returned data format can be seen in 
+    
     def update(self, interval, bar_maski="11111", ma_mask="111111111"):
         if self.realtime:
             resp = self.sc.update(self.client, interval, ma_mask)

@@ -217,7 +217,6 @@ def serialize(df, output_type="javascript", chart_type="default", *args, **kwarg
     serialize_xAxis(df_copy, output, *args, **kwargs)
     serialize_yAxis(df_copy, output, *args, **kwargs)
     serialize_zoom(df_copy, output, *args, **kwargs)
-    print output["rangeSelector"]
     if output_type == "dict":
         return output
     if output_type == "json":

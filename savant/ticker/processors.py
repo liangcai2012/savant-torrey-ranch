@@ -3,7 +3,8 @@ import pandas as pd
 import numpy
 import subprocess
 from collections import defaultdict
-from datetime import datetime, timedelta
+import datetime
+import subprocess
 
 from savant.config import settings
 from savant.ticker import calc_time_diff
@@ -62,11 +63,11 @@ class TickDataProcessor:
         return tick_data[begin_datetime:end_datetime] 
 
     def parse_dates(self, begin, end):
-        bd = datetime.strptime(begin, "%Y%m%d")
-        ed = datetime.strptime(end, "%Y%m%d")
+        bd = datetime.datetime.strptime(begin, "%Y%m%d")
+        ed = datetime.datetime.strptime(end, "%Y%m%d")
         if bd > ed:
             raise ValueError("Begin date older than end date")
-        delta = timedelta(days=1)
+        delta = datetime.timedelta(days=1)
         dates = []
         while bd <= ed:
             if bd.weekday() < 5:
@@ -87,46 +88,63 @@ class TickDataProcessor:
             raise ValueError("No such hours: %s" % hours)
         return suffix
 
-def tick2bar(symbol, date, duration=None, interval=1, save_to_disk=False, start_sec_int=None):
-    tick_processor = TickDataProcessor()
-    ticks = tick_processor.get_ticks_by_date(symbol, date, date)
+# scope must be "full" or "regular"
+# date must be in form of "YYYYMMDD"
+# time must be in form of "HHMMSS" if not None
+
+# get_next_bar returns date, o/h/l/c/v, average 
+def Tick2SecondBarConverter(symbol, date):
+    bar_path = settings.DATA_HOME+ '/data/' + date + '/' +symbol+"_second_bar.csv" 
+    if os.path.exists(bar_path):
+        print "secondly bar file already exists"
+        return
+
+    try:
+        fbar = open(bar_path, 'w')
+    except IOError:
+        print "Cannot open ", bar_path
+        return
+
+    ticker = TickDataProcessor()
+    tickdata = ticker.get_ticks_by_date(symbol, date, date, "full", False, None)
+    tick_iter = tickdata.iterrows()
     begin_time = None
-    cur_open_time = None
     tick_batch = []
-    bars = pd.DataFrame(columns=["datetime", "open", "high", "low", "close", "average", "volume"])
+    current_dt = None
 
-    for tick in ticks.iterrows():
-        time = tick[1][0].split()[1]
-        if start_sec_int!=None:
-            if int(time.split('.')[0].replace(':','')) < start_sec_int:
+    while True:
+        try:
+            tick = tick_iter.next()
+        except StopIteration:
+            fbar.close()
+            print "gzipping", bar_path
+            subprocess.check_call(["gzip", bar_path])
+            return 
+
+        #skip ticks with conditions containing 9
+        condlist = tick[1][5].split('-')
+        for cond in condlist:
+            if cond == '9':
                 continue
-        if cur_open_time == None:
-            cur_open_time = time
-        if duration != None:
-            if begin_time == None:
-                begin_time = time
-            if calc_time_diff(begin_time, time) > duration:
-                return bars
 
-        if calc_time_diff(cur_open_time, time) < interval:
-            tick_batch.append(tick)
-        else:
-            bar = {}
-            dt, po, pc, ph, pl, vol, pave = calc_bar_from_tick_batch(tick_batch)
-            bar["datetime"]=dt
-            bar["open"]=po
-            bar["close"]=pc
-            bar["high"]=ph
-            bar["low"]=pl
-            bar["average"]=pave
-            bar["volume"]=vol
-            bars = bars.append([bar])
-            cur_open_time = time
-            tick_batch = [tick]
-    return bars
+        time_no_ms = tick[1][0].split('.')[0]# remove the millisecond part
+        tick_dt = datetime.datetime.strptime(time_no_ms, '%m/%d/%Y %H:%M:%S')
+        if current_dt == None:
+            current_dt = tick_dt
+        if (tick_dt - current_dt).seconds < 1:
+            tick_batch.append(tick) 
+            continue
+        else: #tick_dt >= self.current_dt
+            if len(tick_batch)>0:
+                p_open, p_close, p_high, p_low, volume, p_average = calc_bar_from_tick_batch(tick_batch)
+                fbar.write(current_dt.strftime("%Y%m%d%H%M%S") + ", " + str(p_open) + ", " + str(p_high) + ", "+ str(p_low) + ", " + str(p_close) + ", " + str(volume) + ", " + p_average + '\n')
+
+            while(tick_dt - current_dt).seconds >= 1:
+                current_dt += datetime.timedelta(0, 1)
+            tick_batch=[tick]
+
 
 def calc_bar_from_tick_batch(ticks):
-    dt  = ticks[0][1][0]
     trade_prices= [t[1][2] for t in ticks]
     po = trade_prices[0]
     pc = trade_prices[-1]
@@ -135,10 +153,61 @@ def calc_bar_from_tick_batch(ticks):
     vol = sum([int(t[1][3]) for t in ticks])
     trade_cost = sum([t[1][2]*t[1][3] for t in ticks])
     pave = format(trade_cost/vol, ".2f")
-    return dt, po, pc, ph, pl, vol, pave 
+    return po, pc, ph, pl, vol, pave 
+
+
+
+#TODO: This function needs to be re-written 
+def tick2bar(symbol, date, duration=None, interval=1, save_to_disk=False, start_sec_int=None):
+    scope = "full"
+    start_time = None
+    if start_sec_int != None:
+        if start_sec_int >= 93000:
+            scope = "regular"
+        start_time = str(start_sec_int)
+
+    if (start_sec_int !=None or duration != None ) and save_to_disk:
+            print "Warning: cannot cache the bar data if start time or duration not set to None!"
+            save_to_disk = False
+
+    fbar = None
+    if save_to_disk:
+        bar_path = settings.DATA_HOME+ '/data/' + date + '/' +symbol+"_second_bar.csv" 
+        if os.path.exists(bar_path):
+            save_to_disk = False
+        else: 
+            fbar = open(bar_path, 'w')
+
+    converter = Tick2BarConverter(symbol, date, start_time, scope)
+
+    start_dt = None
+    bars = pd.DataFrame(columns=["datetime", "open", "high", "low", "close", "volume", "average"])
+    while True:
+        dt, o, h, l, c, v, ave = converter.get_next_bar(interval)
+        #print dt, o, h, l, c, v, ave
+        if start_dt == None:
+            start_dt = dt
+        if dt == None:
+            if fbar != None:
+                fbar.close()
+            break
+        if duration!= None and (dt-start_dt).seconds > duration:
+            #fbar must be None if duration is not None
+            break
+        bars.append([{"datetime":dt, "open":float(o), "high":float(h), "low":float(l), "close":float(c), "volume":int(v), "average":float(ave)}])
+        print bars
+        if fbar != None:
+            print "write line"
+            #fbar.write(dt.strftime('%Y%m%d%H%M%S') + ", " + o + ", " + h + ", "+ l + ", " + c + ", " + v + ", " + ave + '\n')
+            print type(o), type(ave), type(dt), type(v)
+            fbar.write(dt + ", " + str(o) + ", " + str(h) + ", "+ str(l) + ", " + str(c) + ", " + str(v) + ", " + str(ave) + '\n')
+
+    return bars
 
 if __name__ == "__main__":
     #ticker = TickDataProcessor()
     #print ticker.get_ticks_by_date("NTRA", "20150702", "20150702")
     #print ticker.get_ticks_by_datetime("NTRA", datetime.strptime("07/02/2015 11:00:00", "%m/%d/%Y %H:%M:%S"), datetime.strptime("07/02/2015 15:00:00", "%m/%d/%Y %H:%M:%S"))
-    print list(tick2bar("NVET", "20150205", 30).iterrows())
+#    print list(tick2bar("NVET", "20150205", save_to_disk=True).iterrows())
+    Tick2SecondBarConverter("NVET", "20150205")
+    #print list(tick2bar("BABA", "20140919").iterrows())
