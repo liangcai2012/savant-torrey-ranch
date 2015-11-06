@@ -6,13 +6,6 @@ import time
 import savant.highcharts.core as pdhc
 from savant.config import settings
 
-
-def bar2pd(bar_gz_path): 
-    dateparse = lambda x: pd.datetime.strptime(x, '%Y%m%d%H%M%S')
-    bar_data = pd.DataFrame(columns=["datetime", "open", "high", "low", "close", "volume"])
-    bar_pd = pd.read_csv(bar_gz_path, names=["datetime", "open", "high", "low", "close", "volume", "average"], compression="gzip", index_col=[0], parse_dates=[0], date_parser=dateparse)
-    return bar_pd
-
 def barpd2hc(bar_pd, chart_title, pricetype, showvolume, htmlfile):
 
      #<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
@@ -59,7 +52,7 @@ def plot_secondly_bar(symbol, date, title = None, price_type = "open", display_v
         print "Generating second bar date..."
         processors.Tick2SecondBarConverter(symbol, date)
         #tick2bar(symbol, date, bar_path)
-    bar_pd = bar2pd(bar_gz_path)
+    bar_pd = processors.bar2pd(bar_gz_path)
     if volume_downscale:
         bar_pd.is_copy=False
         bar_pd.iloc[0, -1] /=100
@@ -96,7 +89,7 @@ def test():
     #date = "20150702"
     barpath = sym+date+"_sec_bar.csv.gz"
     #tick2bar(sym, date, barpath)
-    bar_pd = bar2pd(barpath)
+    bar_pd = processors.bar2pd(barpath)
     starttime = time.time()
     barpd2hc(bar_pd)
 #tick_pd = tick2pd(sym, date)

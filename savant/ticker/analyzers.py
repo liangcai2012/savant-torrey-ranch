@@ -39,6 +39,7 @@ class TickDataAnalyzer:
     def get_opening_price(self):
         if not self.opening:
             self.opening = self.tick_data.iloc[0, 2-self.adj_ind]
+            print self.opening
         return float(self.opening)
 
     def get_closing_price(self):
@@ -378,21 +379,21 @@ class BarDataAnalyzer:
 if __name__ == "__main__":
     from savant.ticker.processors import TickDataProcessor
     ticker = TickDataProcessor()
-    data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=False)
+    data = ticker.get_ticks_by_date("BABA", "20140919", "20140919", parse_dates=False)
 #     data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=True, nrows=6000)
-    print "1",data
+#    print "1",data
     analyzer = TickDataAnalyzer(data)   #Chuan: change to 'TickDataAnalyzer'
 #     print analyzer.get_price_by_datetime(datetime.strptime("07/02/2015 10:43:27.0", "%m/%d/%Y %H:%M:%S"))
 #     print analyzer.find_next_spike_by_datetime(datetime.strptime("07/02/2015 10:43:27.0", "%m/%d/%Y %H:%M:%S"), 0.02)
-    print analyzer.get_first_trade_time()
-    print analyzer.get_first_second_vol()
-    print analyzer.get_first_minute_vol()
-    print analyzer.get_first_5m_vol()
-    print analyzer.get_first_30m_vol()
-    print analyzer.get_first_1h_vol()
-    print analyzer.get_first_1d_markethour_vol()
-    print analyzer.get_first_1d_aftermarket_vol()
-#     print analyzer.get_opening_price()
+#    print analyzer.get_first_trade_time()
+#    print analyzer.get_first_second_vol()
+#    print analyzer.get_first_minute_vol()
+#    print analyzer.get_first_5m_vol()
+#    print analyzer.get_first_30m_vol()
+#    print analyzer.get_first_1h_vol()
+#    print analyzer.get_first_1d_markethour_vol()
+#    print analyzer.get_first_1d_aftermarket_vol()
+    print analyzer.get_opening_price()
 #     print analyzer.find_next_spike(0.05)
 #     print analyzer.tick_data
     

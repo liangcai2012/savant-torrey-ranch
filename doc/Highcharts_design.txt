@@ -1,0 +1,22 @@
+
+0. Use cases:
+   display intra line chart given symbol and date
+
+1. cache for secondly bar data
+    secondly bar data will be in the same folder as the tick data. file name pattern:
+    XXXX_second_bar.csv
+
+
+2. charting feature 
+    1) show intraday bar. type = line 
+    2) range selector: 1m, 10m, 1h, All (cannot get range selector left aligned) 
+    3) layout, split percentage (if there is second y axis)
+    4) first y axis is used for display price, Second y axis is used to display volume
+    5) output file is always "<proj_home"/out/index.html"
+
+3. Charting options
+    1) symbol, date
+    2) title overide (by default:  sym (date))
+    3) price type
+    4) display volume (by default: true) 
+    5) first volume down-scaler: divide the first volume by this value (for IPO)

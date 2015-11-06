@@ -43,8 +43,8 @@ class TickDataProcessor:
             for filename in filenames:
                 data_path = os.path.join(self.base_dir, date, filename)
                 if not os.path.exists(data_path):
-                    print "cannot find", data_path
                     continue
+                    #print "cannot find", data_path
                     #raise IOException("Data file not found: %s" % data_path)
                 if parse_dates:
                     dateparse = lambda x: pd.datetime.strptime(x+"000", '%m/%d/%Y %H:%M:%S.%f')
@@ -95,7 +95,8 @@ class TickDataProcessor:
 # get_next_bar returns date, o/h/l/c/v, average 
 def Tick2SecondBarConverter(symbol, date):
     bar_path = settings.DATA_HOME+ '/data/' + date + '/' +symbol+"_second_bar.csv" 
-    if os.path.exists(bar_path):
+    bar_gz_path = bar_path+".gz" 
+    if os.path.exists(bar_gz_path):
         print "secondly bar file already exists"
         return
 
@@ -117,16 +118,25 @@ def Tick2SecondBarConverter(symbol, date):
             tick = tick_iter.next()
         except StopIteration:
             fbar.close()
-            print "gzipping", bar_path
+            #print "gzipping", bar_path
             subprocess.check_call(["gzip", bar_path])
             return 
 
         #skip ticks with conditions containing 9
         condlist = tick[1][5].split('-')
+        market_start = False
         for cond in condlist:
             if cond == '9':
-                continue
+                market_start = True
+                break
+        if market_start:
+            #skip this record as there will be another record
 
+            #maybe we should clear tick_batch because all record before market open should not be considered real ticks. 
+            #tick_batch=[]
+            continue
+
+        print 'here'
         time_no_ms = tick[1][0].split('.')[0]# remove the millisecond part
         tick_dt = datetime.datetime.strptime(time_no_ms, '%m/%d/%Y %H:%M:%S')
         if current_dt == None:
@@ -137,7 +147,8 @@ def Tick2SecondBarConverter(symbol, date):
         else: #tick_dt >= self.current_dt
             if len(tick_batch)>0:
                 p_open, p_close, p_high, p_low, volume, p_average = calc_bar_from_tick_batch(tick_batch)
-                fbar.write(current_dt.strftime("%Y%m%d%H%M%S") + ", " + str(p_open) + ", " + str(p_high) + ", "+ str(p_low) + ", " + str(p_close) + ", " + str(volume) + ", " + p_average + '\n')
+                if p_open != None:
+                    fbar.write(current_dt.strftime("%Y%m%d%H%M%S") + ", " + str(p_open) + ", " + str(p_high) + ", "+ str(p_low) + ", " + str(p_close) + ", " + str(volume) + ", " + p_average + '\n')
 
             while(tick_dt - current_dt).seconds >= 1:
                 current_dt += datetime.timedelta(0, 1)
@@ -151,6 +162,9 @@ def calc_bar_from_tick_batch(ticks):
     ph = max(trade_prices)
     pl = min(trade_prices)
     vol = sum([int(t[1][3]) for t in ticks])
+    #there are chances that tick record with vol = 0
+    if vol == 0:
+        return None, None, None, None, None, None
     trade_cost = sum([t[1][2]*t[1][3] for t in ticks])
     pave = format(trade_cost/vol, ".2f")
     return po, pc, ph, pl, vol, pave 
@@ -197,17 +211,24 @@ def tick2bar(symbol, date, duration=None, interval=1, save_to_disk=False, start_
         bars.append([{"datetime":dt, "open":float(o), "high":float(h), "low":float(l), "close":float(c), "volume":int(v), "average":float(ave)}])
         print bars
         if fbar != None:
-            print "write line"
+            #print "write line"
             #fbar.write(dt.strftime('%Y%m%d%H%M%S') + ", " + o + ", " + h + ", "+ l + ", " + c + ", " + v + ", " + ave + '\n')
-            print type(o), type(ave), type(dt), type(v)
+            #print type(o), type(ave), type(dt), type(v)
             fbar.write(dt + ", " + str(o) + ", " + str(h) + ", "+ str(l) + ", " + str(c) + ", " + str(v) + ", " + str(ave) + '\n')
+            #os.fsync(fbar)
 
     return bars
+
+def bar2pd(bar_gz_path): 
+    dateparse = lambda x: pd.datetime.strptime(x, '%Y%m%d%H%M%S')
+    bar_pd = pd.read_csv(bar_gz_path, names=["datetime", "open", "high", "low", "close", "volume", "average"], compression="gzip", index_col=[0], parse_dates=[0], date_parser=dateparse)
+    return bar_pd
+
 
 if __name__ == "__main__":
     #ticker = TickDataProcessor()
     #print ticker.get_ticks_by_date("NTRA", "20150702", "20150702")
     #print ticker.get_ticks_by_datetime("NTRA", datetime.strptime("07/02/2015 11:00:00", "%m/%d/%Y %H:%M:%S"), datetime.strptime("07/02/2015 15:00:00", "%m/%d/%Y %H:%M:%S"))
 #    print list(tick2bar("NVET", "20150205", save_to_disk=True).iterrows())
-    Tick2SecondBarConverter("NVET", "20150205")
+    Tick2SecondBarConverter("SPLK", "20120419")
     #print list(tick2bar("BABA", "20140919").iterrows())
