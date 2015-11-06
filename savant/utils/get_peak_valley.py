@@ -294,8 +294,8 @@ if __name__ == "__main__":
     #[len(list[i]) for i in range(len(list))]
     
 
-#    get_all_ipo_pv()
-    processors.Tick2SecondBarConverter("MB", "20150619")
+    get_all_ipo_pv()
+   # processors.Tick2SecondBarConverter("MB", "20150619")
     #test()
 
         
