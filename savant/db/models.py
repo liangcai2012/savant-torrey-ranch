@@ -7,7 +7,7 @@ from sqlalchemy import (Boolean, Column, Date, Enum, ForeignKey, Index,
                         Sequence, Table, DateTime)
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import relationship, backref
-
+from sqlalchemy import UniqueConstraint
 from savant import db
 
 
@@ -193,6 +193,7 @@ class HistoricalIPO(CBase):
     scoop_rating = Column(Integer)
 
     # Related to first day trading
+    open_vol = Column(Integer)
     first_opening_price = Column(Float)
     first_closing_price = Column(Float)
     first_trade_time = Column(String)
@@ -201,6 +202,13 @@ class HistoricalIPO(CBase):
     first_day_low = Column(Float)
     first_day_low_percent_change = Column(Float)
     first_day_volume = Column(Integer)
+
+    # Related to finance
+    revenue = Column(Integer)
+    net_income = Column(Integer)
+    total_assets = Column(Integer)
+    total_liability = Column(Integer)
+    stakeholder_equity = Column(Integer)
 
     company = relationship("Company", foreign_keys='HistoricalIPO.company_id')
 
@@ -225,6 +233,7 @@ class PostIPOPrice(CBase):
     volume = Column(Integer)
 
     company = relationship("Company", foreign_keys='PostIPOPrice.company_id')
+    UniqueConstraint('company_id', 'date', name='uix_1')
 
     def __init__(self, **params):
         self.__dict__.update(params)
@@ -232,28 +241,28 @@ class PostIPOPrice(CBase):
     def __repr__(self):
         return "<Post_IPO_Price(company_id='%s', datetime='%s', open='%s', high='%s', low='%s', close='%s', volume='%s')>" % (self.company_id, self.datetime, self.open, self.high, self.low, self.close, self.volume)
 
-class IPOVolume(CBase):
-    __tablename__ = "ipo_volume" 
-  
-    id = Column(Integer, primary_key=True)
-    company_id = Column(Integer, ForeignKey("company.id"), primary_key=False)
-
-    first_trade_vol = Column(Integer)
-    first_second_vol = Column(Integer)
-    first_minute_vol = Column(Integer)
-    first_5m_vol = Column(Integer)
-    first_30m_vol = Column(Integer)
-    first_1h_vol = Column(Integer)
-    first_1d_markethour_vol = Column(Integer)
-    first_1d_aftermarket_vol = Column(Integer)
-    
-    company = relationship("Company", foreign_keys='IPOVolume.company_id')
-
-    def __init__(self, params):
-        self.__dict__.update(params)
-
-    def __repr__(self):
-        return "<IPO_Volume(symbol='%s', first_trade_vol='%s', first_second_vol='%s', first_minute_vol='%s', first_5m_vol='%s', first_30m_vol='%s', first_1h_vol='%s', first_1d_markethour_vol='%s', first_1d_aftermarket_vol='%s')>" % (self.company_id, self.first_trade_vol, self.first_second_vol, self.first_minute_vol, self.first_5m_vol, self.first_30m_vol, self.first_1h_vol, self.first_1d_markethour_vol, self.first_1d_aftermarket_vol)
+#class IPOVolume(CBase):
+#    __tablename__ = "ipo_volume" 
+#  
+#    id = Column(Integer, primary_key=True)
+#    company_id = Column(Integer, ForeignKey("company.id"), primary_key=False)
+#
+#    first_trade_vol = Column(Integer)
+#    first_second_vol = Column(Integer)
+#    first_minute_vol = Column(Integer)
+#    first_5m_vol = Column(Integer)
+#    first_30m_vol = Column(Integer)
+#    first_1h_vol = Column(Integer)
+#    first_1d_markethour_vol = Column(Integer)
+#    first_1d_aftermarket_vol = Column(Integer)
+#    
+#    company = relationship("Company", foreign_keys='IPOVolume.company_id')
+#
+#    def __init__(self, params):
+#        self.__dict__.update(params)
+#
+#    def __repr__(self):
+#        return "<IPO_Volume(symbol='%s', first_trade_vol='%s', first_second_vol='%s', first_minute_vol='%s', first_5m_vol='%s', first_30m_vol='%s', first_1h_vol='%s', first_1d_markethour_vol='%s', first_1d_aftermarket_vol='%s')>" % (self.company_id, self.first_trade_vol, self.first_second_vol, self.first_minute_vol, self.first_5m_vol, self.first_30m_vol, self.first_1h_vol, self.first_1d_markethour_vol, self.first_1d_aftermarket_vol)
 
 
 

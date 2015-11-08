@@ -197,6 +197,7 @@ class HistoricalIPO(CBase):
     scoop_rating = Column(Integer)
 
     # Related to first day trading
+    open_vol = Column(Integer)
     first_opening_price = Column(Float)
     first_closing_price = Column(Float)
     first_trade_time = Column(String)
@@ -205,6 +206,15 @@ class HistoricalIPO(CBase):
     first_day_low = Column(Float)
     first_day_low_percent_change = Column(Float)
     first_day_volume = Column(Integer)
+
+    # Related to finance
+    revenue = Column(Integer)
+    net_income = Column(Integer)
+    total_assets = Column(Integer)
+    total_liability = Column(Integer)
+    stakeholder_equity = Column(Integer)
+
+
 
     company = relationship("Company", foreign_keys='HistoricalIPO.company_id')
 
@@ -339,8 +349,8 @@ s.commit()
 pips = savant.db.models.PostIPOPrice.query.all()
 for pip in pips:
    pip_dict = pip.__dict__
-   pip_dict["date"]=pip_dict["datetime"].date()
-   pip_dict.pop("datetime")
+   #pip_dict["date"]=pip_dict["datetime"].date()
+   #pip_dict.pop("datetime")
    if '_sa_instance_state' in pip_dict.keys():
       pip_dict.pop("_sa_instance_state")
    new_pip = PostIPOPrice(**pip_dict)

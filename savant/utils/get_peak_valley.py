@@ -267,13 +267,13 @@ def plot_boost_percentage():
         print '-----bp =', bp, '------'
         for i in range(20):
             res = boost_by_openvol(pv_pd, bp, i/20.0)
-            if res[0] > 5 :
+            if res[0] > 0 :
                 list[0].append(i/20.0)
                 list[1].append(float(res[1])/res[0])
                 print list[0][-1], res[1], res[0], "{0:.2f}".format(list[1][-1]) 
-        #print list[0], list[1]
-        #plt.plot(list[0], list[1])
-    #plt.show()
+        print list[0], list[1]
+        plt.plot(list[0], list[1])
+    plt.show()
     return
 
     
@@ -283,18 +283,18 @@ def test():
     print get_peak_valley("CYAD", "20120724", [60, 180, 300, 600], "open")
 
 if __name__ == "__main__":
-    #plot_boost_percentage()
+    plot_boost_percentage()
 
     #plot_peak_percentage_by_scoop()
     #plot_open_percentage_by_scoop()
     #find_mini_cap_ipo()
-#    plot_two_percentage()
+    #plot_two_percentage()
     #plot_open_vol_dist()
     #print list
     #[len(list[i]) for i in range(len(list))]
     
 
-    get_all_ipo_pv()
+   # get_all_ipo_pv()
    # processors.Tick2SecondBarConverter("MB", "20150619")
     #test()
 

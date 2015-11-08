@@ -26,7 +26,12 @@ class ATConnection:
     def barData(self, params):
         url = self.root_url + '/barData'
         connect = requests.get(url, params=params)
-        return pd.read_csv(StringIO(connect.content), names=self.bar_names, parse_dates=[0], date_parser=self.bar_parse, index_col=[0])
+        try:
+            #In case of zero valid record,  ATAPI http server still returns a string of all zero, which would cause date parser error
+            return pd.read_csv(StringIO(connect.content), names=self.bar_names, parse_dates=[0], date_parser=self.bar_parse, index_col=[0])
+        except ValueError:
+            return None
+
 
     def tickData(self, params):
         url = self.root_url + '/tickData'
@@ -64,27 +69,34 @@ def IPO_first_daily_price(symb_list=None):
         ipo =  HistoricalIPO.query.filter_by(company_id=comp.id).first()
         if ipo is None:
             continue
-        #print comp.id, ipo
+        #print comp.symbol
         params = {}
         params['symbol'] = comp.symbol
         params['historyType'] = 1
         params['beginTime'] = ipo.ipo_date.strftime('%Y%m%d%H%M%S')
-        params['endTime'] = (ipo.ipo_date + datetime.timedelta(days=10)).strftime('%Y%m%d%H%M%S')
-        try:
+        params['endTime'] = (ipo.ipo_date + datetime.timedelta(days=30)).strftime('%Y%m%d%H%M%S')
             prices = at.barData(params=params)
+            if prices is None:
+                print comp.symbol, 'does not have valid post-ipo daily bar!'
+                continue
+            dailybar_num = len(prices.index)
+            # 10 is definetly abnormal, we are expecting something around 20
+            if dailybar_num < 12: 
+                print comp.symbol, 'contains only', dailybar_num, 'daily bar!'
             for ind, price in prices.iterrows():
                 post_ipo_price = PostIPOPrice(**price.to_dict())
                 #print post_ipo_price
                 #post_ipo_price.datetime = price.name
-                post_ipo_price.date = price.name.split(' ')[0]
+#                post_ipo_price.date = price.name.split(' ')[0]
+                post_ipo_price.date = price.name
                 post_ipo_price.company_id = comp.id
                 savant.db.session.add(post_ipo_price)
-                savant.db.session.commit()
+                try:
+                    savant.db.session.commit()
+                except:
+                    savant.db.session.rollback()
+                    print "cannot save ", comp.symbol, ind
 
-        except:
-            savant.db.session.rollback()
-            print "cannot save" + comp.symbol
-
-IPO_first_day_tick('CORI', '20140403' )
-#IPO_first_daily_price()
+#IPO_first_daily_price(['RLOC'])
+IPO_first_daily_price()
 
