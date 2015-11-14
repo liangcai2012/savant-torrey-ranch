@@ -77,6 +77,7 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 		ArrayList<String> premarketTickRecords = new ArrayList<String>();
 		ArrayList<String> marketTickRecords = new ArrayList<String>();
 		ArrayList<String> aftermarketTickRecords = new ArrayList<String>();
+        boolean aftermarket = false;
 		while(itrDataItems.hasNext())
 		{	
 			ATServerAPIDefines.ATTICKHISTORY_RECORD record = (ATServerAPIDefines.ATTICKHISTORY_RECORD)itrDataItems.next();
@@ -115,20 +116,33 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
                   if(atTradeRecord.lastCondition[i].m_atTradeConditionType==12 || atTradeRecord.lastCondition[i].m_atTradeConditionType == 13)
                      formT = true;
                }
-					String curRecord=sb.toString();
+			   String curRecord=sb.toString();
+
                if(formT){
 					      int rtime = atTradeRecord.lastDateTime.hour*10000+atTradeRecord.lastDateTime.minute*100+atTradeRecord.lastDateTime.second;
 					      if(rtime < 93100)
 						      premarketTickRecords.add(curRecord);
-                     else if(rtime > 160000)
+                     else if(rtime > 155900){
+                            if(!aftermarket){
+                                aftermarket = true;
+                            }
 						   	aftermarketTickRecords.add(curRecord);
-                     else
+                     }
+                     else{
 				            marketTickRecords.add(curRecord);
-					}
-               else
-				      marketTickRecords.add(curRecord);
+                    }
+		       }
+               else{
+					int rtime = atTradeRecord.lastDateTime.hour*10000+atTradeRecord.lastDateTime.minute*100+atTradeRecord.lastDateTime.second;
+                    if (aftermarket || rtime > 160200){
+						aftermarketTickRecords.add(curRecord);
+                    }
+                    else{
+				        marketTickRecords.add(curRecord);
+                    }
 				}
 				break;
+                }
 				case ATTickHistoryRecordType.TickHistoryRecordQuote: {
 					ATTICKHISTORY_QUOTE_RECORD atQuoteRecord = (ATTICKHISTORY_QUOTE_RECORD) record;
 					StringBuilder sb = new StringBuilder();

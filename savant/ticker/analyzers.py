@@ -8,25 +8,33 @@ from savant.ticker import calc_time_diff
 # from __builtin__ import None
 
 class TickDataAnalyzer:
-    """
-    Class to analyze one-day tick data
-    """
+    #Class to analyze one-day tick data
 
     def __init__(self, tick_data):
         self.tick_data = tick_data 
-        self.datetime_parsed=True  #Chuan: add temp
+
+        self.datetime_parsed=False#Chuan: add temp
 #         self.validate_input()  #Chuan: comment out
         if self.datetime_parsed:
             self.adj_ind = 1
         else:
             self.adj_ind = 0
+
+
+        self.open_ind = None
+        self.open_vol = None
+        self.close_ind = None
+        self.close_vol = None
+
         self.opening = None
         self.closing = None
+
         self.high = None
         self.low = None
         self.high_percent = None
         self.low_percent = None
         self.volume = None
+
         self.firstTrVol = None
         self.firstSecVol = None
         self.firstMinVol = None
@@ -35,28 +43,161 @@ class TickDataAnalyzer:
         self.firstHourVol = None
         self.firstDayVol = None
         self.firstAfterVol = None
+
+    def get_close_ind(self):
+        if not self.close_ind:
+            self.close_vol = None
+            row_num = len(self.tick_data.index)
+            row = row_num 
+            following_cond = None
+            following_vol = 0
+
+        #if cond 9 proceeds cond15 with same vol, use the cond 9  as the closing
+        #if 15 is not proceeded by cond 9, then use the 15 as the closing
+        #if cond 15 does not appear in the last 100 record, use the last one as the closing
+            for i in range(100):
+                row -= 1 
+                if row < 0:
+                    break
+                curr_vol = int(self.tick_data.iloc[row, 3])
+                condlist = self.tick_data.iloc[row, 5].split('-')
+
+                # the last record
+                if not self.close_vol:
+                    self.close_vol = curr_vol 
+                    self.close_ind = row
+
+                curr_cond = None
+                for cond in condlist:
+                    if cond == '9' or cond == '15' or cond == '19':
+                        curr_cond = cond
+                        break
+
+                if curr_cond == '9' and following_cond == '15' and curr_vol  == following_vol:
+                    self.close_vol = curr_vol 
+                    self.close_ind = row
+                    break
+                    
+                if following_cond == '15' or following_cond == '19':
+                    self.close_vol = following_vol
+                    self.close_ind = row +1
+                    break
+
+                following_vol = curr_vol
+                following_cond = curr_cond
+
+
+        if row_num - self.close_ind > 5: 
+            print "unexpected closing tick at", row_num - self.close_ind 
+        return self.open_ind
+                
+    def get_open_ind(self):
+        if not self.open_ind:
+            self.open_vol = None
+            count = 0
+            prev_cond = None
+            prev_vol = 0
+
+            for tick in self.tick_data.iterrows():
+                if count >= 500:
+                    break
+
+                curr_vol = int(tick[1][3])
+                condlist = tick[1][5].split('-')
+
+                if not self.open_vol:
+                    self.open_vol = curr_vol 
+                    self.open_ind = count
+
+                curr_cond = None
+                for cond in condlist:
+                    if cond == '9' or cond == '17' or cond =='16':
+                        curr_cond = cond
+                        break
+
+                # in case cond 16 following 9 and vols are identical. It must be the nasdaq opening
+                if curr_cond == '16' and prev_cond == '9' and curr_vol  == prev_vol:
+                    self.open_vol = curr_vol 
+                    self.open_ind = count
+                    break
+                    
+
+                if (curr_cond =='9' or curr_cond == '17') and curr_vol > self.open_vol: 
+                    self.open_vol = curr_vol
+                    self.open_ind = count
+
+                prev_vol = curr_vol
+                prev_cond = curr_cond
+                count += 1    
+
+        return self.open_ind
+
         
+
+    def get_open_vol(self):
+        self.get_open_ind()
+        return self.open_vol
+
     def get_opening_price(self):
         if not self.opening:
-            self.opening = self.tick_data.iloc[0, 2-self.adj_ind]
-            print self.opening
-        return float(self.opening)
+            self.get_open_ind()
+        self.opening = float(self.tick_data.iloc[self.open_ind, 2-self.adj_ind])
+        return self.opening
 
     def get_closing_price(self):
-        if not self.closing:
-            self.closing = self.tick_data.iloc[-1, 2-self.adj_ind]
-        return float(self.closing)
+        if not self.close_ind:
+            self.get_close_ind()
+        self.closing = float(self.tick_data.iloc[self.close_ind, 2-self.adj_ind])
+        return self.closing
 
     def get_first_trade_time(self):
+        self.get_open_ind()
         if self.datetime_parsed:
-            return self.tick_data.iloc[0].datetime
+            return self.tick_data.iloc[self.open_ind].datetime
         else:
-            dt = self.tick_data.iloc[0, 1]
-            if isinstance(dt, datetime):
-                return self.tick_data.iloc[0, 1].strftime("%H:%M:%S")
-            else:
-                return datetime.strptime(dt, "%m/%d/%Y %H:%M:%S").strftime("%H:%M:%S")
+            dt = self.tick_data.iloc[self.open_ind, 0].split('.')
+            
+#            if isinstance(dt, datetime):
+#                return self.tick_data.iloc[self.open_ind, 0].strftime("%H:%M:%S")
+#            else:
+            return datetime.strptime(dt[0], "%m/%d/%Y %H:%M:%S").strftime("%H:%M:%S")
     
+    def get_high_price(self):
+        if not self.high:
+            self.high = max(self.tick_data["price"].tolist()[self.open_ind:])
+        return self.high
+
+    def get_low_price(self):
+        if not self.low:
+            self.low = min(self.tick_data["price"].tolist()[self.open_ind:])
+        return self.low
+
+    def get_high_percent_change(self):
+        # stock price peak percentage change relative to opening
+        if not self.high_percent:
+            self.get_high_price()
+            self.get_opening_price()
+            self.high_percent = float("{:.2f}".format(100*(self.high-self.opening)/self.opening))
+        return self.high_percent
+
+    def get_low_percent_change(self):
+        # stock price base percentage change relative to opening
+        if not self.low_percent:
+            self.get_low_price()
+            self.get_opening_price()
+            self.low_percent = float("{:.2f}".format(100*(self.low-self.opening)/self.opening))
+        return self.low_percent 
+
+
+#the close volume might be replicated. But the value is not very accurage
+    def get_volume(self):
+        if not self.volume:
+            self.volume = int(numpy.sum(self.tick_data["size"].tolist()[self.open_ind:]))
+        return self.volume
+
+
+
+    #########Analyze volumes from tick data#########################
     def get_first_trade_volume(self):
         if not self.firstTrVol:
             self.firstTrVol = int(self.tick_data.iloc[0]["size"])
@@ -151,36 +292,6 @@ class TickDataAnalyzer:
                 self.firstAfterVol=int(numpy.sum(self.tick_data["size"]))
         return self.firstAfterVol
      
-    def get_high_price(self):
-        if not self.high:
-            self.high = self.tick_data["price"].max()
-        return float(self.high)
-
-    def get_low_price(self):
-        if not self.low:
-            self.low = self.tick_data["price"].min()
-        return float(self.low)
-
-    def get_high_percent_change(self):
-        # stock price peak percentage change relative to opening
-        if not self.high_percent:
-            opening = self.get_opening_price()
-            high = self.get_high_price()
-            self.high_percent = 100*(high-opening)/opening
-        return self.high_percent
-
-    def get_low_percent_change(self):
-        # stock price base percentage change relative to opening
-        if not self.low_percent:
-            opening = self.get_opening_price()
-            low = self.get_low_price()
-            self.low_percent = 100*(low-opening)/opening
-        return self.low_percent 
-
-    def get_volume(self):
-        if not self.volume:
-            self.volume = int(numpy.sum(self.tick_data["size"]))
-        return self.volume
 
 
     def find_next_spike_by_datetime(self, begin_datetime, noise_level):

@@ -24,10 +24,14 @@ def rate_finder(sym):
 def update_scoop_rate():
     ipos  = session.query(Company, HistoricalIPO).filter(Company.id == HistoricalIPO.company_id).all() 
     for ipo in ipos:
+        if ipo.HistoricalIPO.scoop_rating != 0:
+            continue
         sym = ipo.Company.symbol
         rate = rate_finder(sym)
         if rate == None:
             continue
+        if rate == 'N/A' or rate == 'N/C':
+            rate = 0
         hi = HistoricalIPO.query.filter(HistoricalIPO.company_id == ipo.Company.id).first()
         if hi == None:
             continue #should not happen
