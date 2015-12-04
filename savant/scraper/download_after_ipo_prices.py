@@ -2,7 +2,7 @@ import os, requests, sys, datetime
 import matplotlib.pyplot as plt
 import pandas as pd
 import savant.db
-from savant.db.models import HistoricalIPO, Company, PostIPOPrice
+from savant.db.models import HistoricalIPO, Company, PostIPOPriceAT
 from savant.config import settings
 import numpy as np
 
@@ -42,7 +42,7 @@ class ATConnection:
 
 
 try:
-    PostIPOPrice.__table__.create(bind = savant.db.create_engine())
+    PostIPOPriceAT.__table__.create(bind = savant.db.create_engine())
 except:
     savant.db.session.rollback()
 
@@ -59,7 +59,7 @@ def IPO_first_day_tick(sym, date):
     print prices
 
 
-def IPO_first_daily_price(symb_list=None):
+def IPO_first_daily_price(days, symb_list=None):
     at = ATConnection()
     if symb_list is None:
         comps =  Company.query.all()
@@ -74,29 +74,28 @@ def IPO_first_daily_price(symb_list=None):
         params['symbol'] = comp.symbol
         params['historyType'] = 1
         params['beginTime'] = ipo.ipo_date.strftime('%Y%m%d%H%M%S')
-        params['endTime'] = (ipo.ipo_date + datetime.timedelta(days=30)).strftime('%Y%m%d%H%M%S')
-            prices = at.barData(params=params)
-            if prices is None:
-                print comp.symbol, 'does not have valid post-ipo daily bar!'
-                continue
-            dailybar_num = len(prices.index)
-            # 10 is definetly abnormal, we are expecting something around 20
-            if dailybar_num < 12: 
-                print comp.symbol, 'contains only', dailybar_num, 'daily bar!'
-            for ind, price in prices.iterrows():
-                post_ipo_price = PostIPOPrice(**price.to_dict())
-                #print post_ipo_price
-                #post_ipo_price.datetime = price.name
-#                post_ipo_price.date = price.name.split(' ')[0]
-                post_ipo_price.date = price.name
-                post_ipo_price.company_id = comp.id
-                savant.db.session.add(post_ipo_price)
-                try:
-                    savant.db.session.commit()
-                except:
-                    savant.db.session.rollback()
-                    print "cannot save ", comp.symbol, ind
+        params['endTime'] = (ipo.ipo_date + datetime.timedelta(days)).strftime('%Y%m%d%H%M%S')
+        prices = at.barData(params=params)
+        if prices is None:
+            print comp.symbol, 'does not have valid post-ipo daily bar!'
+            continue
+        dailybar_num = len(prices.index)
+        # 10 is definetly abnormal, we are expecting something around 20
+        if dailybar_num < 12: 
+            print comp.symbol, 'contains only', dailybar_num, 'daily bar!'
+        for ind, price in prices.iterrows():
+            post_ipo_price = PostIPOPriceAT(**price.to_dict())
+            #print post_ipo_price
+            #post_ipo_price.datetime = price.name
+#            post_ipo_price.date = price.name.split(' ')[0]
+            post_ipo_price.date = price.name
+            post_ipo_price.company_id = comp.id
+            savant.db.session.add(post_ipo_price)
+            try:
+                savant.db.session.commit()
+            except:
+                savant.db.session.rollback()
+                print "cannot save ", comp.symbol, ind
 
 #IPO_first_daily_price(['RLOC'])
-IPO_first_daily_price()
 

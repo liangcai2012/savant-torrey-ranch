@@ -110,6 +110,22 @@ def checkIPOStartTime(strtime):
        if fttime< time.strptime(strtime, '%H:%M:%S.%f'):
           print ipo.Company.symbol, fttimestr
 
+
+def IPO_Vol_consitency():
+   ipos  = session.query(Company, HistoricalIPO).filter(Company.id == HistoricalIPO.company_id).all() 
+
+   for ipo in ipos:
+      if ipo.HistoricalIPO.first_opening_price == None:
+           continue
+      pips  = PostIPOPrice.query.filter(PostIPOPrice.company_id ==ipo.HistoricalIPO.company_id).filter(PostIPOPrice.date == ipo.HistoricalIPO.ipo_date).all()
+      if len(pips) < 1:
+          print 'cannot find post ipo price for', ipo.Company.symbol
+          continue
+      rate = ipo.HistoricalIPO.first_day_volume*1.0/pips[0].volume
+      if  rate < 0.9 or rate >  1.1:
+          print ipo.Company.symbol, rate 
+
+
 def compareIPOVol(times):
    ipos  = session.query(Company, HistoricalIPO).filter(Company.id == HistoricalIPO.company_id).all() 
 
@@ -175,7 +191,12 @@ def comparePrice(delta, detail=False):
             print o["symbol"], ":", o["tick"], o["bar"], o["diff"]
 
 
-#compareIPOVol(3)
+
+#IPO_Vol_consitency()
+miss = diffIPOBar()
+print len(miss), "cannot get bar data after IPO:", miss
+exit()
+compareIPOVol(3)
 #checkIPOStartTime("09:30:00.0")
 print "num of rows in company table:", len(Company.query.all())
 print "num of rows in ipo_url table:", len(IPOInfoUrl.query.all())

@@ -138,8 +138,10 @@ class CompanyUnderwriterAssociation(CBase):
     lead = Column(Boolean)
     company = relationship("Underwriter", backref="companies")
 
-    def __init__(self):
-         pass
+    def __init__(self, company_id, underwriter_id, lead):
+        self.company_id = company_id
+        self.underwriter_id = underwriter_id
+        self.lead = lead
 
     def clone(self, params):
         self.__dict__.update(params)
@@ -209,6 +211,7 @@ class HistoricalIPO(CBase):
     total_assets = Column(Integer)
     total_liability = Column(Integer)
     stakeholder_equity = Column(Integer)
+    validity = Column(Integer)
 
     company = relationship("Company", foreign_keys='HistoricalIPO.company_id')
 
@@ -218,9 +221,8 @@ class HistoricalIPO(CBase):
     def __repr__(self):
         return "<Historical_IPO(company_id='%s', ipo_date='%s', price='%s', shares='%s', outstanding='%s', scoop_rating='%s')>" % (self.company_id, self.ipo_date, self.price, self.shares, self.outstanding, self.scoop_rating)
 
-
-class PostIPOPrice(CBase):
-    __tablename__ = "post_ipo_price"
+class PostIPOPriceAT(CBase):
+    __tablename__ = "post_ipo_price_at"
 
     id = Column(Integer, primary_key=True)
     company_id = Column(Integer, ForeignKey("company.id"), primary_key=False)
@@ -232,14 +234,38 @@ class PostIPOPrice(CBase):
     close = Column(Float)
     volume = Column(Integer)
 
-    company = relationship("Company", foreign_keys='PostIPOPrice.company_id')
-    UniqueConstraint('company_id', 'date', name='uix_1')
+    company = relationship("Company", foreign_keys='PostIPOPriceAT.company_id')
+    __table_args__ = (UniqueConstraint('company_id', 'date', name='uix_1'), )
+
 
     def __init__(self, **params):
         self.__dict__.update(params)
 
     def __repr__(self):
-        return "<Post_IPO_Price(company_id='%s', datetime='%s', open='%s', high='%s', low='%s', close='%s', volume='%s')>" % (self.company_id, self.datetime, self.open, self.high, self.low, self.close, self.volume)
+        return "<Post_IPO_Price_AT(company_id='%s', datetime='%s', open='%s', high='%s', low='%s', close='%s', volume='%s')>" % (self.company_id, self.date, self.open, self.high, self.low, self.close, self.volume)
+
+class PostIPOPriceYahoo(CBase):
+    __tablename__ = "post_ipo_price_yh"
+
+    id = Column(Integer, primary_key=True)
+    company_id = Column(Integer, ForeignKey("company.id"), primary_key=False)
+
+    date= Column(Date)
+    open = Column(Float)
+    high = Column(Float)
+    low = Column(Float)
+    close = Column(Float)
+    volume = Column(Integer)
+
+    company = relationship("Company", foreign_keys='PostIPOPriceYahoo.company_id')
+    __table_args__ = (UniqueConstraint('company_id', 'date', name='uix_1'), )
+
+
+    def __init__(self, **params):
+        self.__dict__.update(params)
+
+    def __repr__(self):
+        return "<Post_IPO_Price_YH(company_id='%s', datetime='%s', open='%s', high='%s', low='%s', close='%s', volume='%s')>" % (self.company_id, self.date, self.open, self.high, self.low, self.close, self.volume)
 
 #class IPOVolume(CBase):
 #    __tablename__ = "ipo_volume" 

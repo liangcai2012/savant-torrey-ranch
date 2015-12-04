@@ -103,15 +103,15 @@ def populate_ipo_table():
             ipo_data["first_day_low_percent_change"] = itd["first_day_low_percent_change"]
             ipo_data["first_day_volume"] = itd["first_day_volume"]
         else:
-            ipo_data["open_vol"] = 0
-            ipo_data["first_opening_price"] = 0.0
-            ipo_data["first_closing_price"] = 0.0
-            ipo_data["first_trade_time"] = "N/A"
-            ipo_data["first_day_high"] = 0.0
-            ipo_data["first_day_low"] = 0.0
-            ipo_data["first_day_high_percent_change"] = 0.0
-            ipo_data["first_day_low_percent_change"] = 0.0
-            ipo_data["first_day_volume"] = 0.0
+            ipo_data["open_vol"] = None
+            ipo_data["first_opening_price"] = None
+            ipo_data["first_closing_price"] = None
+            ipo_data["first_trade_time"] = None
+            ipo_data["first_day_high"] = None
+            ipo_data["first_day_low"] = None
+            ipo_data["first_day_high_percent_change"] = None
+            ipo_data["first_day_low_percent_change"] = None
+            ipo_data["first_day_volume"] = None
 
         ipo_data["scoop_rating"] = 0 
         ipo_data["company_id"] = comp.id
