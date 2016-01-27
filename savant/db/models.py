@@ -290,6 +290,35 @@ class PostIPOPriceYahoo(CBase):
 #    def __repr__(self):
 #        return "<IPO_Volume(symbol='%s', first_trade_vol='%s', first_second_vol='%s', first_minute_vol='%s', first_5m_vol='%s', first_30m_vol='%s', first_1h_vol='%s', first_1d_markethour_vol='%s', first_1d_aftermarket_vol='%s')>" % (self.company_id, self.first_trade_vol, self.first_second_vol, self.first_minute_vol, self.first_5m_vol, self.first_30m_vol, self.first_1h_vol, self.first_1d_markethour_vol, self.first_1d_aftermarket_vol)
 
+class MarketIndex(CBase):
+    __tablename__ = "market_index"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    symbol = Column(String(10), nullable=False, unique=True)
+
+    def __init__(self, **params):
+        self.__dict__.update(params)
+
+    def clone(self, params):
+        self.__dict__.update(params)
+
+class Daily(CBase):
+    __tablename__ = "daily"
+
+    id = Column(Integer, primary_key=True)
+    symbol = Column(String(10))
+    date = Column(Date)
+    open = Column(Float)
+    high = Column(Float)
+    low = Column(Float)
+    close = Column(Float)
+    volume = Column(Integer)
+    tick_downloaded = Column(Boolean, default=False)
+    minbar_downloaded = Column(Boolean, default=False)
+
+    __table_args__ = (UniqueConstraint('symbol', 'date', name='uix_1'), )
+
 
 
 #########################End Schema ##########################

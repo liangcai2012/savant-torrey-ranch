@@ -113,8 +113,8 @@ def Tick2SecondBarConverter(symbol, date):
     tick_batch = []
     current_dt = None
 
-#    cond_9= False
-#    cond_15 = False
+    cond_9= False
+    cond_15 = False
     while True:
         try:
             tick = tick_iter.next()
@@ -125,33 +125,34 @@ def Tick2SecondBarConverter(symbol, date):
             return 
 
 
-#do not handle condition, create second bar directly from tick data 
-#
-#        #handle conditions
-#        #assumption: conditions cannot contain both 9 and 15 or 16
-#        #9 might be followed by 15 or 16
-#        #any record before 16 is not valid
-#
-#        condlist = tick[1][5].split('-')
-#        for cond in condlist:
-#            if cond == '9' or cond == "15" or cond == "16":
-#                break
-#        if cond == '9':
-#            cond_9 = True 
-#            prev_vol = int(tick[1][3]) 
-#        elif cond == '16':
-#            if cond_9 and int(tick[1][3]) == prev_vol:
+
+        #handle conditions
+        #assumption: conditions cannot contain both 9 and 15 or 16
+        #9 might be followed by 15 or 16
+        #any record before 16 is not valid
+
+        condlist = tick[1][5].split('-')
+        for cond in condlist:
+            if cond == '9' or cond == "15" or cond == "16":
+                break
+        if cond == '9':
+            cond_9 = True 
+            prev_vol = int(tick[1][3]) 
+        elif cond == '16':
+            if cond_9 and int(tick[1][3]) == prev_vol:
+# do not remove the second bars before open, try to be literate as the tick data
 #                if len(tick_batch)>1:
 #                    print symbol, date, "contains trade records before offical open!"
 #                tick_batch=[]
-#                cond_9 = False
-#        elif cond == "15":
-#            if cond_9 and int(tick[1][3]) == prev_vol:
-#                cond_9 = False
-#                continue
-#        else:
-#            if cond_9:
-#                cond_9 = False
+                cond_9 = False
+                continue
+        elif cond == "15":
+            if cond_9 and int(tick[1][3]) == prev_vol:
+                cond_9 = False
+                continue
+        else:
+            if cond_9:
+                cond_9 = False
 
         time_no_ms = tick[1][0].split('.')[0]# remove the millisecond part
         tick_dt = datetime.datetime.strptime(time_no_ms, '%m/%d/%Y %H:%M:%S')
