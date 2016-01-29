@@ -95,6 +95,9 @@ public class ATTickDataFetcher {
                 String symbol = (String)request.get("symbol");
                 String date = (String)request.get("date");
 
+                boolean getTrade = request.getBoolean("gettrade");
+                boolean getQuote = request.getBoolean("getquote");
+
                 //time_begin = new Date();
 
                 logger.log(Level.INFO,"SEND request [" + symbol + ":" + date + "]");
@@ -111,7 +114,7 @@ public class ATTickDataFetcher {
                     String strCurrEndTime = "";
                     do {
                         strCurrEndTime = addTime(strCurrBeginTime, DEFAULT_TIME_WINDOW);
-                        request = buildRequest(symbol,date,strCurrBeginTime,strCurrEndTime);
+                        request = buildRequest(symbol,date,strCurrBeginTime,strCurrEndTime, getTrade, getQuote);
                         this.addPendingRequest(request);
                         strCurrBeginTime = strCurrEndTime;
                     } while ((subtractTime(DEFAULT_END_TIME,strCurrEndTime) > 0));
@@ -153,12 +156,13 @@ public class ATTickDataFetcher {
         return response;
     }
 
-    public long sendATRequest(String symbol,String strBeginDateTime,String strEndDateTime) {
+    public long sendATRequest(String symbol,String strBeginDateTime,String strEndDateTime, boolean getTrade, boolean getQuote) {
         ATSYMBOL atSymbol = Helpers.StringToSymbol(symbol);
         SYSTEMTIME beginDateTime = Helpers.StringToATTime(strBeginDateTime);
         SYSTEMTIME endDateTime = Helpers.StringToATTime(strEndDateTime);
         //return apiSession.GetRequestor().SendATTickHistoryDbRequest(atSymbol, true, true, beginDateTime, endDateTime, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
-        return apiSession.GetRequestor().SendATTickHistoryDbRequest(atSymbol, true, false, beginDateTime, endDateTime, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
+        //return apiSession.GetRequestor().SendATTickHistoryDbRequest(atSymbol, true, false, beginDateTime, endDateTime, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
+        return apiSession.GetRequestor().SendATTickHistoryDbRequest(atSymbol, getTrade, getQuote, beginDateTime, endDateTime, ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
     }
 
 
@@ -200,14 +204,16 @@ public class ATTickDataFetcher {
             String symbol = (String) lastRequest.get("symbol");
             String beginDateTime = (String) lastRequest.get("beginDateTime");
             String endDateTime = (String) lastRequest.get("endDateTime");
+            boolean getTrade = lastRequest.getBoolean("getTrade");
+            boolean getQuote = lastRequest.getBoolean("getQuote");
             String date = beginDateTime.substring(0, 8);
             int deltaT = (int) subtractTime(endDateTime.substring(8), beginDateTime.substring(8));
             if (deltaT >= MIN_INTERVAL) {
                 int timeWindow = deltaT/2;
                 String midPointTime = addTime(this.beginTime,timeWindow);
                 logger.log(Level.INFO,midPointTime);
-                this.insertPendingRequest(buildRequest(symbol, date, midPointTime, endDateTime.substring(8)));
-                this.insertPendingRequest(buildRequest(symbol, date, beginDateTime.substring(8), midPointTime));
+                this.insertPendingRequest(buildRequest(symbol, date, midPointTime, endDateTime.substring(8), getTrade, getQuote));
+                this.insertPendingRequest(buildRequest(symbol, date, beginDateTime.substring(8), midPointTime, getTrade, getQuote));
                 this.sendNextRequest();
             } else {
                 logger.log(Level.WARNING, "Fetch halted: Unexpected data volume");
@@ -345,11 +351,13 @@ public class ATTickDataFetcher {
         return delta/1000;
     }
 
-    public JSONObject buildRequest (String symbol,String date,String beginTime,String endTime) throws JSONException {
+    public JSONObject buildRequest (String symbol,String date,String beginTime,String endTime, boolean getTrade, boolean getQuote) throws JSONException {
         JSONObject request = new JSONObject();
         request.put("symbol",symbol);
         request.put("beginDateTime",date+beginTime);
         request.put("endDateTime",date+endTime);
+        request.put("getTrade",getTrade);
+        request.put("getQuote",getQuote);
         return request;
     }
 
@@ -358,7 +366,9 @@ public class ATTickDataFetcher {
         String symbol = (String)nextRequest.get("symbol");
         String beginDateTime = (String)nextRequest.get("beginDateTime");
         String endDateTime = (String)nextRequest.get("endDateTime");
-        return this.sendATRequest(symbol,beginDateTime,endDateTime);
+        boolean getTrade = nextRequest.getBoolean("getTrade");
+        boolean getQuote = nextRequest.getBoolean("getQuote");
+        return this.sendATRequest(symbol,beginDateTime,endDateTime, getTrade, getQuote);
     }
 
     public boolean isIdle() {
@@ -391,23 +401,31 @@ public class ATTickDataFetcher {
     //return file size for estimation purpose
     private long completeFetch() {
         String filepath = this.outputPath + "_markethours.csv";
-        logger.log(Level.INFO, "output file is "+filepath);
 
         long res=0;
 
         if (new File(filepath+".tmp").exists()) {
             logger.log(Level.INFO, "compress "+filepath+".tmp");
         	res+=compressFile(filepath);
+            logger.log(Level.INFO, "output to "+filepath);
         }
 
         filepath = this.outputPath + "_premarket.csv";
         if (new File(filepath+".tmp").exists()) {
             res+=compressFile(filepath);
+            logger.log(Level.INFO, "output to "+filepath);
         }
 
         filepath = this.outputPath + "_aftermarket.csv";
         if (new File(filepath+".tmp").exists()) {
             res+=compressFile(filepath);
+            logger.log(Level.INFO, "output to "+filepath);
+        }
+
+        filepath = this.outputPath + "_quote.csv";
+        if (new File(filepath+".tmp").exists()) {
+            res+=compressFile(filepath);
+            logger.log(Level.INFO, "output to "+filepath);
         }
         return res;
      }
@@ -464,7 +482,9 @@ public class ATTickDataFetcher {
         clearExisting(marketFilePath);
         String aftermarketFilePath = this.outputPath + "_aftermarket.csv.tmp";
         clearExisting(aftermarketFilePath);
-        apiSession.GetRequestor().setOutputPath(symbol, premarketFilePath,marketFilePath,aftermarketFilePath);
+        String quoteFilePath = this.outputPath + "_quote.csv.tmp";
+        clearExisting(quoteFilePath);
+        apiSession.GetRequestor().setOutputPath(symbol, premarketFilePath, marketFilePath, aftermarketFilePath, quoteFilePath );
     }
 
     private void clearExisting(String filepath) {

@@ -98,7 +98,7 @@ def patch_ipo_date():
              if os.path.exists(ipo_data_dir) and os.path.exists(ipo_data_path):
                  print "IPO data found"
              else:
-                 request = {"command": "get", "symbol": symbol, "date": wrong_ipo[symbol]}
+                 request = {"command": "get", "symbol": symbol, "date": wrong_ipo[symbol], "gettrade": "true", "getquote": "true"}
                  print request
                  print cjson.encode(request)
                  fetcher_caller = fetcher.FetcherCaller()

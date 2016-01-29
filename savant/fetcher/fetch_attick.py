@@ -38,14 +38,25 @@ class FetcherCaller:
     def close(self):
         self.socket.close()
 
-def get_data(args):
+def get_trade_data(args):
     cmd = "get"
     symbol = args.symbol
     date = args.date
-    request = {"command":cmd,"symbol":symbol,"date":date}
+    request = {"command":cmd,"symbol":symbol,"date":date, "gettrade": "true", "getquote": "false"}
     json_request = cjson.encode(request)
     caller = FetcherCaller(json_request)    
     caller.send_request()
+    caller.close()
+
+def get_quote_data(args):
+    cmd = "get"
+    symbol = args.symbol
+    date = args.date
+    request = {"command":cmd,"symbol":symbol,"date":date, "gettrade": "false", "getquote": "true"}
+    json_request = cjson.encode(request)
+    caller = FetcherCaller(json_request)    
+    caller.send_request()
+    caller.close()
 
 def check_status(args):
     cmd = "check"
@@ -53,6 +64,7 @@ def check_status(args):
     json_request = cjson.encode(request)
     caller = FetcherCaller(json_request)
     caller.send_request()
+    caller.close()
 
 def cancel(args):
     cmd = "cancel"
@@ -60,15 +72,21 @@ def cancel(args):
     json_request = cjson.encode(request)
     caller = FetcherCaller(json_request)
     caller.send_request()
+    caller.close()
 
 def main():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(help="subcommands")
     
-    psr_get = subparsers.add_parser("get",help="get tick data")
+    psr_get = subparsers.add_parser("trade",help="get tick data (trade)")
     psr_get.add_argument("symbol",help="stock symbol")
     psr_get.add_argument("date",help="date")
-    psr_get.set_defaults(func=get_data)
+    psr_get.set_defaults(func=get_trade_data)
+
+    psr_get = subparsers.add_parser("quote",help="get tick data (quote)")
+    psr_get.add_argument("symbol",help="stock symbol")
+    psr_get.add_argument("date",help="date")
+    psr_get.set_defaults(func=get_quote_data)
 
     psr_check = subparsers.add_parser("check",help="check fetcher status")
     psr_check.set_defaults(func=check_status)    

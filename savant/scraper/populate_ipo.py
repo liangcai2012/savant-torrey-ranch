@@ -68,7 +68,7 @@ def populate_ipo_table():
             exist = True
             log.info("IPO data found")
         else:
-            request = {"command": "get", "symbol": url.symbol, "date": ipo_date}
+            request = {"command": "get", "symbol": url.symbol, "date": ipo_date, "gettrade": "true", "getquote": "true"}
             try:
                 fetcher_caller = fetcher.FetcherCaller()
                 fetcher_caller.set_request(cjson.encode(request))

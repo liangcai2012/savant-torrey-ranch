@@ -24,6 +24,7 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 	String premarketFilePath;
 	String marketFilePath;
 	String aftermarketFilePath;
+	String quoteFilePath;
 
 
 /*
@@ -77,6 +78,7 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 		ArrayList<String> premarketTickRecords = new ArrayList<String>();
 		ArrayList<String> marketTickRecords = new ArrayList<String>();
 		ArrayList<String> aftermarketTickRecords = new ArrayList<String>();
+		ArrayList<String> quoteTickRecords = new ArrayList<String>();
         boolean aftermarket = false;
 		while(itrDataItems.hasNext())
 		{	
@@ -146,41 +148,80 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 				case ATTickHistoryRecordType.TickHistoryRecordQuote: {
 					ATTICKHISTORY_QUOTE_RECORD atQuoteRecord = (ATTICKHISTORY_QUOTE_RECORD) record;
 					StringBuilder sb = new StringBuilder();
-					sb.append("[");
-					sb.append(++index);
-					sb.append("/");
-					sb.append(recCount);
-					sb.append("]");
-					sb.append(" [" + atQuoteRecord.quoteDateTime.month + "/" + atQuoteRecord.quoteDateTime.day + "/" + atQuoteRecord.quoteDateTime.year + " ");
-					sb.append(atQuoteRecord.quoteDateTime.hour + ":" + atQuoteRecord.quoteDateTime.minute + ":" + atQuoteRecord.quoteDateTime.second + "] ");
-					sb.append("QUOTE ");
+					//sb.append("[");
+					//sb.append(++index);
+					//sb.append("/");
+					//sb.append(recCount);
+					//sb.append("]");
+					//sb.append(" [" + atQuoteRecord.quoteDateTime.month + "/" + atQuoteRecord.quoteDateTime.day + "/" + atQuoteRecord.quoteDateTime.year + " ");
+					//sb.append(atQuoteRecord.quoteDateTime.hour + ":" + atQuoteRecord.quoteDateTime.minute + ":" + atQuoteRecord.quoteDateTime.second + "] ");
+					//sb.append("QUOTE ");
 
+					//strFormat = "%0." + atQuoteRecord.bidPrice.precision + "f";
+					//sb.append("  \t[bid:" + new PrintfFormat(strFormat).sprintf(atQuoteRecord.bidPrice.price));
+
+					//strFormat = "%0." + atQuoteRecord.askPrice.precision + "f";
+					//sb.append("  \task:" + new PrintfFormat(strFormat).sprintf(atQuoteRecord.askPrice.price) + " ");
+
+					//sb.append("  \tbidsize:" + atQuoteRecord.bidSize);
+					//sb.append("  \tasksize:" + atQuoteRecord.askSize);
+					//sb.append("  \tbidexch:" + atQuoteRecord.bidExchange.m_atExchangeType);
+					//sb.append("  \taskexch:" + atQuoteRecord.askExchange.m_atExchangeType);
+					//sb.append("  \tcond:" + atQuoteRecord.quoteCondition.m_quoteConditionType);
+					//String hour = (atQuoteRecord.quoteDateTime.hour >= 10) ? String.valueOf(atQuoteRecord.quoteDateTime.hour) : "0" + atQuoteRecord.quoteDateTime.hour;
+					//String minute = (atQuoteRecord.quoteDateTime.minute >= 10) ? String.valueOf(atQuoteRecord.quoteDateTime.minute) : "0" + atQuoteRecord.quoteDateTime.minute;
+					//String second = (atQuoteRecord.quoteDateTime.second >= 10) ? String.valueOf(atQuoteRecord.quoteDateTime.second) : "0" + atQuoteRecord.quoteDateTime.second;
+					//String tradeTime = hour + minute + second;
+					//try {
+					//	if (m_fetcher.subtractTime(tradeTime, "093000") < 0) {
+					//		premarketTickRecords.add(sb.toString() + "\n");
+					//	} else if (atQuoteRecord.quoteDateTime.hour >= 16) {
+					//		aftermarketTickRecords.add(sb.toString() + "\n");
+					//	} else {
+					//		marketTickRecords.add(sb.toString() + "\n");
+					//	}
+					//} catch (ParseException e) {
+					//	System.out.println("Time parsing error");
+					//}
+
+					//date
+					sb.append(atQuoteRecord.quoteDateTime.month + "/" + atQuoteRecord.quoteDateTime.day + "/" + atQuoteRecord.quoteDateTime.year);   
+					sb.append(" ");
+					//time
+					sb.append(atQuoteRecord.quoteDateTime.hour + ":" + atQuoteRecord.quoteDateTime.minute + ":" + atQuoteRecord.quoteDateTime.second);
+					sb.append(",");
+					//type
+					sb.append("QUOTE");
+					sb.append(",");
+					//bid/ask price
+                    if (atQuoteRecord.bidPrice.precision < 0)
+                        System.out.println("illegal bid precision " + atQuoteRecord.bidPrice.precision + ", force it to be 6");
+                        atQuoteRecord.bidPrice.precision = 6;
 					strFormat = "%0." + atQuoteRecord.bidPrice.precision + "f";
-					sb.append("  \t[bid:" + new PrintfFormat(strFormat).sprintf(atQuoteRecord.bidPrice.price));
+					sb.append(new PrintfFormat(strFormat).sprintf(atQuoteRecord.bidPrice.price));
+					sb.append(",");
 
+                    if (atQuoteRecord.askPrice.precision < 0)
+                        System.out.println("illegal ask precision " + atQuoteRecord.askPrice.precision + ", force it to be 6");
+                        atQuoteRecord.askPrice.precision = 6;
 					strFormat = "%0." + atQuoteRecord.askPrice.precision + "f";
-					sb.append("  \task:" + new PrintfFormat(strFormat).sprintf(atQuoteRecord.askPrice.price) + " ");
+					sb.append(new PrintfFormat(strFormat).sprintf(atQuoteRecord.askPrice.price) + " ");
+					sb.append(",");
+					//bid/ask size 
+					sb.append(atQuoteRecord.bidSize);
+					sb.append(",");
+					sb.append(atQuoteRecord.askSize);
+					sb.append(",");
+					//bid/ask exch
+					sb.append(atQuoteRecord.bidExchange.m_atExchangeType);
+					sb.append(",");
+					sb.append(atQuoteRecord.askExchange.m_atExchangeType);
+					sb.append(",");
+					//condition
+					sb.append(atQuoteRecord.quoteCondition.m_quoteConditionType); 
+			        String curRecord=sb.toString();
+				  	quoteTickRecords.add(curRecord);
 
-					sb.append("  \tbidsize:" + atQuoteRecord.bidSize);
-					sb.append("  \tasksize:" + atQuoteRecord.askSize);
-					sb.append("  \tbidexch:" + atQuoteRecord.bidExchange.m_atExchangeType);
-					sb.append("  \taskexch:" + atQuoteRecord.askExchange.m_atExchangeType);
-					sb.append("  \tcond:" + atQuoteRecord.quoteCondition.m_quoteConditionType);
-					String hour = (atQuoteRecord.quoteDateTime.hour >= 10) ? String.valueOf(atQuoteRecord.quoteDateTime.hour) : "0" + atQuoteRecord.quoteDateTime.hour;
-					String minute = (atQuoteRecord.quoteDateTime.minute >= 10) ? String.valueOf(atQuoteRecord.quoteDateTime.minute) : "0" + atQuoteRecord.quoteDateTime.minute;
-					String second = (atQuoteRecord.quoteDateTime.second >= 10) ? String.valueOf(atQuoteRecord.quoteDateTime.second) : "0" + atQuoteRecord.quoteDateTime.second;
-					String tradeTime = hour + minute + second;
-					try {
-						if (m_fetcher.subtractTime(tradeTime, "093000") < 0) {
-							premarketTickRecords.add(sb.toString() + "\n");
-						} else if (atQuoteRecord.quoteDateTime.hour >= 16) {
-							aftermarketTickRecords.add(sb.toString() + "\n");
-						} else {
-							marketTickRecords.add(sb.toString() + "\n");
-						}
-					} catch (ParseException e) {
-						System.out.println("Time parsing error");
-					}
 					break;
 				}
 			}
@@ -194,6 +235,9 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 		}
 		if (!aftermarketTickRecords.isEmpty()) {
 			this.writeTickRecord(this.aftermarketFilePath,aftermarketTickRecords);
+		}
+		if (!quoteTickRecords.isEmpty()) {
+			this.writeTickRecord(this.quoteFilePath,quoteTickRecords);
 		}
 		System.out.println("--------------------------------------------------------------\nTotal records:" + recCount);
 		m_fetcher.onRequestComplete();
@@ -358,11 +402,12 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 
 
 	//this is called when fetch data request is received
-	public void setOutputPath(String symbol, String premarketFilePath, String marketFilePath, String aftermarketFilePath) {
+	public void setOutputPath(String symbol, String premarketFilePath, String marketFilePath, String aftermarketFilePath, String quoteFilePath) {
 		this.fetchingSym = symbol;
 		this.premarketFilePath = premarketFilePath;
 		this.marketFilePath = marketFilePath;
 		this.aftermarketFilePath = aftermarketFilePath;
+		this.quoteFilePath = quoteFilePath;
 	}
 
 }
