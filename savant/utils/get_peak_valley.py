@@ -425,10 +425,10 @@ def test():
 
 if __name__ == "__main__":
     #perf_stocks_drop_in_first_min()
-    peak_valley_which_first()
+    #peak_valley_which_first()
     #boost_in_first_min()
     #filter_stocks(open_vol_percent_min=0.1)
-    #plot_boost_percentage()
+    plot_boost_percentage()
 
     #plot_peak_percentage_by_scoop()
     #plot_open_percentage_by_scoop()

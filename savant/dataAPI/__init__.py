@@ -37,7 +37,7 @@ class DataAPI:
             return -1
         
         ticker = processors.TickDataProcessor()
-        tickdata = ticker.get_ticks_by_date(self.symbol, self.date, self.date, "full", False, None)
+        tickdata = ticker.get_trades_by_date(self.symbol, self.date, self.date, "full", False, None)
         self.tick_iter = tickdata.iterrows()
         self.tick_batch = []
         return 0

@@ -490,8 +490,8 @@ class BarDataAnalyzer:
 if __name__ == "__main__":
     from savant.ticker.processors import TickDataProcessor
     ticker = TickDataProcessor()
-    data = ticker.get_ticks_by_date("BABA", "20140919", "20140919", parse_dates=False)
-#     data = ticker.get_ticks_by_date("FB", "20120518", "20120518", parse_dates=True, nrows=6000)
+    data = ticker.get_trades_by_date("BABA", "20140919", "20140919", parse_dates=False)
+#     data = ticker.get_trades_by_date("FB", "20120518", "20120518", parse_dates=True, nrows=6000)
 #    print "1",data
     analyzer = TickDataAnalyzer(data)   #Chuan: change to 'TickDataAnalyzer'
 #     print analyzer.get_price_by_datetime(datetime.strptime("07/02/2015 10:43:27.0", "%m/%d/%Y %H:%M:%S"))

@@ -188,7 +188,7 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 					sb.append(atQuoteRecord.quoteDateTime.month + "/" + atQuoteRecord.quoteDateTime.day + "/" + atQuoteRecord.quoteDateTime.year);   
 					sb.append(" ");
 					//time
-					sb.append(atQuoteRecord.quoteDateTime.hour + ":" + atQuoteRecord.quoteDateTime.minute + ":" + atQuoteRecord.quoteDateTime.second);
+					sb.append(atQuoteRecord.quoteDateTime.hour + ":" + atQuoteRecord.quoteDateTime.minute + ":" + atQuoteRecord.quoteDateTime.second + "." + atQuoteRecord.quoteDateTime.milliseconds);
 					sb.append(",");
 					//type
 					sb.append("QUOTE");

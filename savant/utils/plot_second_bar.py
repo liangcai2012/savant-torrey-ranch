@@ -60,7 +60,7 @@ def plot_secondly_bar(symbol, date, title = None, price_type = "open", display_v
     print "Chart is ready, run 'open ../out/index.html' to view the chart"
 
 if __name__ == "__main__":
-    plot_secondly_bar("YELP", "20151215", volume_downscale=True)
+    plot_secondly_bar("GPRO", "20140626", volume_downscale=True)
 
 ###############Not used#################
 def tick2pd(sym, date):
@@ -83,8 +83,8 @@ def tick2bar(sym, date, barpath):
         fw.write(ret['timestamp'] + ", " + ret['data'][0]['bar'] + '\n')
 
 def test():
-    sym = "BABA"
-    date = "20140919"
+    sym = "GPRO"
+    date = "20140626"
     #sym = "NTRA"
     #date = "20150702"
     barpath = sym+date+"_sec_bar.csv.gz"
