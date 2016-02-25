@@ -5,6 +5,7 @@ from matplotlib.dates import DateFormatter, WeekdayLocator, DayLocator, MONDAY
 #from matplotlib.finance import quotes_historical_yahoo_ohlc, candlestick_ohlc
 from matplotlib.finance import * 
 import matplotlib.mlab as mlab
+from savant.scraper import ATHttpConnection
 
 
 #this is just to test how numpy recarray is used 
@@ -30,12 +31,7 @@ def csvtest():
 def plot_candlestick(quote):
     fig, ax = plt.subplots(figsize=(16, 9))
     fig.subplots_adjust(bottom=0.2)
-    #ax.xaxis.set_major_locator(mondays)
-    #ax.xaxis.set_minor_locator(alldays)
-    #ax.xaxis.set_major_formatter(weekFormatter)
-    #ax.xaxis.set_minor_formatter(dayFormatter)
-    
-    #plot_day_summary_ohlc(ax, quotes, ticksize=3)
+
     candlestick_ohlc(ax, quote, width=0.000004, colorup='g')
 
     ax.xaxis_date()
@@ -50,6 +46,23 @@ def plot_candlestick(quote):
     axt.set_ylim(0, 5*vmax)    
     volume_overlay3(axt, quote, colorup='g')
     
+    fig.tight_layout()
+    plt.show()
+
+def plot_line(quote_df, pricetype):
+    fig, ax = plt.subplots(figsize=(16, 9))
+    fig.subplots_adjust(bottom=0.2)
+    axt = ax.twinx()
+    quote_df.plot(y=pricetype, ax= ax)
+    print quote_df.iloc[0]
+    quote_df.iloc[0, 4]/=1000
+    vmax=0
+    for ind, q in quote_df.iterrows():
+        vmax=max(vmax, q["volume"])
+    axt.set_ylim(0, 5*vmax)
+    quote_df.plot(y="volume", ax=axt, kind="area", color='#008000')
+    #quotes.plot(y=pricetype, ax= ax, kind="area", color='g')
+
     fig.tight_layout()
     plt.show()
 
@@ -90,7 +103,7 @@ def candlestick(symbol, date, end_min, start_min = 0):
     return
 
 
-def singleline(symbol, date, end_min, start_min = 0, pricetype="close"):
+def sencond_bar_line(symbol, date, end_min, start_min = 0, pricetype="close"):
     quotes = get_ohlc_from_secondbar(symbol, date, end_min, start_min)
     quotes_df = load_secondbar(symbol, date)
     if quotes_df is None:
@@ -102,19 +115,38 @@ def singleline(symbol, date, end_min, start_min = 0, pricetype="close"):
         return 
 
     quotes = quotes_df[start_min*60: end_min*60]
-    # now prepare ax
-    fig = plt.figure()
-    fig, ax = plt.subplots(figsize=(16, 9))
-    #axescolor = '#f6f6f6'  # the axes background colordd
+    plot_line(quotes, "open")
+    return
 
-    #ax1 = fig.add_axes(rect1)  # left, bottom, width, height
-    axt = ax.twinx()
 
-    quotes.plot(y=pricetype, ax= ax)
-    plt.show()
+def minute_bar_line(symbol, date, pricetype="close"):
+    ath = ATHttpConnection()
+    quotes_df = ath.getMinuteBar(symbol, date) 
+    if quotes_df is None:
+        print "data not found"
+        return 
+
+    plot_line(quotes_df, "open")
+    return
+
     
-
-singleline("GPRO", "20140626", 30)
+minute_bar_line("ADMS", "20151223")
+#sencond_bar_line("LOCO", "20140725", 120)
+#candlestick("LOCO", "20140725", start_min=0, end_min=120)
+#sencond_bar_line("GPRO", "20140626", 30)
 #candlestick("GPRO", "20140626", 3)
 exit()
+
+
+
+def usage():
+    print "Choose one of the following commands:"
+    print "$hv minbar|mincan int=1 sym:date[;sym:date;sym:date]"
+    print "$hv secbar|mincan sym:date:start_min=0:end_min[;sym:date:start_min=0:end_min"
+
+
+if __name__ == __main__:
+    print args
+    if len(args)<3: 
+        usage()
 

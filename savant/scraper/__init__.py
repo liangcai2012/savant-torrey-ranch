@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, datetime
 import httplib
 import urllib
 import requests
@@ -7,10 +7,16 @@ import string
 import xlrd
 import bs4
 from bs4 import BeautifulSoup
+import pandas as pd
 
 from savant.config import settings
 from savant.db import session, Base
 from savant.db.models import Company, Exchange, Industry, Sector
+
+if sys.version_info[0] < 3:
+    from StringIO import StringIO
+else:
+    from io import StringIO
 
 
 def get_soup(url, params=None, timeout=5):
@@ -295,6 +301,64 @@ def get_symbols(market):
         symlist += mat
     conn.close()
     return symlist
+
+class ATHttpConnection:
+    def __init__(self):
+        self.root_url = 'http://127.0.0.1:5000'
+        self.bar_names = ['datetime', 'open', 'high', 'low', 'close', 'volume' ]
+        self.bar_parse = lambda x: datetime.datetime.strptime(x, '%Y%m%d%H%M%S%f')
+
+    def quoteData(self, params):
+        url = self.root_url + '/quoteData'
+        return requests.get(url, params=params)
+
+    def quoteStream(self, params):
+        url = self.root_url + '/quoteStream'
+        return requests.get(url, params=params)
+
+    def barData(self, params):
+        url = self.root_url + '/barData'
+        connect = requests.get(url, params=params)
+        try:
+            #In case of zero valid record,  ATAPI http server still returns a string of all zero, which would cause date parser error
+            return pd.read_csv(StringIO(connect.content), names=self.bar_names, parse_dates=[0], date_parser=self.bar_parse, index_col=[0])
+        except ValueError:
+            return None
+
+    def tickData(self, params):
+        url = self.root_url + '/tickData'
+        return requests.get(url, params=params)
+
+    def optionChain(self, params):
+        url = self.root_url + '/optionChain'
+        return requests.get(url, params=params)
+
+#sdate/edate must be in the form of 20100101
+    def getDailyBar(self, symbol, sdate, edate):
+        params = {}
+        params['symbol'] = symbol
+        params['historyType'] = 1
+        params['beginTime'] = sdate+"000000"
+        params['endTime'] = edate+"000000"
+        return self.barData(params)
+
+    def getHourlyBar(self, symbol, date):
+        params = {}
+        params['symbol'] = symbol
+        params['intradayMinutes'] = 60 
+        params['historyType'] = 0 
+        params['beginTime'] = date+"093000"
+        params['endTime'] = date+"160000"
+        return self.barData(params)
+
+    def getMinuteBar(self, symbol, date):
+        params = {}
+        params['symbol'] = symbol
+        params['intradayMinutes'] = 1 
+        params['historyType'] = 0 
+        params['beginTime'] = date+"093000"
+        params['endTime'] = date+"160000"
+        return self.barData(params)
 
 
 if __name__ == "__main__":
