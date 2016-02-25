@@ -351,10 +351,10 @@ class ATHttpConnection:
         params['endTime'] = date+"160000"
         return self.barData(params)
 
-    def getMinuteBar(self, symbol, date):
+    def getMinuteBar(self, symbol, date, int):
         params = {}
         params['symbol'] = symbol
-        params['intradayMinutes'] = 1 
+        params['intradayMinutes'] = int
         params['historyType'] = 0 
         params['beginTime'] = date+"093000"
         params['endTime'] = date+"160000"

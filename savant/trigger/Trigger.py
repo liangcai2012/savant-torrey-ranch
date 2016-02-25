@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
 import sys
-import rpyc
+#import rpyc
 import argparse as ap
 
 def view_symbol(args):
@@ -62,7 +62,7 @@ def stop_strategy(args):
 def send_request(request):
     print request
     host = "localhost"
-    conn = rpyc.connect(host,8088)
+#    conn = rpyc.connect(host,8088)
     conn.root.request(request)
     conn.close()
 
