@@ -142,12 +142,8 @@ def test():
     #sencond_bar_line("GPRO", "20140626", 30)
     #candlestick("GPRO", "20140626", 3)
 
-
-def usage():
-    print "Choose one of the following commands:"
-    print "$hv minline|mincan int=1 sym:date[ sym:date sym:date]"
-    print "$hv secline|seccan pt=open sym:date:start_min=0:end_min[ sym:date:start_min=0:end_min]"
-    exit()
+def view_dayline(args):
+    pass
 
 def view_minline(args):
     interval = args.interval 
@@ -164,6 +160,10 @@ def view_minline(args):
 def view_secline(args):
     pass
 
+def view_daycan():
+    pass
+ 
+
 def view_mincan(args):
     pass
 
@@ -174,34 +174,65 @@ if __name__ == "__main__":
     parser = ap.ArgumentParser()
     subparsers = parser.add_subparsers(help="subcommands")
 
-    psr_minline = subparsers.add_parser("minline",help="view minutes bar. Data from AT online. ATHttpConnect must be established")
+    subparsers = parser.add_subparsers(help="subcommands")
+    psr_secline = subparsers.add_parser("dayline",help="view daily bar with single line." )
+    psr_secline.add_argument("sym_dayrange",nargs="+",help="symbol and date range to be displayed. eg.: MSFT:20140212:20150101. In case when a -s option exists, the daterange only need one date.")
+    psr_secline.add_argument("-t","--price_type",type=str,default="open", help="type of price to be displayed, could be open/high/low/close, default is open")
+    psr_minline.add_argument("-9","--grid",type=str,default=33, help="grid of subplots when displaying multiple symbol. eg. 3x4, only needed when sydate has more than 1 argement")
+    psr_minline.add_argument("-s","--span",type=int,default=30, help="show number of days following the single date specified in sym_dayrange. It can be negative, which means show date proceeding"))
+    psr_minline.add_argument("-i","--interval",type=int,default=1, help="value can be either 1(daily bar) or 7(weekly bar)"))
+    psr_secline.set_defaults(func=view_dayline)    
+
+
+    psr_minline = subparsers.add_parser("minline",help="view minutes bar.")
     psr_minline.add_argument("symdate",nargs="+",help="symbol and date to be displayed. symbol and data seperated with :")
     psr_minline.add_argument("-i","--interval",type=int,default=1, help="min bar interval, could be 1-60, default is 1")
     psr_minline.add_argument("-t","--price_type",type=str,default="open", help="type of price to be displayed, could be open/high/low/close, default is open")
     psr_minline.add_argument("-s","--vol_suppress",type=int,default=0, help="how volume in first record to be suppressed, default is 0 means no suppression, in displaying IPC data its typical value is 1000")
+    psr_minline.add_argument("-9","--grid",type=str,default=33, help="grid of subplots when displaying multiple symbol. eg. 3x4, only needed when sydate has more than 1 argement")
     psr_minline.set_defaults(func=view_minline)    
 
+
     psr_secline = subparsers.add_parser("secline",help="view second bar. Data from local storage. Make sure data is ready")
-    psr_secline.add_argument("symdate_minrange",nargs="+",help="symbol, data and minute range to be displayed. eg.: MSFT:20140212:0:3. Showing too much second data can make the plot very slow.")
+    psr_secline.add_argument("symdate_minrange",nargs="+",help="symbol, date and minute range to be displayed. eg.: MSFT:20140212:0:3. Showing too much second data can make the plot very slow.")
     psr_secline.add_argument("-t","--price_type",type=str,default="open", help="type of price to be displayed, could be open/high/low/close, default is open")
     psr_secline.add_argument("-s","--first_vol_suppressed",type=int,default=0, help="how volume in first record to be suppressed, default is 0 means no suppression, in displaying IPC data its typical value is 1000")
+    psr_minline.add_argument("-9","--grid",type=str,default=33, help="grid of subplots when displaying multiple symbol. eg. 3x4, only needed when sydate has more than 1 argement")
     psr_secline.set_defaults(func=view_secline)    
 
-    psr_mincan = subparsers.add_parser("mincan",help="view minutes candlestick. Data from AT online. ATHttpConnect must be established")
+
+    psr_mincan = subparsers.add_parser("daycan",help="view daily bar candlestick.")
+    psr_secline.add_argument("sym_dayrange",nargs="+",help="symbol and date range to be displayed. eg.: MSFT:20140212:20150101. In case when a -s option exists, the daterange only need one date.")
+    psr_secline.add_argument("-t","--price_type",type=str,default="open", help="type of price to be displayed, could be open/high/low/close, default is open")
+    psr_minline.add_argument("-9","--grid",type=str,default=33, help="grid of subplots when displaying multiple symbol. eg. 3x4, only needed when sydate has more than 1 argement")
+    psr_minline.add_argument("-s","--span",type=int,default=30, help="show number of days following the single date specified in sym_dayrange. It can be negative, which means show date proceeding"))
+    psr_minline.add_argument("-i","--interval",type=int,default=1, help="value can be either 1(daily bar) or 7(weekly bar)"))
+    psr_mincan.set_defaults(func=view_daycan)    
+
+
+    psr_mincan = subparsers.add_parser("mincan",help="view minutes candlestick.")
     psr_mincan.add_argument("symdate",nargs="+",help="symbol and date to be displayed. symbol and data seperated with :")
     psr_mincan.add_argument("-i","--interval",type=int,default=1, help="min bar interval, could be 1-60, default is 1")
     psr_mincan.add_argument("-s","--first_vol_suppressed",type=int,default=0, help="how volume in first record to be suppressed, default is 0 means no suppression, in displaying IPC data its typical value is 1000")
+    psr_minline.add_argument("-9","--grid",type=str,default=33, help="grid of subplots when displaying multiple symbol. eg. 3x4, only needed when sydate has more than 1 argement")
     psr_mincan.set_defaults(func=view_mincan)    
 
+
+    psr_mincan = subparsers.add_parser("mincan",help="view minutes candlestick.")
+    psr_mincan.add_argument("symdate",nargs="+",help="symbol and date to be displayed. symbol and data seperated with :")
+    psr_mincan.add_argument("-i","--interval",type=int,default=1, help="min bar interval, could be 1-60, default is 1")
+    psr_mincan.add_argument("-s","--first_vol_suppressed",type=int,default=0, help="how volume in first record to be suppressed, default is 0 means no suppression, in displaying IPC data its typical value is 1000")
+    psr_minline.add_argument("-9","--grid",type=str,default=33, help="grid of subplots when displaying multiple symbol. eg. 3x4, only needed when sydate has more than 1 argement")
+    psr_mincan.set_defaults(func=view_mincan)    
+
+
     psr_seccan = subparsers.add_parser("seccan",help="view second candlestick. Data from local storage. Make sure data is ready")
-    psr_seccan.add_argument("symdate_minrange",nargs="+",help="symbol, data and minute range to be displayed. eg.: MSFT:20140212:0:3. Showing too much second data can make the plot very slow.")
+    psr_seccan.add_argument("symdate_minrange",nargs="+",help="symbol, date and minute range to be displayed. eg.: MSFT:20140212:0:3. Showing too much second data can make the plot very slow.")
     psr_seccan.add_argument("-s","--first_vol_suppressed",type=int,default=0, help="how volume in first record to be suppressed, default is 0 means no suppression, in displaying IPC data its typical value is 1000")
+    psr_minline.add_argument("-9","--grid",type=str,default=33, help="grid of subplots when displaying multiple symbol. eg. 3x4, only needed when sydate has more than 1 argement")
     psr_seccan.set_defaults(func=view_seccan)    
 
 
     args = parser.parse_args()
     args.func(args)
-
-        
-        
 

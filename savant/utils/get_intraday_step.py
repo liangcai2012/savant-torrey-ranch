@@ -59,6 +59,7 @@ def filter_pattern(change, min_close, min_vol):
 def __get_pages(change, hr_change, min_close, min_vol):
     global _pages, _syms, _dates
     _pages = []
+    hr_change_perc = int(100*hr_change)
     
     f1 = filter_pattern(change, min_close, min_vol)
     order = 0
@@ -100,12 +101,20 @@ def __get_pages(change, hr_change, min_close, min_vol):
          #filter by hourly change
 
         hbar = ath.getHourlyBar(i[0], i[1].strftime("%Y%m%d")) 
+        if hbar is None:
+            print "no hour bar", i[0], i[1]
         breakout = False
+        hr_change_list = []
         for ind, data in hbar.iterrows():
-            if (data["close"] - data["open"]) > hr_change * data["open"]:
+            rate = int(100*(data["close"]-data["open"])/data["open"])
+            hr_change_list.append(rate)
+            if rate > hr_change_perc:
                 breakout = True
         if not breakout:       
             continue
+        if hr_change_list[0]>hr_change_perc:
+            continue
+        print i[0], i[1], hr_change_list
 
         quotes=[]
         for d in ds:
@@ -176,6 +185,7 @@ if __name__ == "__main__":
     _grid = [3, 4]
     n = __get_pages(0.1, 0.08, 10, 1000000)
     print "size of results:", n, "size of pages:", len(_pages) 
+    exit()
 
     r = _grid[0]
     c = _grid[1]

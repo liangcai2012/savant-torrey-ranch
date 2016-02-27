@@ -1,7 +1,7 @@
 #! /usr/bin/python
 
 import sys
-#import rpyc
+import rpyc
 import argparse as ap
 
 def view_symbol(args):
