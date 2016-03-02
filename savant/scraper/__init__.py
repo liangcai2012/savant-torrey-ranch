@@ -334,10 +334,13 @@ class ATHttpConnection:
         return requests.get(url, params=params)
 
 #sdate/edate must be in the form of 20100101
-    def getDailyBar(self, symbol, sdate, edate):
+    def getDailyBar(self, symbol, sdate, edate, weekly):
         params = {}
         params['symbol'] = symbol
-        params['historyType'] = 1
+        if weekly:
+            params['historyType'] = 2 
+        else:
+            params['historyType'] = 1
         params['beginTime'] = sdate+"000000"
         params['endTime'] = edate+"000000"
         return self.barData(params)
