@@ -1,10 +1,11 @@
-import os, os.path, sys
+import os, os.path, sys, time
 import socket
 import cjson
 import argparse
-
 from savant.config import settings
-
+import savant.ticker as ticker
+from savant.scraper import ATHttpConnection
+from savant.utils import *
 from savant.logger import getLogger
 
 log = getLogger("fetcher", level="INFO")
@@ -38,21 +39,13 @@ class FetcherCaller:
     def close(self):
         self.socket.close()
 
-def get_trade_data(args):
-    cmd = "get"
-    symbol = args.symbol
-    date = args.date
-    request = {"command":cmd,"symbol":symbol,"date":date, "gettrade": "true", "getquote": "false"}
-    json_request = cjson.encode(request)
-    caller = FetcherCaller(json_request)    
-    caller.send_request()
-    caller.close()
-
-def get_quote_data(args):
-    cmd = "get"
-    symbol = args.symbol
-    date = args.date
-    request = {"command":cmd,"symbol":symbol,"date":date, "gettrade": "false", "getquote": "true"}
+def get_tick_data(symbol, date, type):
+    if type == "both":
+        request = {"command":"get","symbol":symbol,"date":date, "gettrade": "true", "getquote": "true"}
+    elif type == "trade":
+        request = {"command":"get","symbol":symbol,"date":date, "gettrade": "true", "getquote": "false"}
+    elif type == "quote":
+        request = {"command":"get","symbol":symbol,"date":date, "gettrade": "true", "getquote": "false"}
     json_request = cjson.encode(request)
     caller = FetcherCaller(json_request)    
     caller.send_request()
@@ -74,28 +67,152 @@ def cancel(args):
     caller.send_request()
     caller.close()
 
-def main():
+def parse_symdayrange(args):
+    sdr = args.symdayrange
+    symlist = []
+    startlist = []
+    endlist = []
+    drange = args.date_range 
+    span = args.span
+    if drange != "":
+        drange_split = drange.split(":")
+        if len(drange_split) != 2:
+            return [None, None, None]
+        for s in sdr:
+            s_split = s.split(":")
+            if len(s_split) !=1: 
+                print "invalid sym_dayrange format. It should only contain SYM list since date range is already specified", s
+                return [None, None, None]
+            symlist.append(s_split[0])
+            startlist.append(drange_split[0])
+            endlist.append(drange_split[1])
+    elif span != "":
+        span_split = span.split(":")
+        if len(span_split)!=2:
+            return [None, None, None]
+        for s in sdr:
+            s_split = s.split(":")
+            if len(s_split) !=2: 
+                print "invalid sym_dayrange format. It should be like SYM:YYYYmmdd", s
+                return [None, None, None]
+            start, end = get_date_span(s_split[1], int(span_split[0]), int(span_split[1]))
+            symlist.append(s_split[0])
+            startlist.append(start)
+            endlist.append(end)
+    else:
+        for s in sdr:
+            s_split = s.split(":")
+            if len(s_split) !=3: 
+                print "invalid sym_dayrange format. It should be like SYM:YYYYMMDD:YYYYMMDD", s
+                return [None, None, None]
+            symlist.append(s_split[0])
+            startlist.append(s_split[1])
+            endlist.append(s_split[2])
+    return [symlist, startlist, endlist] 
+
+#--------cmd handlers ----------
+def fetch_tick_data(args):
+    #parse arguments
+    symlist, startlist, endlist = parse_symdayrange(args)
+    print symlist, startlist, endlist
+    if symlist == None:
+        print "invalid arguments"
+        return
+
+#    print symlist, startlist, endlist
+
+    type = args.type
+    if type != "both" and type != "trade" and type != "quote":
+        print "invalid type:", type, ". It must be both or trade or quote" 
+        return
+    if type != "both":
+        print "Are you sure that you are only fetching", type, "data? this is might break database records. This option should only be used to fetch missed data."
+        a = raw_input("Type Y/n to continue:")
+        if a != "Y":
+            return
+        for i in range(len(symlist)):
+            for date in get_date_range(startlist[i], endlist[i]):
+                get_tick_data(symlist[i], date, type)
+    else:
+        for i in range(len(symlist)):
+            for date in get_date_range(startlist[i], endlist[i]):
+                paths = ticker.get_ticks_paths_by_date(symlist[i], date)
+                if paths[1] == "" or paths[3] == "":   #mainly means the markethour trade data or the quote data is not available 
+                    print "fetch data for", symlist[i], date
+                    get_tick_data(symlist[i], date, type)
+                    time.sleep(1)  #add some time gap between each tick data fetching request
+                    
+                    count_down = 60
+                    fetched = False
+                    while count_down > 0:
+                        if os.path.exists(paths[1]) and os.path.exists(paths[3]):
+                            print "tick data fetched:", symlist[i]
+                            fetched = True
+                            time.sleep(5)
+                            break
+                        time.sleep(1)
+                        count_down -= 1
+                    if not fetched:
+                        print "Unable to download data for", symlist[i]
+
+        print "now converting tick data to second bar..."
+        #do secondbar conversion later because writing tick data file takes a while
+        for i in range(len(symlist)):
+            for date in get_date_range(startlist[i], endlist[i]):
+                ticker.generate_secondbar_from_tradetick(symlist[i], date)
+               # update_daily_table(symlist[i], date)
+                    
+
+def update_daily_table(symbol, date):
+    d = Daily.query.filter(Daily.symbol== symbol).filter(Daily.date == date).first()
+    if d == None:
+        #insert a new daily record
+        ath = ATHttpConnection()
+        db_df = ath.getDailyBar(symbol, date, date, weekly=False) 
+        if len(db_df.index) != 1:
+            print "cannot download daily bar from activetick"
+            return
+        dbdict = db_df.iloc[0]
+        rec = {"symbol": symbol, "date": date, "open": dbdict["open"], "high": dbdict["high"], "low": dbdict["low"], "close": dbdict["close"], "volume": int(dbdict["volume"]), "tick_downloaded": True, "minbar_downloaded": False} 
+        d= Daily(**rec)
+        savant.db.session.add(d)
+    else:
+        d.tick_downloaded = True 
+    session.commit() 
+
+
+def fetch_daily_data(args):
+    view_day(args, "can")
+
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(help="subcommands")
     
-    psr_get = subparsers.add_parser("trade",help="get tick data (trade)")
-    psr_get.add_argument("symbol",help="stock symbol")
-    psr_get.add_argument("date",help="date")
-    psr_get.set_defaults(func=get_trade_data)
+    psr_tick = subparsers.add_parser("tick",help="fetch tick data")
+    psr_tick.add_argument("symdayrange", nargs="+", help="sym and date range to be fetched: eg: MSFT:20140101:20140201, or MSFT:20140101 (for only one day or if -s is specified) or MSFT (if -r is specified")
+    psr_tick.add_argument("-r", "--date_range", type=str, default="", help="global date range applied to all symbols")
+    psr_tick.add_argument("-s","--span",type=str, default="", help="fetch number of days procceding and following the single date specified in sym_dayrange. eg: 3:3 means fetch date from date-3 to date+3")
+    psr_tick.add_argument("-t","--type",type=str, default="both", help="trade: means only fetching trade data, quote: means quote data only. both means both." )
+    psr_tick.set_defaults(func=fetch_tick_data)
+    #psr_get.set_defaults(func=get_trade_data)
 
-    psr_get = subparsers.add_parser("quote",help="get tick data (quote)")
-    psr_get.add_argument("symbol",help="stock symbol")
-    psr_get.add_argument("date",help="date")
-    psr_get.set_defaults(func=get_quote_data)
+    psr_tick = subparsers.add_parser("daily",help="fetch daily data")
+    psr_tick.add_argument("symdayrange", nargs="+", help="sym and date range to be fetched: eg: MSFT:20140101:20140201, or MSFT:20140101 (for only one day or if -s is specified) or MSFT (if -r is specified")
+    psr_tick.add_argument("-r", "--date_range", type=str, default="", help="global date range applied to all symbols")
+    psr_tick.add_argument("-s","--span",type=str, default="", help="fetch number of days procceding and following the single date specified in sym_dayrange. eg: 3:3 means fetch date from date-3 to date+3")
+    psr_tick.set_defaults(func=fetch_daily_data)
 
-    psr_check = subparsers.add_parser("check",help="check fetcher status")
-    psr_check.set_defaults(func=check_status)    
+    #psr_get = subparsers.add_parser("quote",help="get tick data (quote)")
+    #psr_get.add_argument("symbol",help="stock symbol")
+    #psr_get.add_argument("date",help="date")
+    #psr_get.set_defaults(func=get_quote_data)
 
-    psr_cancel = subparsers.add_parser("cancel",help="cancel fetching")
-    psr_cancel.set_defaults(func=cancel)
+    #psr_check = subparsers.add_parser("check",help="check fetcher status")
+    #psr_check.set_defaults(func=check_status)    
+
+    #psr_cancel = subparsers.add_parser("cancel",help="cancel fetching")
+    #psr_cancel.set_defaults(func=cancel)
 
     args = parser.parse_args()
     args.func(args)
-
-if __name__ == "__main__":
-    main()

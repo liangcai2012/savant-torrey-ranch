@@ -13,6 +13,7 @@ from matplotlib.finance import *
 import matplotlib.mlab as mlab
 import matplotlib.dates as mdates
 from savant.scraper import ATHttpConnection
+from savant.utils import *
 
 #this is just to test how numpy recarray is used 
 def csvtest():
@@ -56,7 +57,6 @@ def plot_candlestick(fig, ax, axt, quote_df, volsuppress, title, barwidth):
     ax.set_title(title)
     plt.setp(ax.get_xticklabels(which='both'), rotation=45, horizontalalignment='right')
 
-    axt = ax.twinx()
     if volsuppress != 0:
         quote_list[0][5]/=1000
     vmax=0
@@ -159,7 +159,7 @@ def view_day(args, fig_type):
             title.append(s+" "+span)
             
         #kick start the plot
-        __plot_multi(int(grid_split[0]), int(grid_split[1]), dflist, title, fig_type, pricetype, volsuppress, 0.1)
+        __plot_multi(int(grid_split[0]), int(grid_split[1]), dflist, title, fig_type, pricetype, 0, 0.1)
         return
     sdr_split = sdr[0].split(":")
     if len(sdr_split) !=3  and (len(sdr_split) != 2 or span == ""):
@@ -329,9 +329,10 @@ def __plot_current_page():
     page = _dflist[_current_page:]
     page_title = _title[_current_page:]
     
+
     for i in range(s):
-        ax = _axes[(i%s)/c, (i%s)%c]
-        axt = _axtes[(i%s)/c][(i%s)%c]
+        ax = _axes[i/c, i%c]
+        axt = _axtes[i/c][i%c]
         ax.cla()
         axt.cla()
 
@@ -359,7 +360,7 @@ def __plot_multi(row, col, dflist, title, figtype, pricetype, volsuppress, barwi
     _vol_suppress = volsuppress
     _bar_width = barwidth
 
-    _fig, _axes = plt.subplots(nrows=row, ncols=col, figsize=(16, 9))
+    _fig, _axes = plt.subplots(nrows=row, ncols=col, figsize=(16,9))
     _axtes = [[0 for x in range(col)] for x in range(row)]
     for i in range(row*col):
         _axtes[i/col][i%col]=_axes[i/col, i%col].twinx()

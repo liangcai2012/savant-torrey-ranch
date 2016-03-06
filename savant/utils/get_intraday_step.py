@@ -8,37 +8,13 @@ from savant.db.models import Daily, Company, HistoricalIPO
 from matplotlib.finance import * 
 import matplotlib.dates as mdates
 from savant.scraper import ATHttpConnection
+from savant.utils import *
 ## this is obtain all stocks with a step pattern
 #1. abs(close - open) > d% * open
 #2. download minute bar for all these 
 #3. find out all 
 
 
-def get_previous_dates(date, days):
-    dates = []
-    i = 1
-    today = date
-    while i <= days:
-        today = today - datetime.timedelta(1)
-        if today.weekday() < 5:
-            dates.append(today)
-            i+= 1
-    return dates
-
-def get_following_dates(date, days, inclusive = True):
-    if inclusive:
-        dates = [date]
-    else:
-        dates = []
-    today = date
-    i = 1
-    while i <= days:
-        today = today + datetime.timedelta(1)
-        if today.weekday() < 5:
-            dates.append(today)
-            i+= 1
-    return dates
-            
 def get_average_vol(symbol, dates):
     ds = Daily.query.filter(Daily.symbol == symbol).filter(and_(Daily.date <= dates[0], Daily.date >= dates[-1])).all()
     len_ds = len(ds)

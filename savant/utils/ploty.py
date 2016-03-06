@@ -73,28 +73,28 @@ def display_association(axes, data, attr_x, attr_y, gridsize=100):
 
     return mat
 
-#li = [
-#    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
-#    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
-#    {'key1': 'ac', 'key2': 111, 'sym': 6},
-#    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
-#    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
-#    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
-#    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
-#    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
-#    {'key1': 'ac', 'key2': 11, 'sym': 1.2},
-#    {'key1': 'cc', 'key2': 4, 'sym': 1.11},
-#    {'key1': 'cc', 'key2': 4, 'sym': 2},
-#    {'key1': 'cc', 'key2': 11, 'sym': 2.1},
-#    {'key1': 'c',  'key2': 11, 'sym': 1.5},
-#    {'key1': 'cc', 'key2': 4, 'sym': 2.2},
-#    {'key1': 'cc', 'key2': 4, 'sym': 1.8}
-#]
-#
-#import matplotlib.pyplot as plt
-#plt.close('all')
-#f, axes = plt.subplots()
-##dd = display_association(axes, li,'key2', 'sym', 10)
-#dd = display_association(axes, li,'key1', 'key2', 10)
-#plt.show()
-##f.savefig('sdf')
+li = [
+    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+    {'key1': 'ac', 'key2': 111, 'sym': 6},
+    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+    {'key1': 'ac', 'key2': 111, 'sym': 1.1},
+    {'key1': 'ac', 'key2': 11, 'sym': 1.2},
+    {'key1': 'cc', 'key2': 4, 'sym': 1.11},
+    {'key1': 'cc', 'key2': 4, 'sym': 2},
+    {'key1': 'cc', 'key2': 11, 'sym': 2.1},
+    {'key1': 'c',  'key2': 11, 'sym': 1.5},
+    {'key1': 'cc', 'key2': 4, 'sym': 2.2},
+    {'key1': 'cc', 'key2': 4, 'sym': 1.8}
+]
+
+import matplotlib.pyplot as plt
+plt.close('all')
+f, axes = plt.subplots()
+#dd = display_association(axes, li,'key2', 'sym', 10)
+dd = display_association(axes, li,'key1', 'key2', 10)
+plt.show()
+#f.savefig('sdf')

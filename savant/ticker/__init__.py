@@ -1,4 +1,5 @@
 import os
+import subprocess
 import pandas as pd
 import datetime as dt
 from savant.config import settings
@@ -42,20 +43,6 @@ def _get_trade_tick_suffix(hours):
 def _get_quote_tick_suffix():
     return "_quote"
 
-#to get all dates between begin and end
-def _parse_dates(begin, end):
-    bd = datetime.datetime.strptime(begin, "%Y%m%d")
-    ed = datetime.datetime.strptime(end, "%Y%m%d")
-    if bd > ed:
-        raise ValueError("Begin date older than end date")
-    delta = datetime.timedelta(days=1)
-    dates = []
-    while bd <= ed:
-        if bd.weekday() < 5:
-            dates.append(bd.strftime("%Y%m%d"))
-        bd += delta
-    return dates
-
 
 # return a list of four paths: pre, markethour, after, quotes
 #This function is to replace get_ticks_paths_by_date() in Processor. It returns quote path as well
@@ -68,11 +55,13 @@ def get_ticks_paths_by_date(symbol, date):
         if not os.path.exists(trade_path):
            paths.append("")
         else:
-           paths.append(data_path)
+           paths.append(trade_path)
     filename = symbol + _get_quote_tick_suffix() + ".csv.gz" 
     quote_path = os.path.join(base_dir, date, filename)
     if not os.path.exists(quote_path):
-       paths.append("")
+        paths.append("")
+    else:
+        paths.append(quote_path)
     return paths
 
 
@@ -81,18 +70,19 @@ def get_ticks_paths_by_date(symbol, date):
 def get_trades_by_date(symbol, date, hours="regular"):
     suffix = _get_trade_tick_suffix(hours)
     filenames = [symbol + s + ".csv.gz" for s in suffix]
+    #print filenames
     tick_data = None 
     for filename in filenames:
         data_path = os.path.join(base_dir, date, filename)
         if not os.path.exists(data_path):
-            continue
             #print "cannot find", data_path
+            continue
             #raise IOException("Data file not found: %s" % data_path)
         cur_ticks = pd.read_csv(data_path, compression="gzip", names= trade_csv_col, usecols = trade_col, parse_dates=[0], date_parser=tick_date_parser, index_col=0)
         if tick_data is None:
             tick_data = cur_ticks
         else:
-            tick_data.append(cur_ticks)
+            tick_data = pd.concat([tick_data, cur_ticks])
     return tick_data
 
 def get_quotes_by_date(symbol, date):
@@ -147,8 +137,98 @@ def filter_ticks_by_exchange(tick_df, exchange):
     return tick_df[tick_df["exch"]==exchange]
 
 #we will implement this later. So far all secondbar are stored and only needs to be read out 
+#downsampling arbitrary dataframe? tick data is not processed to removed dual opening etc. maybe not a good idea
 def tradetick_to_secondbar(trade_df):
     pass
+
+#this is to replace Tick2SecondBarConverter
+def generate_secondbar_from_tradetick(symbol, date):
+    bar_path = settings.DATA_HOME+ '/data/' + date + '/' +symbol+"_second_bar.csv" 
+    bar_gz_path = bar_path+".gz" 
+    if os.path.exists(bar_gz_path):
+        return
+
+    tickdata = get_trades_by_date(symbol, date, "full")
+    if tickdata is None:
+        print "trade data cannot be found, exiting second bar conversion"
+        return
+
+    try:
+        fbar = open(bar_path, 'w')
+    except IOError:
+        return
+
+    begin_time = None
+    tick_batch = []
+    current_dt = None
+
+    cond_9= False
+    cond_15 = False
+    for i, tick in tickdata.iterrows():
+        #handle conditions
+        #assumption: conditions cannot contain both 9 and 15 or 16
+        #9 might be followed by 15 or 16
+        #any record before 16 is not valid
+
+        condlist = tick["cond"].split('-')
+        for cond in condlist:
+            if cond == '9' or cond == "15" or cond == "16":
+                break
+        if cond == '9':
+            cond_9 = True 
+            prev_vol = tick["size"] 
+        elif cond == '16':
+            if cond_9 and tick["size"] == prev_vol:
+# do not remove the second bars before open, try to be literate as the tick data
+#                if len(tick_batch)>1:
+#                    print symbol, date, "contains trade records before offical open!"
+#                tick_batch=[]
+                cond_9 = False
+                continue
+        elif cond == "15":
+            if cond_9 and tick["size"] == prev_vol:
+                cond_9 = False
+                continue
+        else:
+            if cond_9:
+                cond_9 = False
+
+        #time_no_ms = tick[1][0].split('.')[0]# remove the millisecond part
+        #tick_dt = datetime.datetime.strptime(time_no_ms, '%m/%d/%Y %H:%M:%S')
+        if current_dt == None:
+            #current_dt = tick_dt
+            current_dt = i.replace(microsecond = 0) 
+        #if (tick_dt - current_dt).seconds < 1:
+        if (i - current_dt).seconds < 1:
+            tick_batch.append(tick) 
+            continue
+        else: #tick_dt >= self.current_dt
+            if len(tick_batch)>0:
+                p_open, p_close, p_high, p_low, volume, p_average = _calc_bar_from_tick_batch(tick_batch)
+                if p_open != None:
+                    fbar.write(current_dt.strftime("%Y%m%d%H%M%S") + ", " + str(p_open) + ", " + str(p_high) + ", "+ str(p_low) + ", " + str(p_close) + ", " + str(volume) + ", " + p_average + '\n')
+
+            while(i - current_dt).seconds >= 1:
+                current_dt += dt.timedelta(0, 1)
+            tick_batch=[tick]
+    fbar.close()
+    subprocess.check_call(["gzip", bar_path])
+
+#internal function only used by the generate_secondbar_from_tradetick
+def _calc_bar_from_tick_batch(ticks):
+    trade_prices= [t["price"] for t in ticks]
+    po = trade_prices[0]
+    pc = trade_prices[-1]
+    ph = max(trade_prices)
+    pl = min(trade_prices)
+    vol = sum([t["size"] for t in ticks])
+    #there are chances that tick record with vol = 0
+    if vol == 0:
+        return None, None, None, None, None, None
+    trade_cost = sum([t["price"]*t["size"] for t in ticks])
+    pave = format(trade_cost/vol, ".2f")
+    return po, pc, ph, pl, vol, pave 
+
 
 #return the records only when there is a change in price or size
 def get_quote_change(quote_df):
@@ -232,9 +312,13 @@ def test_trade():
     print trade_df_filtered
     #print trade_df
 
+def test():
+    #testing generate_secondbar_from_tradetick
+    generate_secondbar_from_tradetick("TUMI", "20120419")
 
-quote_df = get_quotes_by_date("GPRO", "20140626")
-#print quote_df
-quote_ch_df = get_quote_change(quote_df)
-print_df(bid_change_only(quote_ch_df))
+    ##test get_quotes_by_date
+    #quote_df = get_quotes_by_date("GPRO", "20140626")
+    ##print quote_df
+    #quote_ch_df = get_quote_change(quote_df)
+    #print_df(bid_change_only(quote_ch_df))
 

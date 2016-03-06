@@ -247,5 +247,5 @@ if __name__ == "__main__":
     #print ticker.get_ticks_by_date("NTRA", "20150702", "20150702")
     #print ticker.get_ticks_by_datetime("NTRA", datetime.strptime("07/02/2015 11:00:00", "%m/%d/%Y %H:%M:%S"), datetime.strptime("07/02/2015 15:00:00", "%m/%d/%Y %H:%M:%S"))
 #    print list(tick2bar("NVET", "20150205", save_to_disk=True).iterrows())
-    Tick2SecondBarConverter("SPLK", "20120419")
+    Tick2SecondBarConverter("TUMI", "20120419")
     #print list(tick2bar("BABA", "20140919").iterrows())
