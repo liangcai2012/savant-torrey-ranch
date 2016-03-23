@@ -7,7 +7,7 @@ from savant.db import session
 from savant.db.models import Daily, Company, HistoricalIPO
 from matplotlib.finance import * 
 import matplotlib.dates as mdates
-from savant.scraper import ATHttpConnection
+from savant.fetcher import ATHttpConnection
 from savant.utils import *
 ## this is obtain all stocks with a step pattern
 #1. abs(close - open) > d% * open

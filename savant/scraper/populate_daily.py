@@ -1,10 +1,9 @@
-
 import datetime
 import savant.db
 from savant.db import session
 from savant.config import settings
 from savant.db.models import MarketIndex, Daily, Company 
-from savant.scraper import ATHttpConnection
+from savant.fetcher import ATHttpConnection
 import yahoo_finance as yahoo
 
 def create_daily_table():

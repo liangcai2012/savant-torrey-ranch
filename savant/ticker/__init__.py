@@ -150,7 +150,7 @@ def generate_secondbar_from_tradetick(symbol, date):
 
     tickdata = get_trades_by_date(symbol, date, "full")
     if tickdata is None:
-        print "trade data cannot be found, exiting second bar conversion"
+        print "trade data cannot be found, exiting second bar conversion", symbol, date
         return
 
     try:

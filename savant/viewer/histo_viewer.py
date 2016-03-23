@@ -12,7 +12,7 @@ from matplotlib.dates import DateFormatter, WeekdayLocator, DayLocator, MONDAY
 from matplotlib.finance import * 
 import matplotlib.mlab as mlab
 import matplotlib.dates as mdates
-from savant.scraper import ATHttpConnection
+from savant.fetcher import ATHttpConnection
 from savant.utils import *
 
 #this is just to test how numpy recarray is used 
@@ -101,6 +101,7 @@ def load_minutebar_atserver(symbol, date, interval):
 
 def load_secondbar_localfs(symbol, date, start_min, end_min):
     bar_gz_path = settings.DATA_HOME+ '/data/' +  date + '/' +symbol+"_second_bar.csv.gz" 
+    print bar_gz_path, start_min, end_min
     if not os.path.exists(bar_gz_path):
         return None
     col = ["time", "open", "high", "low", "close", "volume", "average"]
@@ -292,7 +293,7 @@ def view_sec(args, fig_type):
     if fig_type == "line":
         plot_line(fig, ax, axt, quote_df, pricetype, volsuppress, symdate_minrange[0])
     else:
-        plot_candlestick(fig, ax, axt, quote_df, volsuppress, symdate_minrange[0], symdate_minrange[0], 0.000005)
+        plot_candlestick(fig, ax, axt, quote_df, volsuppress, symdate_minrange[0], 0.000005)
 
     fig.tight_layout()
     plt.show()

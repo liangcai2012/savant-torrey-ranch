@@ -28,10 +28,18 @@ public class RequestListener {
                 Map response = fetcher.processRequest(jsonRequest);
                 BufferedWriter out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
                 JSONObject jsonResponse = new JSONObject();
+                boolean hasExtra= false;
                 for (Object key : response.keySet()) {
-                    jsonResponse.put((String)key,response.get(key));
+                    if (((String)key).equals("extra"))
+                        hasExtra= true;
+                    else
+                       jsonResponse.put((String)key,response.get(key));
                 }
                 out.write(jsonResponse.toString());
+                if(hasExtra){
+                    out.write("extra:");
+                    out.write((String)response.get("extra"));
+                }
                 out.flush();
                 socket.close();
             }

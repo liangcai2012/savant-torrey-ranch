@@ -15,6 +15,7 @@ import java.io.FileNotFoundException;
 import at.feedapi.ActiveTickServerAPI;
 import at.feedapi.Helpers;
 import at.shared.ATServerAPIDefines;
+import at.shared.ATServerAPIDefines.ATBarHistoryType;
 import at.shared.ATServerAPIDefines.ATSYMBOL;
 import at.shared.ATServerAPIDefines.ATGUID;
 import at.shared.ATServerAPIDefines.SYSTEMTIME;
@@ -84,7 +85,6 @@ public class ATTickDataFetcher {
             if (cmd.equals("quit")) {
                 this.exit();
             } else if (cmd.equals("get")) {
-
                 if (!this.isIdle()) {
                     logger.log(Level.SEVERE,"fetcher busy");
                     errcode = "-1";
@@ -128,6 +128,25 @@ public class ATTickDataFetcher {
                     errcode = "-1";
                     errmsg = "Error in time addition";
                 }
+            } else if (cmd.equals("getbar")){
+                if (!this.isIdle()){
+                    errcode ="-1";
+                    errmsg = "Fetcher is busy";
+                }
+                else{
+                    String symbol = (String)request.get("symbol");
+                    int type = request.getInt("historyType");
+                    int interval = request.getInt("intradayMinutes");
+                    String bdatetime = (String)request.get("beginTime");
+                    String edatetime = (String)request.get("endTime");
+                    
+                    String res = sendSyncATBarHistoryRequest(symbol, type, interval, bdatetime, edatetime);
+                    errcode = "0";
+                    response.put("reslen", String.valueOf(res.length()));
+                    response.put("extra", res);
+                }
+
+
             } else if (cmd.equals("check")) {
                 if (this.isIdle()) {
                     //errcode = "-1";
@@ -153,7 +172,37 @@ public class ATTickDataFetcher {
         if (errmsg != null) {
             response.put("errmsg", errmsg);
         }
+        
         return response;
+    }
+
+    public String sendSyncATBarHistoryRequest(String symbol, int type, int interval, String strBeginDateTime, String strEndDateTime){
+        ATSYMBOL atSymbol = Helpers.StringToSymbol(symbol);
+        SYSTEMTIME beginDateTime = Helpers.StringToATTime(strBeginDateTime);
+        SYSTEMTIME endDateTime = Helpers.StringToATTime(strEndDateTime);
+        ATBarHistoryType barHistoryType;
+        if (type == 0)
+            barHistoryType = (new ATServerAPIDefines()).new ATBarHistoryType(ATBarHistoryType.BarHistoryIntraday);
+        else if (type == 1)
+            barHistoryType = (new ATServerAPIDefines()).new ATBarHistoryType(ATBarHistoryType.BarHistoryDaily);
+        else
+            barHistoryType = (new ATServerAPIDefines()).new ATBarHistoryType(ATBarHistoryType.BarHistoryWeekly);
+        //it returns a handle which is never used
+        apiSession.GetRequestor().barReceived = false;
+        apiSession.GetRequestor().barTimeout = false;
+        apiSession.GetRequestor().SendATBarHistoryDbRequest(atSymbol, barHistoryType, (short)interval, beginDateTime, endDateTime, 
+                                                                    ActiveTickServerAPI.DEFAULT_REQUEST_TIMEOUT);
+
+        String res = "";
+        synchronized(apiSession.GetRequestor().barSync) {
+            try {
+                 apiSession.GetRequestor().barSync.wait();
+                 res = apiSession.GetRequestor().barResult;
+            } catch (InterruptedException e) {
+                //do nothing, return empty string
+            }
+        }
+        return res;
     }
 
     public long sendATRequest(String symbol,String strBeginDateTime,String strEndDateTime, boolean getTrade, boolean getQuote) {
@@ -370,6 +419,7 @@ public class ATTickDataFetcher {
         boolean getQuote = nextRequest.getBoolean("getQuote");
         return this.sendATRequest(symbol,beginDateTime,endDateTime, getTrade, getQuote);
     }
+
 
     public boolean isIdle() {
         return this.pendingRequests.isEmpty();

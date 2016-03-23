@@ -25,6 +25,12 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 	String marketFilePath;
 	String aftermarketFilePath;
 	String quoteFilePath;
+    //the following members are for synchroized requests
+    //since no concurrent write exists, so we don't need to use synchronized methods or block. 
+    boolean barTimeout;
+    boolean barReceived;
+    String barResult; 
+    Object barSync = new Object();
 
 
 /*
@@ -48,6 +54,7 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 	public void OnRequestTimeoutCallback(long origRequest)
 	{
 		System.out.println("(" + origRequest + "): Request timed-out");
+        barTimeout = true;
 	}
 
 	public void OnTickHistoryDbResponse(long origRequest, ATServerAPIDefines.ATTickHistoryResponseType responseType, Vector<ATServerAPIDefines.ATTICKHISTORY_RECORD> vecData)
@@ -239,7 +246,7 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 		if (!quoteTickRecords.isEmpty()) {
 			this.writeTickRecord(this.quoteFilePath,quoteTickRecords);
 		}
-		System.out.println("--------------------------------------------------------------\nTotal records:" + recCount);
+		//System.out.println("--------------------------------------------------------------\nTotal records:" + recCount);
 		m_fetcher.onRequestComplete();
 	}
 
@@ -260,33 +267,48 @@ public class Requestor extends at.feedapi.ActiveTickServerRequester
 		Iterator<ATServerAPIDefines.ATBARHISTORY_RECORD> itrDataItems = vecData.iterator();
 		int index = 0;
 		int recCount = vecData.size();
-		String strFormat = "%0.2f";
+        barResult = "";
 		while(itrDataItems.hasNext())
 		{
+            if(! barResult.equals(""))
+                barResult += "\n";
 			ATServerAPIDefines.ATBARHISTORY_RECORD record = (ATServerAPIDefines.ATBARHISTORY_RECORD)itrDataItems.next();
-			StringBuilder sb = new StringBuilder();
-			sb.append((++index) + "/" + recCount + " ");
-			sb.append("[" + record.barTime.month + "/" + record.barTime.day + "/" + record.barTime.year + " ");
-			sb.append(record.barTime.hour + ":" + record.barTime.minute + ":" + record.barTime.second + "] ");
+            barResult += String.format("%4d%02d%02d%02d%02d%02d,%.6f,%.6f,%.6f,%.6f,%d",record.barTime.year, record.barTime.month, record.barTime.day,
+                                                                                  record.barTime.hour, record.barTime.minute, record.barTime.second,
+                                                                                  record.open.price, record.high.price,
+                                                                                  record.low.price, record.close.price,
+                                                                                  record.volume);
+
+			//StringBuilder sb = new StringBuilder();
+			//sb.append(String.format(", record.barTime.year+ record.barTime.month + "/" + record.barTime.day + "/" + record.barTime.year + " ");
+			//sb.append(record.barTime.hour + ":" + record.barTime.minute + ":" + record.barTime.second + "] ");
+			//sb.append((++index) + "/" + recCount + " ");
+			//sb.append("[" + record.barTime.month + "/" + record.barTime.day + "/" + record.barTime.year + " ");
+			//sb.append(record.barTime.hour + ":" + record.barTime.minute + ":" + record.barTime.second + "] ");
 
 
-			strFormat = "%0." + record.open.precision + "f";
-			sb.append("  \t[o:" + new PrintfFormat(strFormat).sprintf(record.open.price));
+			//strFormat = "%0." + record.open.precision + "f";
+			//sb.append("  \t[o:" + new PrintfFormat(strFormat).sprintf(record.open.price));
 
-			strFormat = "%0." + record.high.precision + "f";
-			sb.append("  \th:" + new PrintfFormat(strFormat).sprintf(record.high.price) + " ");
+			//strFormat = "%0." + record.high.precision + "f";
+			//sb.append("  \th:" + new PrintfFormat(strFormat).sprintf(record.high.price) + " ");
 
-			strFormat = "%0." + record.low.precision + "f";
-			sb.append("  \tl:" + new PrintfFormat(strFormat).sprintf(record.low.price) + " ");
+			//strFormat = "%0." + record.low.precision + "f";
+			//sb.append("  \tl:" + new PrintfFormat(strFormat).sprintf(record.low.price) + " ");
 
-			strFormat = "%0." + record.close.precision + "f";
-			sb.append("  \tc:" + new PrintfFormat(strFormat).sprintf(record.close.price) + " ");
+			//strFormat = "%0." + record.close.precision + "f";
+			//sb.append("  \tc:" + new PrintfFormat(strFormat).sprintf(record.close.price) + " ");
 
-			sb.append("  \tvol:" + record.volume);
+			//sb.append("  \tvol:" + record.volume);
 
-			System.out.println(sb.toString());
+			//System.out.println(sb.toString());
 		}
-		System.out.println("--------------------------------------------------------------\nTotal records:" + recCount);
+        //System.out.println(barResult);    
+		//System.out.println("--------------------------------------------------------------\nTotal records:" + recCount);
+        synchronized(barSync){
+            barSync.notify();
+        }
+
 	}
 
 	public void OnMarketMoversDbResponse(long origRequest, ATServerAPIDefines.ATMarketMoversDbResponseType responseType, Vector<ATServerAPIDefines.ATMARKET_MOVERS_RECORD> vecData)
